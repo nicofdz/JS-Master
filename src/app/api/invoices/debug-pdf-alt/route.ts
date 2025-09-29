@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
 
     try {
       // Usar pdfjs-dist con configuración específica
-      const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+      // const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+      throw new Error('pdfjs-dist no disponible en build')
       
+      // TODO: Comentar todo el bloque cuando pdfjs-dist esté disponible
+      /*
       // Configurar worker
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`
       
@@ -45,6 +48,7 @@ export async function POST(request: NextRequest) {
         pages: pdf.numPages,
         method: 'pdfjs-dist'
       })
+      */
       
     } catch (error) {
       console.error('Error con pdfjs-dist:', error)

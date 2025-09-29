@@ -173,7 +173,7 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <div className="pt-3 border-t">
                     <Button
                       variant="outline"
-                      onClick={() => window.open(invoice.pdf_url, '_blank')}
+                      onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}
                       className="w-full"
                     >
                       📄 Ver PDF Original

@@ -78,7 +78,7 @@ export function TaskPaymentModal({
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setTasks(data || [])
+      setTasks((data || []) as any)
     } catch (err: any) {
       console.error('Error fetching tasks:', err)
     } finally {

@@ -68,7 +68,7 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
       
       // Si hay un archivo, lo agregamos a los datos
       if (plan_pdf && plan_pdf.length > 0) {
-        projectData.plan_pdf = plan_pdf[0]
+        (projectData as any).plan_pdf = plan_pdf[0]
       }
       
       await onSubmit(projectData)

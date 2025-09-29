@@ -148,7 +148,7 @@ export function useDashboard() {
                     if (task.is_delayed === true && task.status !== 'blocked') {
                       delayedTasks++
                       console.log('🔴 Tarea retrasada encontrada:', {
-                        task_name: task.task_name,
+                        task_name: (task as any).task_name,
                         status: task.status,
                         is_delayed: task.is_delayed,
                         delay_reason: task.delay_reason

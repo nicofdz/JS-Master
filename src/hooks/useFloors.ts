@@ -8,6 +8,7 @@ type Floor = Database['public']['Tables']['floors']['Row'] & {
   project_name?: string
   apartments_count?: number
   progress_percentage?: number
+  apartments?: any[]
 }
 type FloorInsert = Database['public']['Tables']['floors']['Insert']
 
@@ -173,7 +174,7 @@ export function useFloors(projectId?: number) {
       const { data: delayedTasks, error: tasksError } = await supabase
         .from('apartment_tasks')
         .select('id, is_delayed, status')
-        .in('apartment_id', apartments?.map(a => a.id) || [])
+        .in('apartment_id', apartments?.map(a => (a as any).id) || [])
         .eq('is_delayed', true)
         .neq('status', 'blocked')
 

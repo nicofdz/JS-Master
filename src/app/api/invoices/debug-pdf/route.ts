@@ -138,7 +138,11 @@ export async function POST(request: NextRequest) {
 
     try {
       // Prueba 2: pdfjs-dist
-      const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+      // const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+      throw new Error('pdfjs-dist no disponible en build')
+      
+      // TODO: Comentar todo el bloque cuando pdfjs-dist esté disponible
+      /*
       const loadingTask = pdfjsLib.getDocument({ data: buffer })
       const pdf = await loadingTask.promise
       
@@ -156,6 +160,8 @@ export async function POST(request: NextRequest) {
         pages: pdf.numPages
       }
       console.log('pdfjs-dist exitoso:', result.pdfjsDist.text.substring(0, 100))
+      */
+      
     } catch (error) {
       result.pdfjsDist = {
         success: false,
@@ -206,8 +212,9 @@ export async function POST(request: NextRequest) {
       
       // Extraer texto de todas las páginas
       let fullText = ''
-      if (pdfData.Pages) {
-        pdfData.Pages.forEach((page: any) => {
+      const pdfDataTyped = pdfData as any
+      if (pdfDataTyped.Pages) {
+        pdfDataTyped.Pages.forEach((page: any) => {
           if (page.Texts) {
             page.Texts.forEach((textObj: any) => {
               if (textObj.R) {
@@ -228,7 +235,7 @@ export async function POST(request: NextRequest) {
       result.pdf2json = {
         success: true,
         text: fullText.substring(0, 500) + '...',
-        pages: pdfData.Pages ? pdfData.Pages.length : 0,
+        pages: (pdfData as any).Pages ? (pdfData as any).Pages.length : 0,
         rawData: pdfData,
         extractedData: extractedData
       }

@@ -194,8 +194,8 @@ export default function ApartamentosPage() {
     const matchesSearch = apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesProject = projectFilter === 'all' || apartment.project_id.toString() === projectFilter
-    const matchesGlobalProject = selectedProjectId === null || apartment.project_id.toString() === selectedProjectId
+    const matchesProject = projectFilter === 'all' || (apartment.project_id && apartment.project_id.toString() === projectFilter)
+    const matchesGlobalProject = selectedProjectId === null || (apartment.project_id && apartment.project_id.toString() === selectedProjectId)
     
     return matchesSearch && matchesProject && matchesGlobalProject
   })
@@ -213,7 +213,7 @@ export default function ApartamentosPage() {
     inProgress: inProgressApartments,
     completed: completedApartments,
     blocked: blockedApartments,
-    allStatuses: filteredApartments.map(a => ({ id: a.id, number: a.apartment_name, status: a.status }))
+    allStatuses: filteredApartments.map(a => ({ id: a.id, number: a.apartment_number, status: a.status }))
   })
 
   return (

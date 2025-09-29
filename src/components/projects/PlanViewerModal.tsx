@@ -157,12 +157,12 @@ export function PlanViewerModal({ isOpen, onClose, project }: PlanViewerModalPro
                       {project.plan_pdf && (
                         <div className="space-y-2">
                           <p className="text-sm text-gray-400">
-                            Haz clic en "Descargar PDF" para ver el plano completo
+                            Haz clic en &quot;Descargar PDF&quot; para ver el plano completo
                           </p>
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => window.open(project.plan_pdf, '_blank')}
+                            onClick={() => project.plan_pdf && window.open(project.plan_pdf, '_blank')}
                             className="mt-2"
                           >
                             <FileText className="w-4 h-4 mr-2" />

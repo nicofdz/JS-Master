@@ -427,7 +427,7 @@ export default function ProyectosPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <div>
                             <div className="text-xs text-gray-500">Inicio</div>
-                            <div>{formatDate(project.start_date)}</div>
+                            <div>{project.start_date ? formatDate(project.start_date) : 'No definido'}</div>
                           </div>
                           {project.end_date && (
                             <div className="mt-1">

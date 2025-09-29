@@ -20,7 +20,7 @@ export default function ApartamentosTestPage() {
           <h2 className="text-lg font-semibold text-red-800 mb-2">Instrucciones:</h2>
           <ol className="list-decimal list-inside text-red-700 space-y-1">
             <li>Abre la consola del navegador (F12)</li>
-            <li>Busca los logs que empiezan con "❌ ERROR DETALLADO"</li>
+            <li>Busca los logs que empiezan con &quot;❌ ERROR DETALLADO&quot;</li>
             <li>Copia y pega aquí el error completo</li>
           </ol>
         </div>

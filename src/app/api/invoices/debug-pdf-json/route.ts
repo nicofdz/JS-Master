@@ -137,10 +137,11 @@ export async function POST(request: NextRequest) {
       
       // Extraer texto de todas las páginas
       let fullText = ''
-      if (pdfData.Pages) {
-        console.log('Páginas encontradas:', pdfData.Pages.length)
+      const pdfDataTyped = pdfData as any
+      if (pdfDataTyped.Pages) {
+        console.log('Páginas encontradas:', pdfDataTyped.Pages.length)
         
-        pdfData.Pages.forEach((page: any, pageIndex: number) => {
+        pdfDataTyped.Pages.forEach((page: any, pageIndex: number) => {
           console.log(`Procesando página ${pageIndex + 1}`)
           
           if (page.Texts) {
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         text: fullText,
-        pages: pdfData.Pages ? pdfData.Pages.length : 0,
+        pages: pdfDataTyped.Pages ? pdfDataTyped.Pages.length : 0,
         rawData: pdfData,
         method: 'pdf2json',
         extractedData: extractedData

@@ -36,7 +36,7 @@ function WorkerPaymentDetails({ workerId, workerName, onClose }: WorkerPaymentDe
     }
   }
 
-  useState(() => {
+  useEffect(() => {
     fetchDetails()
   }, [workerId])
 

@@ -118,7 +118,7 @@ export function PaymentSelectionModal({
           </label>
           <div className="grid grid-cols-3 gap-3">
             <Button
-              variant={paymentType === 'full' ? 'default' : 'outline'}
+              variant={paymentType === 'full' ? 'primary' : 'outline'}
               onClick={() => setPaymentType('full')}
               className="flex items-center gap-2 text-black"
             >
@@ -126,7 +126,7 @@ export function PaymentSelectionModal({
               Pago Completo
             </Button>
             <Button
-              variant={paymentType === 'partial' ? 'default' : 'outline'}
+              variant={paymentType === 'partial' ? 'primary' : 'outline'}
               onClick={() => setPaymentType('partial')}
               className="flex items-center gap-2 text-black"
             >
@@ -134,7 +134,7 @@ export function PaymentSelectionModal({
               Pago Parcial
             </Button>
             <Button
-              variant={paymentType === 'by_days' ? 'default' : 'outline'}
+              variant={paymentType === 'by_days' ? 'primary' : 'outline'}
               onClick={() => setPaymentType('by_days')}
               className="flex items-center gap-2 text-black"
             >
@@ -235,12 +235,16 @@ export function PaymentSelectionModal({
         </div>
 
         {/* Notas */}
-        <Textarea
-          label="Notas del Pago"
-          placeholder="Ej: Pago de tareas del mes de enero..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notas del Pago
+          </label>
+          <Textarea
+            placeholder="Ej: Pago de tareas del mes de enero..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
 
         {/* Botones */}
         <div className="flex justify-end gap-3">

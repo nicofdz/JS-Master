@@ -70,7 +70,6 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
           <Select
             value={selectedProject}
             onChange={(e) => setSelectedProject(e.target.value)}
-            placeholder="Selecciona un proyecto"
           >
             <option value="">Selecciona un proyecto</option>
             {projects.map((project) => (

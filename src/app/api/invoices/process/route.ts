@@ -188,7 +188,12 @@ TOTAL$${Math.round(Math.abs(fileHash) * 1000 * 1.19).toLocaleString()}
       data.ivaPercentage = 19.00
 
       // Extraer RUTs según especificaciones
-      const allRutMatches = [...text.matchAll(/R\.U\.T\.\s*:\s*(\d{1,2}\.\d{3}\.\d{3}-[\dkK])/g)]
+      const rutRegex = /R\.U\.T\.\s*:\s*(\d{1,2}\.\d{3}\.\d{3}-[\dkK])/g
+      const allRutMatches: RegExpExecArray[] = []
+      let match
+      while ((match = rutRegex.exec(text)) !== null) {
+        allRutMatches.push(match)
+      }
       console.log('RUTs encontrados:', allRutMatches.map(m => m[1]))
       
       if (allRutMatches.length >= 2) {

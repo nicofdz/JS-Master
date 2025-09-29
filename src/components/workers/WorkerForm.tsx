@@ -53,7 +53,8 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
   }, [worker])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type } = e.target
+    const checked = 'checked' in e.target ? e.target.checked : false
     
     // Formatear RUT automáticamente
     if (name === 'rut') {

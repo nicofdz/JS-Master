@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
     const zipFileName = `documentos-${workerName}-${timestamp}.zip`
     
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(zipBuffer as any, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${zipFileName}"`,

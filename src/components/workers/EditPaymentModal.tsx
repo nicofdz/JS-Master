@@ -124,12 +124,16 @@ export function EditPaymentModal({
         </div>
 
         {/* Editar Notas */}
-        <Textarea
-          label="Notas del Pago"
-          placeholder="Ej: Pago de tareas del mes de enero..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notas del Pago
+          </label>
+          <Textarea
+            placeholder="Ej: Pago de tareas del mes de enero..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
 
         {/* Advertencia de Cambios */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

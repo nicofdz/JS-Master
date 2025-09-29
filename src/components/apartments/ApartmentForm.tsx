@@ -10,7 +10,7 @@ import { X, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface ApartmentFormProps {
-  apartment: any
+  apartment?: any
   onSubmit: (data: any) => void
   onCancel: () => void
   floors: any[]

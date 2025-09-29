@@ -13,6 +13,7 @@ type Project = Database['public']['Tables']['projects']['Row'] & {
   activities_completed?: number
   total_activities?: number
   progress?: number
+  end_date?: string | null
 }
 type ProjectInsert = Database['public']['Tables']['projects']['Insert']
 

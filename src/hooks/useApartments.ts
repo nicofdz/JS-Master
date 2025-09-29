@@ -7,6 +7,7 @@ import { useFloors } from './useFloors'
 
 type Apartment = Database['public']['Tables']['apartments']['Row'] & {
   floor_number?: number
+  project_id?: number
   project_name?: string
   tasks_count?: number
   progress_percentage?: number
@@ -55,8 +56,8 @@ export function useApartments(floorId?: number) {
       // Procesar datos para incluir project_id
       const processedFloors = (data || []).map(floor => ({
         ...floor,
-        project_id: floor.projects?.id || 0,
-        project_name: floor.projects?.name || 'Proyecto Desconocido'
+        project_id: floor.projects?.[0]?.id || 0,
+        project_name: floor.projects?.[0]?.name || 'Proyecto Desconocido'
       }))
       
       setFloors(processedFloors)

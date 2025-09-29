@@ -194,7 +194,7 @@ export default function PisosPage() {
               Recargar página
             </Button>
             <Button 
-              onClick={() => setError(null)} 
+              onClick={() => refresh()} 
               variant="outline"
               className="border-red-300 text-red-700 hover:bg-red-50"
             >

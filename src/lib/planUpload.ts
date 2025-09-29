@@ -89,7 +89,8 @@ async function generatePlanImage(pdfUrl: string, projectId: number): Promise<str
     // Renderizar la página en el canvas
     const renderContext = {
       canvasContext: context,
-      viewport: viewport
+      viewport: viewport,
+      canvas: canvas
     }
     
     await page.render(renderContext).promise

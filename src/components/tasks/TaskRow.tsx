@@ -129,7 +129,7 @@ export function TaskRow({
           <div className="text-center py-8 text-gray-500">
             <Clock className="w-8 h-8 mx-auto mb-2 text-gray-400" />
             <p>No hay tareas asignadas a este apartamento</p>
-            <p className="text-sm">Haz clic en "Agregar Tarea" para comenzar</p>
+            <p className="text-sm">Haz clic en &quot;Agregar Tarea&quot; para comenzar</p>
           </div>
         ) : (
           <div className="space-y-2">

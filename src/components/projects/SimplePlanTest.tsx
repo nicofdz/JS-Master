@@ -202,9 +202,9 @@ export function SimplePlanTest() {
           </p>
           <ul className="text-xs text-yellow-700 mt-1 space-y-1">
             <li>1. Selecciona un archivo PDF pequeño (&lt; 1MB)</li>
-            <li>2. Haz clic en "Subir Archivo"</li>
+            <li>2. Haz clic en &quot;Subir Archivo&quot;</li>
             <li>3. Revisa la consola del navegador para ver los logs</li>
-            <li>4. Si funciona, haz clic en "Probar URL"</li>
+            <li>4. Si funciona, haz clic en &quot;Probar URL&quot;</li>
           </ul>
         </div>
       </CardContent>
