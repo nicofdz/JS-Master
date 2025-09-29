@@ -1,0 +1,127 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
+import { useProjects } from '@/hooks/useProjects'
+import { useInvoices } from '@/hooks/useInvoices'
+import { formatCurrency } from '@/lib/utils'
+
+interface InvoiceUploadProps {
+  onUploadSuccess?: () => void
+}
+
+export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedProject, setSelectedProject] = useState<string>('')
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const { projects } = useProjects()
+  const { processInvoice } = useInvoices()
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file && file.type === 'application/pdf') {
+      setSelectedFile(file)
+    } else {
+      alert('Por favor selecciona un archivo PDF válido')
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile || !selectedProject) {
+      alert('Por favor selecciona un archivo PDF y un proyecto')
+      return
+    }
+
+    try {
+      setIsUploading(true)
+      const result = await processInvoice(selectedFile, parseInt(selectedProject))
+      
+      // Reset form
+      setSelectedFile(null)
+      setSelectedProject('')
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      
+      alert('Factura procesada exitosamente')
+      onUploadSuccess?.()
+    } catch (error) {
+      console.error('Error uploading invoice:', error)
+      alert('Error al procesar la factura')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Subir Nueva Factura</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Seleccionar Proyecto
+          </label>
+          <Select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            placeholder="Selecciona un proyecto"
+          >
+            <option value="">Selecciona un proyecto</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id.toString()}>
+                {project.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Archivo PDF de Factura
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleFileSelect}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          {selectedFile && (
+            <p className="mt-2 text-sm text-gray-600">
+              Archivo seleccionado: {selectedFile.name}
+            </p>
+          )}
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">¿Qué hace el sistema?</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• Extrae automáticamente los datos del PDF</li>
+            <li>• Identifica número de factura, empresa, montos</li>
+            <li>• Calcula IVA e impuestos automáticamente</li>
+            <li>• Vincula la factura con el proyecto seleccionado</li>
+          </ul>
+        </div>
+
+        <Button
+          onClick={handleUpload}
+          disabled={!selectedFile || !selectedProject || isUploading}
+          className="w-full"
+        >
+          {isUploading ? 'Procesando...' : 'Subir y Procesar Factura'}
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+
+
+
+

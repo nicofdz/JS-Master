@@ -1,0 +1,73 @@
+# 📦 DEPENDENCIAS DEL PROYECTO
+# Sistema de Control de Terminaciones
+
+# ========================================
+# INSTALACIÓN BÁSICA
+# ========================================
+
+# Instalar todas las dependencias del proyecto
+npm install
+
+# ========================================
+# DEPENDENCIAS PRINCIPALES
+# ========================================
+
+# Next.js 14 (Framework principal)
+npm install next@latest react@latest react-dom@latest
+
+# TypeScript
+npm install typescript @types/node @types/react @types/react-dom
+
+# Supabase (Base de datos)
+npm install @supabase/supabase-js
+
+# ========================================
+# DEPENDENCIAS DE UI Y ESTILOS
+# ========================================
+
+# Tailwind CSS
+npm install tailwindcss postcss autoprefixer
+
+# Lucide React (Iconos)
+npm install lucide-react
+
+# Utilidades CSS
+npm install clsx tailwind-merge
+
+# ========================================
+# DEPENDENCIAS DE FORMULARIOS Y UTILIDADES
+# ========================================
+
+# React Hook Form
+npm install react-hook-form
+
+# Notificaciones
+npm install react-hot-toast
+
+# Fechas
+npm install date-fns
+
+# ========================================
+# DEPENDENCIAS DE DESARROLLO
+# ========================================
+
+# ESLint
+npm install eslint eslint-config-next --save-dev
+
+# ========================================
+# COMANDOS ÚTILES
+# ========================================
+
+# Verificar versiones
+node --version
+npm --version
+
+# Limpiar caché si hay problemas
+npm cache clean --force
+
+# Reinstalar dependencias
+rm -rf node_modules package-lock.json
+npm install
+
+
+

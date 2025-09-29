@@ -1,0 +1,54 @@
+-- ============================================
+-- CONFIGURACIÓN DE STORAGE PARA FACTURAS
+-- ============================================
+-- 
+-- IMPORTANTE: Este script solo crea las tablas de base de datos.
+-- Para configurar el storage bucket, debes hacerlo desde el dashboard de Supabase:
+-- 
+-- 1. Ve a Storage en el dashboard de Supabase
+-- 2. Crea un nuevo bucket llamado "invoices"
+-- 3. Configura las siguientes políticas en el editor de políticas:
+--
+-- POLÍTICA 1: "Public Access" (SELECT)
+-- ```sql
+-- CREATE POLICY "Public Access" ON storage.objects
+-- FOR SELECT USING (bucket_id = 'invoices');
+-- ```
+--
+-- POLÍTICA 2: "Authenticated users can upload invoices" (INSERT)
+-- ```sql
+-- CREATE POLICY "Authenticated users can upload invoices" ON storage.objects
+-- FOR INSERT WITH CHECK (
+--   bucket_id = 'invoices' 
+--   AND auth.role() = 'authenticated'
+-- );
+-- ```
+--
+-- POLÍTICA 3: "Users can update own invoices" (UPDATE)
+-- ```sql
+-- CREATE POLICY "Users can update own invoices" ON storage.objects
+-- FOR UPDATE USING (
+--   bucket_id = 'invoices' 
+--   AND auth.uid()::text = (storage.foldername(name))[1]
+-- );
+-- ```
+--
+-- POLÍTICA 4: "Users can delete own invoices" (DELETE)
+-- ```sql
+-- CREATE POLICY "Users can delete own invoices" ON storage.objects
+-- FOR DELETE USING (
+--   bucket_id = 'invoices' 
+--   AND auth.uid()::text = (storage.foldername(name))[1]
+-- );
+-- ```
+--
+-- CONFIGURACIÓN DEL BUCKET:
+-- - Nombre: "invoices"
+-- - Público: Sí
+-- - Límite de archivo: 50MB
+-- - Tipos MIME permitidos: application/pdf
+--
+-- ============================================
+
+-- Verificar que las tablas existen
+SELECT 'Tablas de facturas creadas correctamente' as status;

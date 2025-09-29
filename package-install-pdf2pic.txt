@@ -1,0 +1,13 @@
+# Para instalar pdf2pic (requiere GraphicsMagick o ImageMagick)
+# Ejecutar en terminal:
+
+npm install pdf2pic
+
+# NOTA: pdf2pic requiere GraphicsMagick o ImageMagick instalado en el sistema
+# En Windows: https://www.graphicsmagick.org/download.html
+# En Linux: sudo apt-get install graphicsmagick
+# En macOS: brew install graphicsmagick
+
+# Alternativa más simple (ya instalada):
+# Usar pdf-parse + canvas (ya tenemos pdf-text-extract que es similar)
+

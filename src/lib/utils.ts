@@ -1,0 +1,106 @@
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+export function getStatusColor(status: string | null | undefined): string {
+  if (!status) return 'bg-gray-500 text-white'
+  
+  switch (status) {
+    case 'completed':
+      return 'bg-green-600 text-white'
+    case 'good':
+      return 'bg-green-600 text-white'
+    case 'active':
+      return 'bg-green-600 text-white'
+    case 'planning':
+      return 'bg-gray-600 text-white'
+    case 'in-progress':
+    case 'in_progress':
+      return 'bg-blue-500 text-white'
+    case 'warning':
+      return 'bg-yellow-600 text-white'
+    case 'danger':
+      return 'bg-red-600 text-white'
+    case 'blocked':
+      return 'bg-red-600 text-white'
+    case 'delayed':
+      return 'bg-orange-600 text-white'
+    case 'pending':
+      return 'bg-gray-500 text-white'
+    default:
+      return 'bg-gray-500 text-white'
+  }
+}
+
+export function getStatusEmoji(status: string | null | undefined): string {
+  if (!status) return '⚫'
+  
+  switch (status) {
+    case 'completed': return '✅'
+    case 'good': return '🟢'
+    case 'active': return '🟢'
+    case 'planning': return '⚪'
+    case 'in-progress':
+    case 'in_progress': return '🔵'
+    case 'warning': return '🟡'
+    case 'danger': return '🔴'
+    case 'blocked': return '⛔'
+    case 'delayed': return '🟠'
+    case 'pending': return '⚪'
+    default: return '⚫'
+  }
+}
+
+export function getStatusText(status: string | null | undefined): string {
+  if (!status) return 'Pendiente'
+  
+  switch (status) {
+    case 'completed': return 'Completado'
+    case 'good': return 'Bueno'
+    case 'in-progress':
+    case 'in_progress': return 'En Progreso'
+    case 'warning': return 'Advertencia'
+    case 'danger': return 'Peligro'
+    case 'blocked': return 'Bloqueado'
+    case 'pending': return 'Pendiente'
+    case 'planning': return 'Planificación'
+    case 'active': return 'Activo'
+    case 'paused': return 'Pausado'
+    default: return status
+  }
+}
+
+export function formatDate(date: string | Date): string {
+  if (!date) return 'Sin fecha'
+  
+  // Si es string, extraer solo la fecha sin hora
+  const dateString = typeof date === 'string' ? date.split('T')[0] : date.toISOString().split('T')[0]
+  
+  // Crear fecha en zona local para evitar problemas UTC
+  const [year, month, day] = dateString.split('-')
+  const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+  
+  return localDate.toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+}
+
+export function calculateProgress(activities: any[]): number {
+  if (!activities || activities.length === 0) return 0
+  const totalProgress = activities.reduce((sum, activity) => sum + (activity.progress || 0), 0)
+  return Math.round(totalProgress / activities.length)
+}
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount)
+}
