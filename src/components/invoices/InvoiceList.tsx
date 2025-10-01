@@ -20,10 +20,10 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'processed' | 'blocked'>('all')
 
   const getStatusColor = (status: string, isProcessed: boolean) => {
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-800'
-    if (status === 'processed') return 'bg-green-100 text-green-800'
-    if (status === 'blocked') return 'bg-red-100 text-red-800'
-    return 'bg-gray-100 text-gray-800'
+    if (status === 'pending') return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+    if (status === 'processed') return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+    if (status === 'blocked') return 'bg-red-500/20 text-red-400 border border-red-500/30'
+    return 'bg-slate-700 text-slate-300 border border-slate-600'
   }
 
   const getStatusText = (status: string, isProcessed: boolean) => {
@@ -40,13 +40,13 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
       actions.push({ 
         value: 'processed', 
         label: 'Procesar', 
-        color: 'bg-green-50 hover:bg-green-100 text-green-700',
+        color: 'bg-emerald-900/30 hover:bg-emerald-800/40 text-emerald-400 border border-emerald-600',
         icon: '✅'
       })
       actions.push({ 
         value: 'blocked', 
         label: 'Bloquear', 
-        color: 'bg-red-50 hover:bg-red-100 text-red-700',
+        color: 'bg-red-900/30 hover:bg-red-800/40 text-red-400 border border-red-600',
         icon: '🚫'
       })
     }
@@ -55,13 +55,13 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
       actions.push({ 
         value: 'pending', 
         label: 'Pendiente', 
-        color: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700',
+        color: 'bg-yellow-900/30 hover:bg-yellow-800/40 text-yellow-400 border border-yellow-600',
         icon: '⏳'
       })
       actions.push({ 
         value: 'blocked', 
         label: 'Bloquear', 
-        color: 'bg-red-50 hover:bg-red-100 text-red-700',
+        color: 'bg-red-900/30 hover:bg-red-800/40 text-red-400 border border-red-600',
         icon: '🚫'
       })
     }
@@ -70,7 +70,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
       actions.push({ 
         value: 'pending', 
         label: 'Desbloquear', 
-        color: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700',
+        color: 'bg-yellow-900/30 hover:bg-yellow-800/40 text-yellow-400 border border-yellow-600',
         icon: '🔓'
       })
     }
@@ -108,7 +108,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+              className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="date">Ordenar por fecha</option>
               <option value="amount">Ordenar por monto</option>
@@ -117,7 +117,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'processed' | 'blocked')}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+              className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Todas</option>
               <option value="pending">Pendientes</option>
@@ -129,7 +129,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
       </CardHeader>
       <CardContent>
         {sortedAndFilteredInvoices.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-slate-400">
             No hay facturas registradas
           </div>
         ) : (
@@ -137,12 +137,12 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
             {sortedAndFilteredInvoices.map((invoice) => (
               <div
                 key={invoice.id}
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="border border-slate-600 rounded-lg p-4 hover:bg-slate-700/50 transition-colors bg-slate-800/50"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-semibold text-slate-100">
                         Factura #{invoice.invoice_number || 'Sin número'}
                       </h3>
                       <Badge className={getStatusColor(invoice.status, invoice.is_processed)}>
@@ -152,43 +152,43 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-500">Empresa:</span>
-                        <span className="ml-2 font-medium text-black">{invoice.client_name || 'No identificada'}</span>
+                        <span className="text-slate-400">Empresa:</span>
+                        <span className="ml-2 font-medium text-slate-100">{invoice.client_name || 'No identificada'}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Proyecto:</span>
-                        <span className="ml-2 font-medium text-black">{invoice.project_name || 'Sin proyecto'}</span>
+                        <span className="text-slate-400">Proyecto:</span>
+                        <span className="ml-2 font-medium text-slate-100">{invoice.project_name || 'Sin proyecto'}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">Fecha:</span>
-                        <span className="ml-2 text-black">{invoice.issue_date ? formatDate(invoice.issue_date) : 'Sin fecha'}</span>
+                        <span className="text-slate-400">Fecha:</span>
+                        <span className="ml-2 text-slate-200">{invoice.issue_date ? formatDate(invoice.issue_date) : 'Sin fecha'}</span>
                       </div>
                       <div>
-                        <span className="text-gray-500">RUT Cliente:</span>
-                        <span className="ml-2 font-mono text-black">{invoice.client_rut || 'No identificado'}</span>
+                        <span className="text-slate-400">RUT Cliente:</span>
+                        <span className="ml-2 font-mono text-slate-200">{invoice.client_rut || 'No identificado'}</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="text-right">
-                    <div className="text-sm text-gray-600 mb-1">
-                      Neto: <span className="text-black font-medium">{formatCurrency(invoice.net_amount || 0)}</span>
+                    <div className="text-sm text-slate-400 mb-1">
+                      Neto: <span className="text-slate-100 font-medium">{formatCurrency(invoice.net_amount || 0)}</span>
                     </div>
-                    <div className="text-sm text-gray-600 mb-1">
-                      IVA 19%: <span className="text-black font-medium">{formatCurrency(invoice.iva_amount || 0)}</span>
+                    <div className="text-sm text-slate-400 mb-1">
+                      IVA 19%: <span className="text-slate-100 font-medium">{formatCurrency(invoice.iva_amount || 0)}</span>
                     </div>
-                    <div className="text-lg font-bold text-black border-t pt-1">
+                    <div className="text-lg font-bold text-slate-100 border-t border-slate-600 pt-1">
                       Total: {formatCurrency(invoice.total_amount || 0)}
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex flex-wrap gap-2 pt-3 border-t">
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-600">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onViewPDF?.(invoice.pdf_url!)}
-                    className="bg-green-50 hover:bg-green-100 text-green-700"
+                    className="bg-emerald-900/30 hover:bg-emerald-800/40 text-emerald-400 border border-emerald-600"
                     disabled={!invoice.pdf_url}
                   >
                     📄 Ver Factura
@@ -198,6 +198,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                     variant="outline"
                     size="sm"
                     onClick={() => onEdit?.(invoice)}
+                    className="bg-blue-900/30 hover:bg-blue-800/40 text-blue-400 border border-blue-600"
                   >
                     ✏️ Editar
                   </Button>
@@ -219,7 +220,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                     variant="outline"
                     size="sm"
                     onClick={() => onDelete?.(invoice.id)}
-                    className="text-red-600 hover:text-red-700"
+                    className="bg-red-900/30 hover:bg-red-800/40 text-red-400 border border-red-600"
                   >
                     🗑️ Eliminar
                   </Button>

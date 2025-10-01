@@ -129,36 +129,87 @@ export default function PisosPage() {
 
   const handleBlockApartment = async (apartmentId: number, currentStatus: string) => {
     try {
-      const newStatus = currentStatus === 'blocked' ? 'pending' : 'blocked'
-      console.log('🔒 Bloqueando apartamento:', apartmentId, 'de', currentStatus, 'a', newStatus)
+      let updateData: any = {}
+      let newStatus: string
+      
+      if (currentStatus === 'blocked') {
+        // Desbloquear: restaurar el estado anterior
+        const apartment = floors
+          .flatMap(f => f.apartments || [])
+          .find(a => a.id === apartmentId)
+        
+        const previousStatus = (apartment as any)?.previous_status || 'pending'
+        newStatus = previousStatus
+        updateData = { 
+          status: previousStatus,
+          previous_status: null 
+        }
+        console.log('🔓 Desbloqueando apartamento:', apartmentId, 'restaurando a:', previousStatus)
+      } else {
+        // Bloquear: guardar el estado actual antes de bloquear
+        newStatus = 'blocked'
+        updateData = { 
+          status: 'blocked',
+          previous_status: currentStatus 
+        }
+        console.log('🔒 Bloqueando apartamento:', apartmentId, 'guardando estado previo:', currentStatus)
+      }
+      
+      // Actualizar localmente primero (optimistic update)
+      setFloors(prevFloors => 
+        prevFloors.map(floor => {
+          // Actualizar el apartamento
+          const updatedApartments = floor.apartments?.map(apt => 
+            apt.id === apartmentId ? { 
+              ...apt, 
+              status: newStatus,
+              previous_status: updateData.previous_status 
+            } : apt
+          ) || []
+          
+          // Recalcular el progreso del piso basado en tareas
+          let totalTasks = 0
+          let completedTasks = 0
+          let apartmentsWithoutTasks = 0
+          
+          updatedApartments.forEach(apt => {
+            const tasks = (apt as any).apartment_tasks || []
+            totalTasks += tasks.length
+            completedTasks += tasks.filter((task: any) => task.status === 'completed').length
+            
+            // Contar apartamentos sin tareas
+            if (tasks.length === 0) {
+              apartmentsWithoutTasks++
+            }
+          })
+          
+          const newProgressPercentage = totalTasks > 0 
+            ? Math.round((completedTasks / totalTasks) * 100) 
+            : 0
+          
+          return {
+            ...floor,
+            apartments: updatedApartments,
+            progress_percentage: newProgressPercentage,
+            apartments_count: updatedApartments.length,
+            total_tasks: totalTasks,
+            completed_tasks: completedTasks,
+            apartments_without_tasks: apartmentsWithoutTasks
+          }
+        })
+      )
       
       // Actualizar en la base de datos
-      console.log('📝 Llamando a updateApartment...')
-      const result = await updateApartment(apartmentId, { status: newStatus })
-      console.log('✅ updateApartment resultado:', result)
-      
-      // Actualizar el status del apartamento basado en sus tareas
-      console.log('🔄 Actualizando status basado en tareas...')
-      await updateApartmentStatusFromTasks(apartmentId)
-      console.log('✅ Status actualizado basado en tareas')
-      
-      // Actualizar localmente el status del apartamento en los pisos
-      console.log('🔄 Actualizando estado local...')
-      setFloors(prevFloors => 
-        prevFloors.map(floor => ({
-          ...floor,
-          apartments: floor.apartments?.map(apt => 
-            apt.id === apartmentId ? { ...apt, status: newStatus } : apt
-          )
-        }))
-      )
-      console.log('✅ Estado local actualizado')
+      await updateApartment(apartmentId, updateData)
+      console.log('✅ Apartamento bloqueado/desbloqueado exitosamente - sin recarga')
       
       toast.success(`Apartamento ${newStatus === 'blocked' ? 'bloqueado' : 'desbloqueado'} exitosamente`)
       
     } catch (error) {
       console.error('Error al bloquear/desbloquear apartamento:', error)
       toast.error('Error al bloquear/desbloquear apartamento')
+      // Revertir el cambio optimista en caso de error
+      refresh()
     }
   }
 
@@ -466,8 +517,13 @@ export default function PisosPage() {
                           <div className="flex items-center">
                             <div className="flex-1">
                               <div className="flex justify-between text-xs text-gray-600 mb-1">
-                                <span>Progreso</span>
-                                <span>{floor.progress_percentage || 0}%</span>
+                                <span>
+                                  {(floor as any).total_tasks > 0 
+                                    ? `${(floor as any).completed_tasks || 0}/${(floor as any).total_tasks || 0} tareas`
+                                    : 'Sin tareas'
+                                  }
+                                </span>
+                                <span className="font-semibold">{floor.progress_percentage || 0}%</span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div
@@ -478,8 +534,18 @@ export default function PisosPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {floor.apartments_count || 0} departamentos
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {floor.apartments_count || 0} departamentos
+                          </div>
+                          {(floor as any).apartments_without_tasks !== undefined && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {(floor as any).apartments_without_tasks > 0 
+                                ? `${(floor as any).apartments_without_tasks} sin tareas`
+                                : 'Todos con tareas'
+                              }
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(floor.created_at)}

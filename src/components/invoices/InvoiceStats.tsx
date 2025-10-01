@@ -39,11 +39,11 @@ export function InvoiceStats({ stats, incomeData: propIncomeData, incomeLoading:
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Total Facturas</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-400">Total Facturas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-black">{stats.total}</div>
-          <p className="text-xs text-gray-600">
+          <div className="text-2xl font-bold text-slate-100">{stats.total}</div>
+          <p className="text-xs text-slate-400">
             {stats.processed} procesadas ({processedPercentage}%)
           </p>
         </CardContent>
@@ -51,11 +51,11 @@ export function InvoiceStats({ stats, incomeData: propIncomeData, incomeLoading:
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Facturas Pendientes</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-400">Facturas Pendientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          <p className="text-xs text-gray-600">
+          <div className="text-2xl font-bold text-yellow-400">{stats.pending}</div>
+          <p className="text-xs text-slate-400">
             Requieren procesamiento
           </p>
         </CardContent>
@@ -63,17 +63,17 @@ export function InvoiceStats({ stats, incomeData: propIncomeData, incomeLoading:
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Ingresos</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-400">Ingresos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">
+          <div className="text-2xl font-bold text-emerald-400">
             {incomeLoading ? (
-              <div className="animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+              <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
             ) : (
               formatCurrency(incomeData?.total_income || 0)
             )}
           </div>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-slate-400">
             {incomeData?.processed_invoices_count || 0} facturas procesadas
           </p>
         </CardContent>
@@ -81,13 +81,13 @@ export function InvoiceStats({ stats, incomeData: propIncomeData, incomeLoading:
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Ingresos Pendientes</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-400">Ingresos Pendientes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-orange-600">
+          <div className="text-2xl font-bold text-orange-400">
             {formatCurrency(stats.totalAmount - stats.realIncomeAmount)}
           </div>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-slate-400">
             Facturas no procesadas
           </p>
         </CardContent>
@@ -95,35 +95,35 @@ export function InvoiceStats({ stats, incomeData: propIncomeData, incomeLoading:
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Desglose Ingresos</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-400">Desglose Ingresos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Neto:</span>
-              <span className="font-medium text-black">
+              <span className="text-slate-400">Neto:</span>
+              <span className="font-medium text-slate-100">
                 {incomeLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-4 w-16 rounded"></div>
+                  <div className="animate-pulse bg-slate-700 h-4 w-16 rounded"></div>
                 ) : (
                   formatCurrency(incomeData?.total_net || 0)
                 )}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">IVA 19%:</span>
-              <span className="font-medium text-black">
+              <span className="text-slate-400">IVA 19%:</span>
+              <span className="font-medium text-slate-100">
                 {incomeLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-4 w-16 rounded"></div>
+                  <div className="animate-pulse bg-slate-700 h-4 w-16 rounded"></div>
                 ) : (
                   formatCurrency(incomeData?.total_iva || 0)
                 )}
               </span>
             </div>
-            <div className="flex justify-between text-sm border-t pt-1">
-              <span className="text-gray-600 font-semibold">Total:</span>
-              <span className="font-bold text-black">
+            <div className="flex justify-between text-sm border-t border-slate-600 pt-1">
+              <span className="text-slate-300 font-semibold">Total:</span>
+              <span className="font-bold text-slate-100">
                 {incomeLoading ? (
-                  <div className="animate-pulse bg-gray-200 h-4 w-20 rounded"></div>
+                  <div className="animate-pulse bg-slate-700 h-4 w-20 rounded"></div>
                 ) : (
                   formatCurrency(incomeData?.total_income || 0)
                 )}

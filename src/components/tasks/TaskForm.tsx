@@ -18,6 +18,8 @@ interface TaskFormData {
   worker_payment?: number
   assigned_to?: number | null
   start_date?: string
+  end_date?: string
+  completed_at?: string
   notes?: string
 }
 
@@ -88,6 +90,8 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
       worker_payment: task.worker_payment || 0,
       assigned_to: task.assigned_to || null,
       start_date: task.start_date || '',
+      end_date: task.end_date || '',
+      completed_at: task.completed_at ? new Date(task.completed_at).toISOString().split('T')[0] : '',
       notes: task.notes || ''
     } : {
       apartment_id: apartmentId || 0,
@@ -96,7 +100,10 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
       task_category: 'Estructura',
       estimated_hours: 0,
       worker_payment: 0,
-      assigned_to: null
+      assigned_to: null,
+      start_date: '',
+      end_date: '',
+      completed_at: ''
     }
   })
 
@@ -221,7 +228,15 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
         throw new Error('Las horas estimadas deben ser mayor a 0')
       }
 
-      await onSubmit(data)
+      // Convertir strings vacíos a null para campos de fecha
+      const cleanedData = {
+        ...data,
+        start_date: data.start_date && data.start_date.trim() !== '' ? data.start_date : null,
+        end_date: data.end_date && data.end_date.trim() !== '' ? data.end_date : null,
+        completed_at: data.completed_at && data.completed_at.trim() !== '' ? data.completed_at : null
+      }
+
+      await onSubmit(cleanedData)
       toast.success(`Tarea ${task ? 'actualizada' : 'creada'} exitosamente`)
       onCancel()
     } catch (err: any) {
@@ -451,15 +466,31 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
         </select>
       </div>
 
-      {/* Fecha de Inicio */}
-      <div>
-        <Input
-          id="start_date"
-          label="Fecha de Inicio"
-          type="date"
-          {...register('start_date')}
-          error={errors.start_date?.message}
-        />
+      {/* Fechas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Input
+            id="start_date"
+            label="Fecha de Inicio"
+            type="date"
+            {...register('start_date')}
+            error={errors.start_date?.message}
+          />
+          <p className="text-xs text-slate-400 mt-1">Si no se especifica, se usa la fecha actual</p>
+        </div>
+
+        {task && (
+          <div>
+            <Input
+              id="completed_at"
+              label="Fecha de Terminación"
+              type="date"
+              {...register('completed_at')}
+              error={errors.completed_at?.message}
+            />
+            <p className="text-xs text-slate-400 mt-1">Fecha real en que se completó</p>
+          </div>
+        )}
       </div>
 
 

@@ -94,3 +94,5 @@ ORDER BY created_at DESC;
 
 SELECT '✅ ANÁLISIS DE URLs COMPLETADO' as resultado;
 
+
+

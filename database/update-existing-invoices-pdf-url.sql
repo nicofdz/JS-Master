@@ -48,3 +48,5 @@ SELECT
   COUNT(*) - COUNT(pdf_url) as sin_pdf_url
 FROM invoice_income;
 
+
+

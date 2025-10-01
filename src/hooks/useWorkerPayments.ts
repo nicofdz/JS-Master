@@ -64,6 +64,9 @@ export function useWorkerPayments() {
           task_name,
           status,
           worker_payment,
+          start_date,
+          completed_at,
+          end_date,
           created_at,
           apartments!inner(
             apartment_number,
@@ -75,7 +78,7 @@ export function useWorkerPayments() {
         `)
         .eq('assigned_to', workerId)
         .not('worker_payment', 'is', null)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false, nullsFirst: false })
 
       if (error) throw error
 

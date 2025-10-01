@@ -11,13 +11,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none'
 
     const variants = {
-      primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-      secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
-      success: 'bg-success-600 text-white hover:bg-success-700 focus:ring-success-500',
-      warning: 'bg-warning-600 text-white hover:bg-warning-700 focus:ring-warning-500',
-      danger: 'bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500',
-      outline: 'border border-gray-300 bg-transparent text-gray-700 hover:bg-gray-50 focus:ring-primary-500',
-      ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-primary-500'
+      primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
+      secondary: 'bg-slate-700 text-slate-100 hover:bg-slate-600 focus:ring-slate-500',
+      success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+      warning: 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500',
+      danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+      outline: 'border border-slate-600 bg-transparent text-slate-300 hover:bg-slate-700 focus:ring-blue-500',
+      ghost: 'bg-transparent text-slate-300 hover:bg-slate-700 focus:ring-blue-500'
     }
 
     const sizes = {

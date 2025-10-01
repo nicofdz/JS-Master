@@ -36,20 +36,20 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle className="w-5 h-5 text-green-600" />
-      case 'in_progress': return <Play className="w-5 h-5 text-blue-600" />
-      case 'blocked': return <XCircle className="w-5 h-5 text-red-600" />
-      default: return <Clock className="w-5 h-5 text-gray-600" />
+      case 'completed': return <CheckCircle className="w-5 h-5 text-emerald-400" />
+      case 'in_progress': return <Play className="w-5 h-5 text-blue-400" />
+      case 'blocked': return <XCircle className="w-5 h-5 text-red-400" />
+      default: return <Clock className="w-5 h-5 text-slate-400" />
     }
   }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200'
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'low': return 'bg-green-100 text-green-800 border-green-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'urgent': return 'bg-red-900 text-red-200 border-red-700'
+      case 'high': return 'bg-orange-900 text-orange-200 border-orange-700'
+      case 'medium': return 'bg-yellow-900 text-yellow-200 border-yellow-700'
+      case 'low': return 'bg-green-900 text-green-200 border-green-700'
+      default: return 'bg-slate-700 text-slate-200 border-slate-600'
     }
   }
 
@@ -69,7 +69,15 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
     try {
       setIsUpdating(true)
       await onStatusChange(task.id, newStatus)
-      toast.success(`Tarea ${newStatus === 'completed' ? 'completada' : newStatus === 'in_progress' ? 'iniciada' : 'bloqueada'}`)
+      
+      const statusMessages: Record<string, string> = {
+        'completed': 'completada',
+        'in_progress': 'iniciada',
+        'blocked': 'bloqueada',
+        'pending': 'marcada como pendiente'
+      }
+      
+      toast.success(`Tarea ${statusMessages[newStatus] || 'actualizada'}`)
     } catch (error: any) {
       toast.error(`Error al actualizar tarea: ${error.message}`)
     } finally {
@@ -96,7 +104,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               variant="outline"
               onClick={() => handleStatusChange('blocked')}
               disabled={isUpdating}
-              className="text-red-600 border-red-600 hover:bg-red-50"
+              className="text-red-400 border-red-600 hover:bg-red-900/30"
             >
               <XCircle className="w-4 h-4 mr-1" />
               Bloquear
@@ -120,7 +128,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               variant="outline"
               onClick={() => handleStatusChange('pending')}
               disabled={isUpdating}
-              className="text-gray-600 border-gray-600 hover:bg-gray-50"
+              className="text-slate-300 border-slate-600 hover:bg-slate-700"
             >
               <RotateCcw className="w-4 h-4 mr-1" />
               Pendiente
@@ -130,7 +138,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               variant="outline"
               onClick={() => handleStatusChange('blocked')}
               disabled={isUpdating}
-              className="text-red-600 border-red-600 hover:bg-red-50"
+              className="text-red-400 border-red-600 hover:bg-red-900/30"
             >
               <XCircle className="w-4 h-4 mr-1" />
               Bloquear
@@ -154,7 +162,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               variant="outline"
               onClick={() => handleStatusChange('pending')}
               disabled={isUpdating}
-              className="text-gray-600 border-gray-600 hover:bg-gray-50"
+              className="text-slate-300 border-slate-600 hover:bg-slate-700"
             >
               <RotateCcw className="w-4 h-4 mr-1" />
               Pendiente
@@ -169,7 +177,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               variant="outline"
               onClick={() => handleStatusChange('in_progress')}
               disabled={isUpdating}
-              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+              className="text-blue-400 border-blue-600 hover:bg-blue-900/30"
             >
               <Play className="w-4 h-4 mr-1" />
               Reabrir
@@ -179,7 +187,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               variant="outline"
               onClick={() => handleStatusChange('pending')}
               disabled={isUpdating}
-              className="text-gray-600 border-gray-600 hover:bg-gray-50"
+              className="text-slate-300 border-slate-600 hover:bg-slate-700"
             >
               <RotateCcw className="w-4 h-4 mr-1" />
               Pendiente
@@ -192,11 +200,11 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
   }
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      task.status === 'completed' ? 'bg-green-50 border-green-200' :
-      task.status === 'in_progress' ? 'bg-blue-50 border-blue-200' :
-      task.status === 'blocked' ? 'bg-red-50 border-red-200' :
-      'bg-white border-gray-200'
+    <Card className={`transition-all duration-200 hover:shadow-xl ${
+      task.status === 'completed' ? 'bg-emerald-900/20 border-emerald-600' :
+      task.status === 'in_progress' ? 'bg-blue-900/20 border-blue-500' :
+      task.status === 'blocked' ? 'bg-red-900/20 border-red-600' :
+      'bg-slate-800 border-slate-600'
     }`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
@@ -204,14 +212,14 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
             {/* Header con estado y prioridad */}
             <div className="flex items-center space-x-3 mb-3">
               {getStatusIcon(task.status)}
-              <h3 className="text-lg font-medium text-gray-900">{task.task_name}</h3>
+              <h3 className="text-lg font-medium text-slate-100">{task.task_name}</h3>
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(task.priority)}`}>
                 {getPriorityIcon(task.priority)}
                 <span className="ml-1 capitalize">{task.priority}</span>
               </span>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-semibold ${getStatusColor(task.status)}`}>
                 {task.status === 'in_progress' ? (
-                  <div className="w-3 h-3 mr-1 rounded-full bg-blue-500 border border-gray-800 flex-shrink-0"></div>
+                  <div className="w-3 h-3 mr-1 rounded-full bg-white border-2 border-white flex-shrink-0"></div>
                 ) : (
                   <span className="mr-1">{getStatusEmoji(task.status)}</span>
                 )}
@@ -227,11 +235,11 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
             
             {/* Descripción */}
             {task.task_description && (
-              <p className="text-sm text-gray-600 mb-2">{task.task_description}</p>
+              <p className="text-sm text-slate-300 mb-2">{task.task_description}</p>
             )}
             
             {/* Información de la tarea */}
-            <div className="space-y-2 text-sm text-gray-500 mb-3">
+            <div className="space-y-2 text-sm text-slate-300 mb-3">
               <div className="flex items-center space-x-1">
                 <Building2 className="w-4 h-4" />
                 <span className="font-medium">Proyecto:</span>
@@ -262,7 +270,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
             </div>
 
             {/* Fechas */}
-            <div className="flex items-center space-x-4 text-xs text-gray-500 mb-3">
+            <div className="flex items-center space-x-4 text-xs text-slate-400 mb-3">
               {task.start_date && (
                 <div className="flex items-center space-x-1">
                   <Clock className="w-3 h-3" />
@@ -287,7 +295,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
                   variant="ghost"
                   size="sm"
                   onClick={() => onInfo(task)}
-                  className="text-purple-600 hover:text-purple-900 flex items-center space-x-1"
+                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 flex items-center space-x-1"
                 >
                   <Info className="w-4 h-4" />
                   <span>Info</span>
@@ -296,7 +304,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(task)}
-                  className="text-blue-600 hover:text-blue-900"
+                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
                 >
                   Editar
                 </Button>
@@ -304,7 +312,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
                   variant="ghost"
                   size="sm"
                   onClick={() => onComments(task.id)}
-                  className="text-green-600 hover:text-green-900 flex items-center space-x-1"
+                  className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 flex items-center space-x-1"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Comentarios</span>
@@ -313,7 +321,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
                   variant="ghost"
                   size="sm"
                   onClick={() => onDelete(task.id)}
-                  className="text-red-600 hover:text-red-900"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
                 >
                   Eliminar
                 </Button>

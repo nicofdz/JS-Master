@@ -234,9 +234,18 @@ export function useTasks(apartmentId?: number) {
 
   const createTask = async (taskData: TaskInsert) => {
     try {
+      // Si no se especifica start_date, usar la fecha actual
+      // Convertir undefined o string vacío a null
+      const dataToInsert = {
+        ...taskData,
+        start_date: taskData.start_date || new Date().toISOString().split('T')[0],
+        end_date: taskData.end_date || null,
+        completed_at: taskData.completed_at || null
+      }
+      
       const { data, error } = await supabase
         .from('apartment_tasks')
-        .insert(taskData)
+        .insert(dataToInsert)
         .select(`
           *,
           apartments!inner(
@@ -293,9 +302,20 @@ export function useTasks(apartmentId?: number) {
 
   const updateTask = async (id: number, taskData: TaskUpdate) => {
     try {
+      // Si el status cambia a 'completed' y no hay completed_at, establecer la fecha actual
+      // Limpiar strings vacíos convirtiéndolos a null
+      const dataToUpdate = {
+        ...taskData,
+        start_date: taskData.start_date === '' ? null : taskData.start_date,
+        end_date: taskData.end_date === '' ? null : taskData.end_date,
+        completed_at: taskData.status === 'completed' && !taskData.completed_at
+          ? new Date().toISOString()
+          : (taskData.completed_at === '' ? null : taskData.completed_at)
+      }
+      
       const { data, error } = await supabase
         .from('apartment_tasks')
-        .update(taskData)
+        .update(dataToUpdate)
         .eq('id', id)
         .select(`
           *,

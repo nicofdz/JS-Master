@@ -39,3 +39,5 @@ SELECT COUNT(*) as total_tasks FROM public.apartment_tasks;
 
 
 
+
+

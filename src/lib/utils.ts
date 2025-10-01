@@ -6,30 +6,30 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getStatusColor(status: string | null | undefined): string {
-  if (!status) return 'bg-gray-500 text-white'
+  if (!status) return 'bg-slate-600 text-slate-200'
   
   switch (status) {
     case 'completed':
-      return 'bg-green-600 text-white'
+      return 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50'
     case 'good':
-      return 'bg-green-600 text-white'
+      return 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50'
     case 'active':
-      return 'bg-green-600 text-white'
+      return 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50'
     case 'planning':
-      return 'bg-gray-600 text-white'
+      return 'bg-slate-600 text-slate-200'
     case 'in-progress':
     case 'in_progress':
-      return 'bg-blue-500 text-white'
+      return 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
     case 'warning':
-      return 'bg-yellow-600 text-white'
+      return 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/50'
     case 'danger':
-      return 'bg-red-600 text-white'
+      return 'bg-red-600 text-white shadow-lg shadow-red-900/50'
     case 'blocked':
-      return 'bg-red-600 text-white'
+      return 'bg-red-600 text-white shadow-lg shadow-red-900/50'
     case 'delayed':
-      return 'bg-orange-600 text-white'
+      return 'bg-orange-600 text-white shadow-lg shadow-orange-900/50'
     case 'pending':
-      return 'bg-gray-500 text-white'
+      return 'bg-slate-600 text-slate-200 shadow-md'
     default:
       return 'bg-gray-500 text-white'
   }

@@ -91,34 +91,6 @@ export default function LoginPage() {
     }
   }
 
-  const demoUsers = [
-    { email: 'admin@demo.com', password: 'demo123', role: 'Administrador' },
-    { email: 'supervisor@demo.com', password: 'demo123', role: 'Supervisor' },
-    { email: 'jefe@demo.com', password: 'demo123', role: 'Jefe de Cuadrilla' },
-    { email: 'maestro@demo.com', password: 'demo123', role: 'Maestro' },
-  ]
-
-  const loginWithDemo = async (email: string, password: string) => {
-    setEmail(email)
-    setPassword(password)
-    setIsLoading(true)
-
-    try {
-      const { error } = await signIn(email, password)
-      
-      if (error) {
-        toast.error(error.message || 'Error al iniciar sesión')
-        return
-      }
-
-      toast.success('¡Bienvenido!')
-      router.push('/dashboard')
-    } catch (error) {
-      toast.error('Error inesperado al iniciar sesión')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   if (loading) {
     return (
@@ -271,37 +243,6 @@ export default function LoginPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Usuarios demo */}
-        {!showRegister && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">🎭 Usuarios Demo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4 text-center">
-                Haz clic en cualquier usuario para iniciar sesión automáticamente
-              </p>
-              <div className="grid grid-cols-1 gap-2">
-                {demoUsers.map((user, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => loginWithDemo(user.email, user.password)}
-                    disabled={isLoading}
-                    className="text-left justify-start"
-                  >
-                    <div>
-                      <div className="font-medium">{user.role}</div>
-                      <div className="text-xs text-gray-500">{user.email}</div>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   )

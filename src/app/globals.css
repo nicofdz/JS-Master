@@ -3,17 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+  --foreground-rgb: 226, 232, 240;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 30, 41, 59;
 }
 
 body {
@@ -32,23 +24,136 @@ body {
   }
 }
 
+/* Estilos globales para tablas */
+@layer base {
+  table {
+    color: rgb(226, 232, 240);
+  }
+  
+  thead {
+    background-color: rgb(51, 65, 85);
+    color: rgb(203, 213, 225);
+  }
+  
+  tbody {
+    background-color: rgb(30, 41, 59);
+  }
+  
+  tbody tr {
+    border-bottom: 1px solid rgb(51, 65, 85);
+  }
+  
+  tbody tr:hover {
+    background-color: rgb(51, 65, 85);
+  }
+  
+  th, td {
+    color: rgb(226, 232, 240);
+  }
+  
+  /* Títulos principales */
+  h1, h2, h3, h4, h5, h6 {
+    color: rgb(241, 245, 249);
+  }
+  
+  /* Párrafos y texto general */
+  p, span, div {
+    color: rgb(203, 213, 225);
+  }
+  
+  /* Labels */
+  label {
+    color: rgb(203, 213, 225);
+  }
+}
+
 /* Mejorar estilos de formularios */
 @layer base {
   input, select, textarea {
-    color: #111827 !important;
-    background-color: white !important;
+    color: #e2e8f0 !important;
+    background-color: #1e293b !important;
+    border-color: #475569 !important;
   }
   
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px white inset !important;
-    -webkit-text-fill-color: #111827 !important;
+    -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
   }
   
   select option {
-    color: #111827;
-    background-color: white;
+    color: #e2e8f0;
+    background-color: #1e293b;
+  }
+  
+  input::placeholder,
+  textarea::placeholder {
+    color: #64748b !important;
+  }
+}
+
+/* Clases de utilidad personalizadas para el tema oscuro */
+@layer utilities {
+  /* Reemplazos de colores de texto oscuros */
+  .text-gray-900 {
+    color: rgb(241, 245, 249) !important;
+  }
+  
+  .text-gray-800 {
+    color: rgb(226, 232, 240) !important;
+  }
+  
+  .text-gray-700 {
+    color: rgb(203, 213, 225) !important;
+  }
+  
+  .text-gray-600 {
+    color: rgb(148, 163, 184) !important;
+  }
+  
+  .text-gray-500 {
+    color: rgb(100, 116, 139) !important;
+  }
+  
+  /* Fondos oscuros actualizados */
+  .bg-white {
+    background-color: rgb(30, 41, 59) !important;
+  }
+  
+  .bg-gray-50 {
+    background-color: rgb(15, 23, 42) !important;
+  }
+  
+  .bg-gray-100 {
+    background-color: rgb(30, 41, 59) !important;
+  }
+  
+  .bg-gray-200 {
+    background-color: rgb(51, 65, 85) !important;
+  }
+  
+  /* Bordes */
+  .border-gray-200 {
+    border-color: rgb(51, 65, 85) !important;
+  }
+  
+  .border-gray-300 {
+    border-color: rgb(71, 85, 105) !important;
+  }
+  
+  /* Hover backgrounds */
+  .hover\:bg-gray-50:hover {
+    background-color: rgb(51, 65, 85) !important;
+  }
+  
+  .hover\:bg-gray-100:hover {
+    background-color: rgb(51, 65, 85) !important;
+  }
+  
+  /* Dividers */
+  .divide-gray-200 > * + * {
+    border-color: rgb(51, 65, 85) !important;
   }
 }

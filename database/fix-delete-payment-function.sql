@@ -148,3 +148,5 @@ SELECT '2. Haz un pago a un trabajador' as paso3;
 SELECT '3. Ve al historial y elimina el pago' as paso4;
 SELECT '4. Verifica que las tareas vuelven a "Por Pagar"' as paso5;
 
+
+

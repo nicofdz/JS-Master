@@ -120,3 +120,5 @@ COMMENT ON COLUMN invoice_income.parsed_data IS 'Datos estructurados extraídos 
 
 
 
+
+

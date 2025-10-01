@@ -116,12 +116,12 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
   if (!isOpen || !invoice) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-black">Editar Factura #{invoice.invoice_number}</h2>
-            <Button variant="outline" onClick={onClose}>
+            <h2 className="text-xl font-semibold text-slate-100">Editar Factura #{invoice.invoice_number}</h2>
+            <Button variant="outline" onClick={onClose} className="text-slate-300 hover:text-slate-100">
               ✕
             </Button>
           </div>
@@ -130,11 +130,11 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
             {/* Datos del Cliente */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-black">Datos del Cliente</CardTitle>
+                <CardTitle className="text-lg text-slate-100">Datos del Cliente</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Empresa
                   </label>
                   <Input
@@ -145,7 +145,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     RUT
                   </label>
                   <Input
@@ -156,7 +156,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Dirección
                   </label>
                   <Input
@@ -167,7 +167,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Ciudad
                   </label>
                   <Input
@@ -182,11 +182,11 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
             {/* Datos de la Factura */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-black">Datos de la Factura</CardTitle>
+                <CardTitle className="text-lg text-slate-100">Datos de la Factura</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Número de Factura
                   </label>
                   <Input
@@ -197,7 +197,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Fecha de Emisión
                   </label>
                   <Input
@@ -208,7 +208,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Contrato
                   </label>
                   <Input
@@ -219,7 +219,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Forma de Pago
                   </label>
                   <Input
@@ -234,11 +234,11 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
             {/* Montos */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-black">Montos</CardTitle>
+                <CardTitle className="text-lg text-slate-100">Montos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Monto Neto
                   </label>
                   <Input
@@ -250,7 +250,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     IVA 19%
                   </label>
                   <Input
@@ -262,7 +262,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Impuesto Adicional
                   </label>
                   <Input
@@ -274,7 +274,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Total
                   </label>
                   <Input
@@ -291,11 +291,11 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
             {/* Descripción y Estado */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg text-black">Descripción y Estado</CardTitle>
+                <CardTitle className="text-lg text-slate-100">Descripción y Estado</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Descripción del Servicio
                   </label>
                   <Textarea
@@ -307,7 +307,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Estado
                   </label>
                   <Select
@@ -325,14 +325,14 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
           </div>
 
           {/* Botones */}
-          <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-slate-600">
+            <Button variant="outline" onClick={onClose} className="text-slate-300 hover:text-slate-100">
               Cancelar
             </Button>
             <Button 
               onClick={handleSave}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isLoading ? 'Guardando...' : 'Guardar Cambios'}
             </Button>

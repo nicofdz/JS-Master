@@ -101,15 +101,39 @@ export default function ApartamentosPage() {
   }
 
   const handleBlockApartment = async (apartmentId: number, currentStatus: string) => {
-    const newStatus = currentStatus === 'blocked' ? 'pending' : 'blocked'
-    const action = newStatus === 'blocked' ? 'bloquear' : 'desbloquear'
+    let updateData: any = {}
+    let action: string
+    
+    if (currentStatus === 'blocked') {
+      // Desbloquear: restaurar el estado anterior
+      const apartment = apartments.find(a => a.id === apartmentId)
+      console.log('🔓 Desbloqueando apartamento:', apartment)
+      console.log('📋 previous_status en memoria:', (apartment as any)?.previous_status)
+      
+      const previousStatus = (apartment as any)?.previous_status || 'pending'
+      console.log('✅ Estado a restaurar:', previousStatus)
+      
+      updateData = { 
+        status: previousStatus,
+        previous_status: null 
+      }
+      action = 'desbloquear'
+    } else {
+      // Bloquear: guardar el estado actual antes de bloquear
+      console.log('🔒 Bloqueando apartamento - Estado actual:', currentStatus)
+      updateData = { 
+        status: 'blocked',
+        previous_status: currentStatus 
+      }
+      action = 'bloquear'
+    }
     
     if (!confirm(`¿Estás seguro de que quieres ${action} este apartamento?`)) {
       return
     }
 
     try {
-      await updateApartment(apartmentId, { status: newStatus })
+      await updateApartment(apartmentId, updateData)
       toast.success(`Apartamento ${action}do exitosamente`)
     } catch (err: any) {
       toast.error(`Error al ${action} apartamento: ${err.message || 'Error desconocido'}`)
@@ -118,11 +142,61 @@ export default function ApartamentosPage() {
 
   const handleCreateApartment = async (data: any) => {
     try {
-      await createApartment(data)
+      console.log('📝 Creando apartamento con tareas:', data)
+      
+      // Extraer las tareas seleccionadas antes de crear el apartamento
+      const { selectedTasks, ...apartmentData } = data
+      
+      // Crear el apartamento
+      const createdApartment = await createApartment(apartmentData)
+      
+      // Si hay tareas seleccionadas, crearlas
+      if (selectedTasks && selectedTasks.length > 0) {
+        // Descripciones más útiles según el tipo de tarea
+        const getTaskDescription = (taskName: string) => {
+          const descriptions: Record<string, string> = {
+            'Tabiques': 'Construcción e instalación de tabiques divisorios',
+            'Instalacion de puertas': 'Instalación de puertas interiores y marcos',
+            'Piso flotante': 'Instalación de piso flotante en todas las áreas',
+            'Cornisas': 'Instalación de cornisas decorativas en techo'
+          }
+          return descriptions[taskName] || `Completar tarea de ${taskName}`
+        }
+
+        const tasksToCreate = selectedTasks
+          .filter((task: any) => task.templateId > 0) // Solo tareas con template seleccionado
+          .map((task: any) => ({
+            apartment_id: createdApartment.id,
+            task_name: task.name,
+            task_description: getTaskDescription(task.name),
+            task_category: task.category,
+            priority: 'medium',
+            estimated_hours: task.estimated_hours,
+            status: 'pending'
+          }))
+        
+        console.log('📋 Creando', tasksToCreate.length, 'tareas automáticamente')
+        
+        // Crear todas las tareas
+        for (const taskData of tasksToCreate) {
+          try {
+            await createTask(taskData)
+          } catch (taskErr) {
+            console.error('Error creando tarea:', taskErr)
+            // Continuar con las siguientes tareas aunque falle una
+          }
+        }
+        
+        toast.success(`Apartamento creado con ${tasksToCreate.length} tarea(s)`)
+      } else {
+        toast.success('Apartamento creado exitosamente')
+      }
+      
       setShowCreateModal(false)
       setFormError(null)
     } catch (err: any) {
       setFormError(err.message || 'Error desconocido al crear apartamento.')
+      toast.error('Error al crear apartamento')
     }
   }
 

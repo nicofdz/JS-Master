@@ -41,3 +41,5 @@ $$;
 -- Verificar que la función se creó correctamente
 SELECT 'Función delete_payment creada exitosamente' as status;
 
+
+

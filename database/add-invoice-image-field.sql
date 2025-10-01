@@ -21,3 +21,5 @@ AND table_schema = 'public'
 AND column_name IN ('pdf_url', 'image_url')
 ORDER BY ordinal_position;
 
+
+

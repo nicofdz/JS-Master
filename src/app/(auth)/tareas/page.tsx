@@ -10,7 +10,7 @@ import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskComments } from '@/components/tasks/TaskComments'
 import { TaskInfo } from '@/components/tasks/TaskInfo'
-import { Plus, Search, Filter, Edit, Trash2, Clock, User, AlertCircle, CheckCircle, XCircle, Building2, ListTodo, Play, Lock } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2, Clock, User, AlertCircle, CheckCircle, XCircle, Building2, ListTodo, Play, Lock, Home } from 'lucide-react'
 import { formatDate, getStatusColor, getStatusEmoji } from '@/lib/utils'
 import { ACTIVITY_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
@@ -21,6 +21,7 @@ export default function TareasPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [floorFilter, setFloorFilter] = useState<string>('all')
+  const [apartmentFilter, setApartmentFilter] = useState<string>('all')
   const [workerFilter, setWorkerFilter] = useState<string>('all')
   const [showDelayedOnly, setShowDelayedOnly] = useState<boolean>(false)
   const [showPendingOnly, setShowPendingOnly] = useState<boolean>(false)
@@ -56,7 +57,13 @@ export default function TareasPage() {
   // Resetear filtro de piso cuando cambie el proyecto
   useEffect(() => {
     setFloorFilter('all')
+    setApartmentFilter('all')
   }, [selectedProjectId])
+
+  // Resetear filtro de apartamento cuando cambie el piso
+  useEffect(() => {
+    setApartmentFilter('all')
+  }, [floorFilter])
 
   // Filtrar tareas por piso
   const filteredTasks = tasks.filter(task => {
@@ -82,6 +89,10 @@ export default function TareasPage() {
     const selectedFloor = floors.find(f => f.id.toString() === floorFilter)
     const selectedFloorNumber = selectedFloor?.floor_number
     const matchesFloor = floorFilter === 'all' || task.floor_number === selectedFloorNumber
+    
+    // Filtro por apartamento
+    const selectedApartment = apartments.find(a => a.id.toString() === apartmentFilter)
+    const matchesApartment = apartmentFilter === 'all' || task.apartment_id?.toString() === apartmentFilter
     
     // Filtro por tareas atrasadas
     const matchesDelayed = !showDelayedOnly || task.is_delayed === true
@@ -110,12 +121,17 @@ export default function TareasPage() {
       matchesDelayed
     })
     
-    return matchesSearch && matchesStatus && matchesPriority && matchesProject && matchesFloor && matchesWorker && matchesDelayed
+    return matchesSearch && matchesStatus && matchesPriority && matchesProject && matchesFloor && matchesApartment && matchesWorker && matchesDelayed
   })
 
   // Filtrar pisos por proyecto seleccionado
   const availableFloors = floors.filter(floor => 
     !selectedProjectId || selectedProjectId === 'all' || floor.project_id.toString() === selectedProjectId?.toString()
+  )
+
+  // Filtrar apartamentos por piso seleccionado
+  const availableApartments = apartments.filter(apartment => 
+    floorFilter === 'all' || apartment.floor_id?.toString() === floorFilter
   )
 
   // Contar tareas por estado (se calculan más abajo basadas en filteredTasks)
@@ -283,7 +299,7 @@ export default function TareasPage() {
           <CardTitle>Filtros y Búsqueda</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -323,6 +339,9 @@ export default function TareasPage() {
                 <option value="low">Baja</option>
               </select>
             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <select
@@ -345,6 +364,27 @@ export default function TareasPage() {
               </select>
             </div>
             <div className="relative">
+              <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                value={apartmentFilter}
+                onChange={(e) => setApartmentFilter(e.target.value)}
+                disabled={floorFilter === 'all'}
+              >
+                <option value="all">
+                  {floorFilter === 'all'
+                    ? 'Selecciona un piso primero' 
+                    : 'Todos los apartamentos'
+                  }
+                </option>
+                {availableApartments.map((apartment) => (
+                  <option key={apartment.id} value={apartment.id}>
+                    Depto {apartment.apartment_number}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <select
                 className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900"
@@ -359,7 +399,6 @@ export default function TareasPage() {
                 ))}
               </select>
             </div>
-
           </div>
         </CardContent>
       </Card>
@@ -370,11 +409,11 @@ export default function TareasPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Tareas</p>
-                <p className="text-2xl font-bold text-gray-900">{totalTasks}</p>
+                <p className="text-sm font-medium text-slate-300">Total Tareas</p>
+                <p className="text-2xl font-bold text-slate-100">{totalTasks}</p>
               </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <ListTodo className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <ListTodo className="w-5 h-5 text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -382,8 +421,8 @@ export default function TareasPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
             showPendingOnly 
-              ? 'ring-2 ring-yellow-500 bg-yellow-50 shadow-lg' 
-              : 'hover:bg-yellow-50 hover:shadow-md'
+              ? 'ring-2 ring-yellow-400 shadow-lg' 
+              : 'hover:shadow-md'
           }`}
           onClick={() => {
             setShowPendingOnly(!showPendingOnly)
@@ -397,18 +436,18 @@ export default function TareasPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900">{pendingTasks}</p>
+                <p className="text-sm font-medium text-slate-300">Pendientes</p>
+                <p className="text-2xl font-bold text-slate-100">{pendingTasks}</p>
                 <p className={`text-xs mt-1 font-medium ${
-                  showPendingOnly ? 'text-yellow-600' : 'text-gray-500'
+                  showPendingOnly ? 'text-yellow-400' : 'text-slate-400'
                 }`}>
                   {showPendingOnly ? '🟡 Filtrando...' : '👆 Ver pendientes'}
                 </p>
               </div>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showPendingOnly ? 'bg-yellow-200' : 'bg-yellow-100'
+                showPendingOnly ? 'bg-yellow-500/20' : 'bg-yellow-500/10'
               }`}>
-                <Clock className="w-5 h-5 text-yellow-600" />
+                <Clock className="w-5 h-5 text-yellow-400" />
               </div>
             </div>
           </CardContent>
@@ -416,8 +455,8 @@ export default function TareasPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
             showInProgressOnly 
-              ? 'ring-2 ring-blue-500 bg-blue-50 shadow-lg' 
-              : 'hover:bg-blue-50 hover:shadow-md'
+              ? 'ring-2 ring-blue-400 shadow-lg' 
+              : 'hover:shadow-md'
           }`}
           onClick={() => {
             setShowInProgressOnly(!showInProgressOnly)
@@ -431,18 +470,18 @@ export default function TareasPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">En Progreso</p>
-                <p className="text-2xl font-bold text-gray-900">{inProgressTasks}</p>
+                <p className="text-sm font-medium text-slate-300">En Progreso</p>
+                <p className="text-2xl font-bold text-slate-100">{inProgressTasks}</p>
                 <p className={`text-xs mt-1 font-medium ${
-                  showInProgressOnly ? 'text-blue-600' : 'text-gray-500'
+                  showInProgressOnly ? 'text-blue-400' : 'text-slate-400'
                 }`}>
                   {showInProgressOnly ? '🔵 Filtrando...' : '👆 Ver en progreso'}
                 </p>
               </div>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showInProgressOnly ? 'bg-blue-200' : 'bg-blue-100'
+                showInProgressOnly ? 'bg-blue-500/20' : 'bg-blue-500/10'
               }`}>
-                <Play className="w-5 h-5 text-blue-600" />
+                <Play className="w-5 h-5 text-blue-400" />
               </div>
             </div>
           </CardContent>
@@ -450,8 +489,8 @@ export default function TareasPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
             showCompletedOnly 
-              ? 'ring-2 ring-green-500 bg-green-50 shadow-lg' 
-              : 'hover:bg-green-50 hover:shadow-md'
+              ? 'ring-2 ring-emerald-400 shadow-lg' 
+              : 'hover:shadow-md'
           }`}
           onClick={() => {
             setShowCompletedOnly(!showCompletedOnly)
@@ -465,18 +504,18 @@ export default function TareasPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Completadas</p>
-                <p className="text-2xl font-bold text-gray-900">{completedTasks}</p>
+                <p className="text-sm font-medium text-slate-300">Completadas</p>
+                <p className="text-2xl font-bold text-slate-100">{completedTasks}</p>
                 <p className={`text-xs mt-1 font-medium ${
-                  showCompletedOnly ? 'text-green-600' : 'text-gray-500'
+                  showCompletedOnly ? 'text-emerald-400' : 'text-slate-400'
                 }`}>
                   {showCompletedOnly ? '🟢 Filtrando...' : '👆 Ver completadas'}
                 </p>
               </div>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showCompletedOnly ? 'bg-green-200' : 'bg-green-100'
+                showCompletedOnly ? 'bg-emerald-500/20' : 'bg-emerald-500/10'
               }`}>
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
               </div>
             </div>
           </CardContent>
@@ -484,8 +523,8 @@ export default function TareasPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
             showBlockedOnly 
-              ? 'ring-2 ring-red-500 bg-red-50 shadow-lg' 
-              : 'hover:bg-red-50 hover:shadow-md'
+              ? 'ring-2 ring-red-400 shadow-lg' 
+              : 'hover:shadow-md'
           }`}
           onClick={() => {
             setShowBlockedOnly(!showBlockedOnly)
@@ -499,18 +538,18 @@ export default function TareasPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Bloqueadas</p>
-                <p className="text-2xl font-bold text-gray-900">{blockedTasks}</p>
+                <p className="text-sm font-medium text-slate-300">Bloqueadas</p>
+                <p className="text-2xl font-bold text-slate-100">{blockedTasks}</p>
                 <p className={`text-xs mt-1 font-medium ${
-                  showBlockedOnly ? 'text-red-600' : 'text-gray-500'
+                  showBlockedOnly ? 'text-red-400' : 'text-slate-400'
                 }`}>
                   {showBlockedOnly ? '🔴 Filtrando...' : '👆 Ver bloqueadas'}
                 </p>
               </div>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showBlockedOnly ? 'bg-red-200' : 'bg-red-100'
+                showBlockedOnly ? 'bg-red-500/20' : 'bg-red-500/10'
               }`}>
-                <Lock className="w-5 h-5 text-red-600" />
+                <Lock className="w-5 h-5 text-red-400" />
               </div>
             </div>
           </CardContent>
@@ -519,8 +558,8 @@ export default function TareasPage() {
         <Card 
           className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
             showDelayedOnly 
-              ? 'ring-2 ring-red-500 bg-red-50 shadow-lg' 
-              : 'hover:bg-red-50 hover:shadow-md'
+              ? 'ring-2 ring-orange-400 shadow-lg' 
+              : 'hover:shadow-md'
           }`}
           onClick={() => {
             setShowDelayedOnly(!showDelayedOnly)
@@ -534,18 +573,18 @@ export default function TareasPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Atrasadas</p>
-                <p className="text-2xl font-bold text-red-600">{taskStats.delayed}</p>
+                <p className="text-sm font-medium text-slate-300">Atrasadas</p>
+                <p className="text-2xl font-bold text-orange-400">{taskStats.delayed}</p>
                 <p className={`text-xs mt-1 font-medium ${
-                  showDelayedOnly ? 'text-red-600' : 'text-gray-500'
+                  showDelayedOnly ? 'text-orange-400' : 'text-slate-400'
                 }`}>
                   {showDelayedOnly ? '🔴 Filtrando...' : '👆 Ver atrasadas'}
                 </p>
               </div>
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showDelayedOnly ? 'bg-red-200' : 'bg-red-100'
+                showDelayedOnly ? 'bg-orange-500/20' : 'bg-orange-500/10'
               }`}>
-                <AlertCircle className="w-5 h-5 text-red-600" />
+                <AlertCircle className="w-5 h-5 text-orange-400" />
               </div>
             </div>
           </CardContent>
@@ -560,7 +599,7 @@ export default function TareasPage() {
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron tareas</h3>
           <p className="text-gray-500 mb-4">
-            {searchTerm || priorityFilter !== 'all' || floorFilter !== 'all' || workerFilter !== 'all' || showPendingOnly || showInProgressOnly || showCompletedOnly || showBlockedOnly || showDelayedOnly
+            {searchTerm || priorityFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || workerFilter !== 'all' || showPendingOnly || showInProgressOnly || showCompletedOnly || showBlockedOnly || showDelayedOnly
               ? 'Intenta ajustar los filtros de búsqueda'
               : 'Comienza creando tu primera tarea'
             }

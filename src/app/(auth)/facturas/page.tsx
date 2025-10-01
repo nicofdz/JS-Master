@@ -105,8 +105,8 @@ export default function FacturasPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Cargando facturas...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-slate-300">Cargando facturas...</p>
             </div>
           </div>
         </div>
@@ -118,12 +118,12 @@ export default function FacturasPage() {
     return (
       <div className="p-4 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="bg-red-900/20 border border-red-600 rounded-lg p-4">
             <div className="flex">
-              <span className="text-red-500 mr-2">⚠️</span>
+              <span className="text-red-400 mr-2">⚠️</span>
               <div>
-                <h3 className="text-red-800 font-medium">Error al cargar facturas</h3>
-                <p className="text-red-700 text-sm mt-1">{error}</p>
+                <h3 className="text-red-300 font-medium">Error al cargar facturas</h3>
+                <p className="text-red-400 text-sm mt-1">{error}</p>
               </div>
             </div>
           </div>
@@ -139,16 +139,16 @@ export default function FacturasPage() {
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">
                 Gestión de Facturas
               </h1>
-              <p className="text-gray-600">
+              <p className="text-slate-300">
                 Administra las facturas de ingresos y calcula pagos a trabajadores
               </p>
             </div>
             <Button
               onClick={() => setShowUpload(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               + Nueva Factura
             </Button>
@@ -167,14 +167,15 @@ export default function FacturasPage() {
 
         {/* Upload Modal */}
         {showUpload && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold">Subir Nueva Factura</h2>
+                  <h2 className="text-xl font-semibold text-slate-100">Subir Nueva Factura</h2>
                   <Button
                     variant="outline"
                     onClick={() => setShowUpload(false)}
+                    className="text-slate-300 hover:text-slate-100"
                   >
                     ✕
                   </Button>

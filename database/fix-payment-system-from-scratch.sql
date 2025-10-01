@@ -200,3 +200,5 @@ COMMENT ON FUNCTION public.process_partial_payment_simple IS 'Función simple pa
 COMMENT ON VIEW public.worker_payment_summary IS 'Vista que calcula POR PAGAR basándose en is_paid = FALSE';
 
 
+
+

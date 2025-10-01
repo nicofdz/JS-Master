@@ -168,3 +168,5 @@ WHERE id = 1;
 
 SELECT '✅ SOLUCIÓN APLICADA EXITOSAMENTE' as resultado;
 
+
+

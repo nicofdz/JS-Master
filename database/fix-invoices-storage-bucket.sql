@@ -109,3 +109,5 @@ AND tablename = 'objects';
 
 SELECT '✅ CONFIGURACIÓN DE STORAGE COMPLETADA' as resultado;
 
+
+

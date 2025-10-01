@@ -64,7 +64,7 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
             Seleccionar Proyecto
           </label>
           <Select
@@ -81,7 +81,7 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
             Archivo PDF de Factura
           </label>
           <input
@@ -89,18 +89,18 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
             type="file"
             accept=".pdf"
             onChange={handleFileSelect}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900/50 file:text-blue-300 hover:file:bg-blue-800/60 file:cursor-pointer"
           />
           {selectedFile && (
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-slate-400">
               Archivo seleccionado: {selectedFile.name}
             </p>
           )}
         </div>
 
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">¿Qué hace el sistema?</h4>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="bg-blue-900/30 border border-blue-600 p-4 rounded-lg">
+          <h4 className="font-medium text-blue-300 mb-2">¿Qué hace el sistema?</h4>
+          <ul className="text-sm text-blue-400 space-y-1">
             <li>• Extrae automáticamente los datos del PDF</li>
             <li>• Identifica número de factura, empresa, montos</li>
             <li>• Calcula IVA e impuestos automáticamente</li>
@@ -111,7 +111,7 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
         <Button
           onClick={handleUpload}
           disabled={!selectedFile || !selectedProject || isUploading}
-          className="w-full"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
         >
           {isUploading ? 'Procesando...' : 'Subir y Procesar Factura'}
         </Button>

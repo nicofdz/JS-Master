@@ -11,3 +11,5 @@ npm install pdf2pic
 # Alternativa más simple (ya instalada):
 # Usar pdf-parse + canvas (ya tenemos pdf-text-extract que es similar)
 
+
+

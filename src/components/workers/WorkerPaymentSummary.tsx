@@ -24,6 +24,18 @@ function WorkerPaymentDetails({ workerId, workerName, onClose }: WorkerPaymentDe
   const [loading, setLoading] = useState(false)
   const { getWorkerPaymentDetails } = useWorkerPayments()
 
+  // Función para formatear fechas sin problemas de zona horaria
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-'
+    
+    // Extraer solo la parte de la fecha (YYYY-MM-DD) ignorando la hora y zona horaria
+    const datePart = dateString.split('T')[0]
+    const [year, month, day] = datePart.split('-')
+    
+    // Crear fecha con hora local para evitar conversión UTC
+    return new Date(`${year}-${month}-${day}T00:00:00`).toLocaleDateString('es-CL')
+  }
+
   const fetchDetails = async () => {
     try {
       setLoading(true)
@@ -41,77 +53,83 @@ function WorkerPaymentDetails({ workerId, workerName, onClose }: WorkerPaymentDe
   }, [workerId])
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-black">Detalles de Pagos - {workerName}</h3>
-          <Button variant="outline" onClick={onClose}>
+          <h3 className="text-lg font-semibold text-slate-100">Detalles de Pagos - {workerName}</h3>
+          <Button variant="outline" onClick={onClose} className="text-slate-300 hover:text-slate-100">
             Cerrar
           </Button>
         </div>
 
         {loading ? (
-          <div className="text-center py-8">Cargando detalles...</div>
+          <div className="text-center py-8 text-slate-300">Cargando detalles...</div>
         ) : (
           <div className="space-y-4">
             {details.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-slate-400">
                 No hay tareas con pagos asignados
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-slate-600">
+                  <thead className="bg-slate-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Tarea
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Proyecto
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Apartamento
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Estado
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Pago
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                        Fecha Inicio
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                        Fecha Terminación
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-slate-800/50 divide-y divide-slate-600">
                     {details.map((task) => (
-                      <tr key={task.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
+                      <tr key={task.id} className="hover:bg-slate-700/30">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-100">
                           {task.task_name}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
                           {task.apartments?.floors?.projects?.name || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200">
                           {task.apartments?.apartment_number || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${
                             task.status === 'completed' 
-                              ? 'bg-green-100 text-green-800'
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                               : task.status === 'in-progress'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                              : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
                           }`}>
                             {task.status === 'completed' ? 'Completada' : 
                              task.status === 'in-progress' ? 'En Progreso' : 'Pendiente'}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-emerald-400">
                           {formatCurrency(task.worker_payment)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                          {new Date(task.created_at).toLocaleDateString('es-CL')}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                          {formatDate(task.start_date)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
+                          {formatDate(task.completed_at)}
                         </td>
                       </tr>
                     ))}
@@ -335,7 +353,7 @@ export function WorkerPaymentSummary() {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Cargando resumen de pagos...</div>
+          <div className="text-center text-slate-300">Cargando resumen de pagos...</div>
         </CardContent>
       </Card>
     )
@@ -345,7 +363,7 @@ export function WorkerPaymentSummary() {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center text-red-600">Error: {error}</div>
+          <div className="text-center text-red-400">Error: {error}</div>
         </CardContent>
       </Card>
     )
@@ -367,10 +385,10 @@ export function WorkerPaymentSummary() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <DollarSign className="h-8 w-8 text-orange-600" />
+                <DollarSign className="h-8 w-8 text-orange-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Costos Pendientes</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-400">Costos Pendientes</p>
+                  <p className="text-2xl font-bold text-slate-100">
                     {formatCurrency(getTotalPendingPayments())}
                   </p>
                 </div>
@@ -381,10 +399,10 @@ export function WorkerPaymentSummary() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle className="h-8 w-8 text-emerald-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Pagado</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-400">Total Pagado</p>
+                  <p className="text-2xl font-bold text-slate-100">
                     {formatCurrency(payments.reduce((total, worker) => total + worker.total_paid, 0))}
                   </p>
                 </div>
@@ -395,10 +413,10 @@ export function WorkerPaymentSummary() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <Users className="h-8 w-8 text-purple-600" />
+                <Users className="h-8 w-8 text-purple-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Trabajadores</p>
-                  <p className="text-2xl font-bold text-gray-900">{payments.length}</p>
+                  <p className="text-sm font-medium text-slate-400">Total Trabajadores</p>
+                  <p className="text-2xl font-bold text-slate-100">{payments.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -407,17 +425,17 @@ export function WorkerPaymentSummary() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-emerald-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Dinero Disponible</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-400">Dinero Disponible</p>
+                  <p className="text-2xl font-bold text-slate-100">
                     {incomeLoading ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                      <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
                     ) : (
                       formatCurrency((incomeData?.total_income || 0) - (incomeData?.total_spent_on_payments || 0))
                     )}
                   </p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-slate-400">
                     {incomeData?.processed_invoices_count || 0} facturas procesadas
                   </p>
                 </div>
@@ -428,17 +446,17 @@ export function WorkerPaymentSummary() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <DollarSign className="h-8 w-8 text-red-600" />
+                <DollarSign className="h-8 w-8 text-red-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Dinero Gastado en Pagos</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-slate-400">Dinero Gastado en Pagos</p>
+                  <p className="text-2xl font-bold text-slate-100">
                     {incomeLoading ? (
-                      <div className="animate-pulse bg-gray-200 h-8 w-24 rounded"></div>
+                      <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
                     ) : (
                       formatCurrency(incomeData?.total_spent_on_payments || 0)
                     )}
                   </p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-slate-400">
                     Total gastado en trabajadores
                   </p>
                 </div>
@@ -451,7 +469,7 @@ export function WorkerPaymentSummary() {
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <CardTitle className="flex items-center gap-2 text-black">
+              <CardTitle className="flex items-center gap-2 text-slate-100">
                 <DollarSign className="h-5 w-5" />
                 Resumen de Pagos por Trabajador
               </CardTitle>
@@ -461,12 +479,12 @@ export function WorkerPaymentSummary() {
                   placeholder="Buscar por nombre o RUT..."
                   value={searchFilter}
                   onChange={(e) => setSearchFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-slate-400"
                 />
                 {searchFilter && (
                   <button
                     onClick={() => setSearchFilter('')}
-                    className="px-2 py-1 text-sm text-gray-500 hover:text-gray-700"
+                    className="px-2 py-1 text-sm text-slate-400 hover:text-slate-200"
                   >
                     ✕
                   </button>
@@ -476,65 +494,65 @@ export function WorkerPaymentSummary() {
           </CardHeader>
           <CardContent>
             {filteredPayments.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-slate-400">
                 {searchFilter ? 'No se encontraron trabajadores con ese criterio de búsqueda' : 'No hay trabajadores con pagos asignados'}
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-slate-600">
+                  <thead className="bg-slate-700/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Trabajador
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Cargo
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Tareas Completadas
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Costos Pendientes
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Por Pagar
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Total Pagado
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                         Acciones
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-slate-800/50 divide-y divide-slate-600">
                     {filteredPayments.map((worker) => (
-                      <tr key={worker.worker_id} className="hover:bg-gray-50">
+                      <tr key={worker.worker_id} className="hover:bg-slate-700/30">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-slate-100">
                               {worker.full_name}
                             </div>
-                            <div className="text-sm text-gray-500">{worker.rut}</div>
+                            <div className="text-sm text-slate-400">{worker.rut}</div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                           {worker.cargo || 'No especificado'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">
                           <div className="flex items-center gap-2">
-                            <span className="text-green-600">{worker.completed_tasks}</span>
-                            <span className="text-gray-400">/</span>
-                            <span>{worker.total_tasks}</span>
+                            <span className="text-emerald-400">{worker.completed_tasks}</span>
+                            <span className="text-slate-500">/</span>
+                            <span className="text-slate-300">{worker.total_tasks}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-400">
                           {formatCurrency(worker.pending_payment)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-400">
                           {formatCurrency(worker.uncompleted_payment)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-400">
                           {formatCurrency(worker.total_paid)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -543,7 +561,7 @@ export function WorkerPaymentSummary() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleViewDetails(worker.worker_id, worker.full_name)}
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1 bg-blue-900/30 hover:bg-blue-800/40 text-blue-400 border border-blue-600"
                             >
                               <Eye className="h-4 w-4" />
                               Ver
@@ -552,7 +570,7 @@ export function WorkerPaymentSummary() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleViewHistory(worker.worker_id, worker.full_name)}
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1 bg-purple-900/30 hover:bg-purple-800/40 text-purple-400 border border-purple-600"
                             >
                               <History className="h-4 w-4" />
                               Historial
@@ -561,7 +579,7 @@ export function WorkerPaymentSummary() {
                               <Button
                                 size="sm"
                                 onClick={() => handleTaskPayment(worker.worker_id, worker.full_name)}
-                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                                className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                               >
                                 <DollarSign className="h-4 w-4" />
                                 Pagar Tareas
@@ -590,36 +608,36 @@ export function WorkerPaymentSummary() {
 
       {/* Modal de Confirmación de Pago */}
       {activeModal === 'payment' && selectedWorker && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Confirmar Pago</h3>
-              <Button variant="outline" onClick={handleClosePaymentModal}>
+              <h3 className="text-lg font-semibold text-slate-100">Confirmar Pago</h3>
+              <Button variant="outline" onClick={handleClosePaymentModal} className="text-slate-300 hover:text-slate-100">
                 ✕
               </Button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600 mb-2">
-                  Trabajador: <span className="font-medium">{selectedWorkerName}</span>
+                <p className="text-sm text-slate-400 mb-2">
+                  Trabajador: <span className="font-medium text-slate-200">{selectedWorkerName}</span>
                 </p>
-                <p className="text-sm text-gray-600">
-                  Monto a pagar: <span className="font-bold text-green-600">
+                <p className="text-sm text-slate-400">
+                  Monto a pagar: <span className="font-bold text-emerald-400">
                     {formatCurrency(payments.find(w => w.worker_id === selectedWorker)?.pending_payment || 0)}
                   </span>
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Notas del pago (opcional)
                 </label>
                 <textarea
                   value={paymentNotes}
                   onChange={(e) => setPaymentNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-400"
                   placeholder="Notas adicionales sobre el pago..."
                 />
               </div>
@@ -629,13 +647,14 @@ export function WorkerPaymentSummary() {
                   variant="outline"
                   onClick={handleClosePaymentModal}
                   disabled={processingPayment}
+                  className="text-slate-300 hover:text-slate-100"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleConfirmPayment}
                   disabled={processingPayment}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   {processingPayment ? 'Procesando...' : 'Confirmar Pago'}
                 </Button>

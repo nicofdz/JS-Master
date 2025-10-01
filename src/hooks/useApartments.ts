@@ -43,7 +43,7 @@ export function useApartments(floorId?: number) {
     try {
       const { data, error } = await supabase
         .from('floors')
-        .select('id, floor_number, projects(id, name)')
+        .select('id, floor_number, project_id, projects!inner(id, name)')
         .order('floor_number', { ascending: true })
 
       if (error) {
@@ -53,13 +53,17 @@ export function useApartments(floorId?: number) {
       
       console.log('✅ Datos de pisos obtenidos:', data?.length, 'pisos')
       
-      // Procesar datos para incluir project_id
-      const processedFloors = (data || []).map(floor => ({
-        ...floor,
-        project_id: floor.projects?.[0]?.id || 0,
-        project_name: floor.projects?.[0]?.name || 'Proyecto Desconocido'
-      }))
+      // Procesar datos para incluir project_id y project_name
+      const processedFloors = (data || []).map(floor => {
+        const project = floor.projects as any
+        return {
+          ...floor,
+          project_id: project?.id || floor.project_id || 0,
+          project_name: project?.name || 'Proyecto Desconocido'
+        }
+      })
       
+      console.log('✅ Pisos procesados:', processedFloors)
       setFloors(processedFloors)
     } catch (err) {
       console.error('Error fetching floors:', err)
@@ -180,18 +184,35 @@ export function useApartments(floorId?: number) {
       
       console.log('✅ updateApartment exitoso:', data)
       
-      // Actualizar la lista local
-      setApartments(prev => prev.map(a => a.id === id ? { 
-        ...data,
-        floor_number: (data.floors as any)?.floor_number || 0,
-        project_name: (data.floors as any)?.projects?.name || 'Proyecto Desconocido',
-        tasks_count: a.tasks_count, // Mantener el conteo de tareas
-        progress_percentage: a.progress_percentage // Mantener el progreso
-      } : a))
+      // Actualizar la lista local - mantener campos calculados y agregar previous_status
+      setApartments(prev => {
+        const updated = prev.map(a => {
+          if (a.id !== id) return a
+          
+          return { 
+            ...a, // Mantener todo el apartamento existente
+            ...data, // Sobrescribir con datos actualizados de BD
+            floor_number: (data.floors as any)?.floor_number || a.floor_number,
+            project_name: (data.floors as any)?.projects?.name || a.project_name,
+            project_id: (data.floors as any)?.projects?.id || a.project_id,
+            tasks_count: a.tasks_count, // Mantener el conteo de tareas calculado
+            progress_percentage: a.progress_percentage, // Mantener el progreso calculado
+            previous_status: data.previous_status // Actualizar el estado anterior
+          }
+        })
+        
+        console.log('🔄 Apartamento actualizado:', updated.find(a => a.id === id))
+        return updated
+      })
       
       // Actualizar el status del piso si se cambió el status del apartamento
-      if (updates.status && data.floor_id) {
-        await updateFloorStatusFromApartments(data.floor_id)
+      // NO actualizar si es un bloqueo/desbloqueo (se maneja con refresh manual)
+      if (updates.status && data.floor_id && updates.status !== 'blocked') {
+        // Solo actualizar si no estamos bloqueando (el desbloqueo también salta esto 
+        // porque previous_status estará presente en updates)
+        if (!updates.previous_status) {
+          await updateFloorStatusFromApartments(data.floor_id)
+        }
       }
       
       return data

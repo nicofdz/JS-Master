@@ -8,6 +8,9 @@ type Floor = Database['public']['Tables']['floors']['Row'] & {
   project_name?: string
   apartments_count?: number
   progress_percentage?: number
+  total_tasks?: number
+  completed_tasks?: number
+  apartments_without_tasks?: number
   apartments?: any[]
 }
 type FloorInsert = Database['public']['Tables']['floors']['Insert']
@@ -42,7 +45,13 @@ export function useFloors(projectId?: number) {
         .select(`
           *,
           projects!inner(name),
-          apartments(id, apartment_number, status)
+          apartments(
+            id, 
+            apartment_number, 
+            status, 
+            previous_status,
+            apartment_tasks(id, status)
+          )
         `)
         .order('floor_number', { ascending: true })
 
@@ -57,14 +66,36 @@ export function useFloors(projectId?: number) {
       // Procesar datos para incluir información adicional
       const processedFloors = (data || []).map(floor => {
         const apartments = floor.apartments || []
-        const completedApartments = apartments.filter((apt: any) => apt.status === 'completed').length
         const totalApartments = apartments.length
+        
+        // Calcular progreso basado en tareas
+        let totalTasks = 0
+        let completedTasks = 0
+        let apartmentsWithoutTasks = 0
+        
+        apartments.forEach((apt: any) => {
+          const tasks = apt.apartment_tasks || []
+          totalTasks += tasks.length
+          completedTasks += tasks.filter((task: any) => task.status === 'completed').length
+          
+          // Contar apartamentos sin tareas
+          if (tasks.length === 0) {
+            apartmentsWithoutTasks++
+          }
+        })
+        
+        const progress_percentage = totalTasks > 0 
+          ? Math.round((completedTasks / totalTasks) * 100) 
+          : 0
         
         return {
           ...floor,
           project_name: (floor.projects as any)?.name || 'Proyecto Desconocido',
           apartments_count: totalApartments,
-          progress_percentage: totalApartments > 0 ? Math.round((completedApartments / totalApartments) * 100) : 0
+          progress_percentage,
+          total_tasks: totalTasks,
+          completed_tasks: completedTasks,
+          apartments_without_tasks: apartmentsWithoutTasks
         }
       })
 
@@ -160,7 +191,7 @@ export function useFloors(projectId?: number) {
       // Obtener todos los apartamentos del piso (excluyendo bloqueados)
       const { data: apartments, error: apartmentsError } = await supabase
         .from('apartments')
-        .select('status')
+        .select('id, status')
         .eq('floor_id', floorId)
         .neq('status', 'blocked')
 
@@ -170,17 +201,21 @@ export function useFloors(projectId?: number) {
       const completedApartments = apartments?.filter(a => a.status === 'completed').length || 0
       const inProgressApartments = apartments?.filter(a => a.status === 'in-progress').length || 0
 
-      // Obtener tareas retrasadas del piso (EXCLUIR tareas bloqueadas)
-      const { data: delayedTasks, error: tasksError } = await supabase
-        .from('apartment_tasks')
-        .select('id, is_delayed, status')
-        .in('apartment_id', apartments?.map(a => (a as any).id) || [])
-        .eq('is_delayed', true)
-        .neq('status', 'blocked')
+      // Obtener tareas retrasadas del piso (EXCLUIR tareas bloqueadas) solo si hay apartamentos
+      const apartmentIds = apartments?.map(a => a.id) || []
+      
+      let delayedTasksCount = 0
+      if (apartmentIds.length > 0) {
+        const { data: delayedTasks, error: tasksError } = await supabase
+          .from('apartment_tasks')
+          .select('id, is_delayed, status')
+          .in('apartment_id', apartmentIds)
+          .eq('is_delayed', true)
+          .neq('status', 'blocked')
 
-      if (tasksError) throw tasksError
-
-      const delayedTasksCount = delayedTasks?.length || 0
+        if (tasksError) throw tasksError
+        delayedTasksCount = delayedTasks?.length || 0
+      }
 
       // Determinar el nuevo status (PRIORIDAD: retrasado > completado > en progreso > pendiente)
       let newStatus: string

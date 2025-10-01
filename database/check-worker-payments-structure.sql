@@ -10,3 +10,5 @@ ORDER BY ordinal_position;
 SELECT 'Datos de ejemplo de worker_payments:' as info;
 SELECT * FROM worker_payments LIMIT 3;
 
+
+

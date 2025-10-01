@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { X, Save } from 'lucide-react'
+import { X, Save, Plus, Trash2 } from 'lucide-react'
+import { useActivityTemplates } from '@/hooks/useActivityTemplates'
 import toast from 'react-hot-toast'
 
 interface ApartmentFormProps {
@@ -15,6 +16,14 @@ interface ApartmentFormProps {
   onCancel: () => void
   floors: any[]
   projects: any[]
+}
+
+interface SelectedTask {
+  id: string // ID temporal para el componente
+  templateId: number
+  name: string
+  category: string
+  estimated_hours: number
 }
 
 export function ApartmentForm({ apartment, onSubmit, onCancel, floors, projects }: ApartmentFormProps) {
@@ -27,6 +36,8 @@ export function ApartmentForm({ apartment, onSubmit, onCancel, floors, projects 
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [selectedTasks, setSelectedTasks] = useState<SelectedTask[]>([])
+  const { templates, loading: templatesLoading } = useActivityTemplates()
 
   useEffect(() => {
     if (apartment) {
@@ -73,7 +84,46 @@ export function ApartmentForm({ apartment, onSubmit, onCancel, floors, projects 
       return
     }
 
-    onSubmit(formData)
+    // Incluir las tareas seleccionadas en los datos del formulario
+    onSubmit({
+      ...formData,
+      selectedTasks: selectedTasks
+    })
+  }
+
+  const handleAddTask = () => {
+    // Agregar una tarea vacía para seleccionar
+    const newTask: SelectedTask = {
+      id: Date.now().toString(),
+      templateId: 0,
+      name: '',
+      category: '',
+      estimated_hours: 0
+    }
+    setSelectedTasks([...selectedTasks, newTask])
+  }
+
+  const handleSelectTask = (taskId: string, templateId: number) => {
+    const template = templates.find(t => t.id === templateId)
+    if (!template) return
+
+    setSelectedTasks(prev =>
+      prev.map(task =>
+        task.id === taskId
+          ? {
+              ...task,
+              templateId: template.id,
+              name: template.name,
+              category: template.category,
+              estimated_hours: template.estimated_hours
+            }
+          : task
+      )
+    )
+  }
+
+  const handleRemoveTask = (taskId: string) => {
+    setSelectedTasks(prev => prev.filter(task => task.id !== taskId))
   }
 
   const handleInputChange = (field: string, value: any) => {
@@ -92,9 +142,9 @@ export function ApartmentForm({ apartment, onSubmit, onCancel, floors, projects 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md mx-4">
+      <Card className="w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle>Editar Apartamento</CardTitle>
+          <CardTitle>{apartment ? 'Editar Apartamento' : 'Crear Nuevo Apartamento'}</CardTitle>
           <Button
             variant="ghost"
             size="sm"
@@ -211,6 +261,71 @@ export function ApartmentForm({ apartment, onSubmit, onCancel, floors, projects 
                 rows={3}
               />
             </div>
+
+            {/* Sección de Tareas */}
+            {!apartment && (
+              <div className="border-t border-slate-600 pt-4">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="block text-sm font-medium text-slate-300">
+                    Tareas a generar (opcional)
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddTask}
+                    disabled={templatesLoading}
+                    className="flex items-center gap-1 bg-blue-900/30 hover:bg-blue-800/40 text-blue-400 border border-blue-600"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar Tarea
+                  </Button>
+                </div>
+
+                {selectedTasks.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">
+                    No se agregarán tareas automáticamente. Puedes agregar tareas después de crear el apartamento.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {selectedTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="flex gap-2 items-center bg-slate-700/50 p-2 rounded border border-slate-600"
+                      >
+                        <Select
+                          value={task.templateId}
+                          onChange={(e) => handleSelectTask(task.id, parseInt(e.target.value))}
+                          className="flex-1 text-sm"
+                        >
+                          <option value={0}>Seleccionar tarea...</option>
+                          {templates.map((template) => (
+                            <option key={template.id} value={template.id}>
+                              {template.name} ({template.category})
+                            </option>
+                          ))}
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveTask(task.id)}
+                          className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedTasks.length > 0 && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    {selectedTasks.filter(t => t.templateId > 0).length} tarea(s) seleccionada(s)
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button
