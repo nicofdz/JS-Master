@@ -7,14 +7,24 @@ import JSZip from 'jszip'
 
 export async function GET() {
   return NextResponse.json(
-    { error: 'Método GET no permitido. Use POST para generar contratos.' }, 
-    { status: 405 }
+    { 
+      message: 'API de generación de contratos',
+      method: 'Use POST para generar contratos',
+      endpoint: '/api/contracts/generate'
+    }, 
+    { status: 200 }
   )
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== API CONTRACTS GENERATE POST ===')
+    console.log('Request method:', request.method)
+    console.log('Request URL:', request.url)
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()))
+    
     const data: WorkerContractData = await request.json()
+    console.log('Datos recibidos:', data)
     
     // Validar datos requeridos
     if (!data.nombre_trabajador || !data.rut_trabajador || !data.nombre_obra) {

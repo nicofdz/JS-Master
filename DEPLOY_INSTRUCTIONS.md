@@ -91,6 +91,14 @@ Una vez configuradas las variables de entorno:
   3. Se agregó logging para debug de plantillas
   4. Verifica que las plantillas estén en `src/templates/contracts/`
 
+**Error: "Método GET no permitido" al generar contratos**
+- **Causa:** La petición se está haciendo como GET en lugar de POST
+- **Solución:** 
+  1. Se agregó logging detallado en el componente y API
+  2. El GET ahora devuelve información útil en lugar de error
+  3. Revisa la consola del navegador para ver los logs de debug
+  4. Verifica que la petición se esté haciendo con método POST
+
 ### 6. Verificación post-deploy
 
 Después del deploy, verifica que:
