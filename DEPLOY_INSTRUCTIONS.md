@@ -67,6 +67,13 @@ Una vez configuradas las variables de entorno:
      - `NEXT_PUBLIC_SUPABASE_URL` (sin @)
      - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (sin @)
 
+**Error: "Function Runtimes must have a valid version"**
+- **Causa:** Configuración de runtime inválida en vercel.json
+- **Solución:** 
+  1. El archivo vercel.json ha sido simplificado
+  2. Vercel detectará automáticamente que es Next.js
+  3. No necesitas configuración manual de runtime para Next.js
+
 ### 6. Verificación post-deploy
 
 Después del deploy, verifica que:
