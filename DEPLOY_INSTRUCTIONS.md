@@ -106,6 +106,14 @@ Una vez configuradas las variables de entorno:
   2. Se agregó `dynamic: 'force-dynamic'` para evitar cache
   3. Se creó archivo de configuración `route.config.js`
   4. Se mejoró el manejo de errores con headers explícitos
+  5. Se cambió a importación dinámica de dependencias
+
+**Error: "Plantilla de contrato no encontrada" (404)**
+- **Causa:** Las plantillas .docx no se incluyen en el build de Vercel
+- **Solución:** 
+  1. Se agregó `includeFiles` en `vercel.json` para incluir `src/templates/**`
+  2. Esto asegura que las plantillas se copien al build de Vercel
+  3. Las plantillas ahora estarán disponibles en tiempo de ejecución
 
 ### 6. Verificación post-deploy
 
