@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createReport } from 'docx-templates'
 import { WorkerContractData } from '@/lib/contracts'
-import fs from 'fs'
-import path from 'path'
-import JSZip from 'jszip'
 
 // Configuración para Vercel
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // Tiempo máximo de ejecución en segundos
 
 export async function GET() {
   return NextResponse.json(
@@ -32,11 +29,20 @@ export async function POST(request: NextRequest) {
     
     // Validar datos requeridos
     if (!data.nombre_trabajador || !data.rut_trabajador || !data.nombre_obra) {
+      console.log('Faltan datos requeridos')
       return NextResponse.json(
         { error: 'Faltan datos requeridos' }, 
         { status: 400 }
       )
     }
+
+    // Importar dinámicamente las dependencias que causan problemas
+    console.log('Importando dependencias...')
+    const fs = await import('fs')
+    const path = await import('path')
+    const JSZip = (await import('jszip')).default
+    const { createReport } = await import('docx-templates')
+    console.log('Dependencias importadas exitosamente')
 
     // Rutas a las plantillas
     const contractTemplatePath = path.join(process.cwd(), 'src/templates/contracts/ContratoTemplate.docx')
@@ -66,6 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Leer las plantillas
+    console.log('Leyendo plantillas...')
     const contractTemplate = fs.readFileSync(contractTemplatePath)
     const hoursTemplate = fs.readFileSync(hoursTemplatePath)
     
@@ -97,6 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generar ambos documentos
+    console.log('Generando documentos...')
     const [contractBuffer, hoursBuffer] = await Promise.all([
       createReport({
         template: contractTemplate,
@@ -109,6 +117,7 @@ export async function POST(request: NextRequest) {
         cmdDelimiter: ['{{', '}}']
       })
     ])
+    console.log('Documentos generados exitosamente')
     
     // Crear nombres de archivos
     const timestamp = Date.now()
@@ -117,13 +126,15 @@ export async function POST(request: NextRequest) {
     const hoursFileName = `horas-${workerName}-${timestamp}.docx`
     
     // Crear un ZIP con ambos archivos
+    console.log('Creando archivo ZIP...')
     const zip = new JSZip()
     
-    zip.file(contractFileName, contractBuffer)
-    zip.file(hoursFileName, hoursBuffer)
+    zip.file(contractFileName, contractBuffer as any)
+    zip.file(hoursFileName, hoursBuffer as any)
     
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
     const zipFileName = `documentos-${workerName}-${timestamp}.zip`
+    console.log('ZIP creado exitosamente:', zipFileName)
     
     return new NextResponse(zipBuffer as any, {
       headers: {
