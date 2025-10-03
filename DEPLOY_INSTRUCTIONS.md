@@ -111,9 +111,10 @@ Una vez configuradas las variables de entorno:
 **Error: "Plantilla de contrato no encontrada" (404)**
 - **Causa:** Las plantillas .docx no se incluyen en el build de Vercel
 - **Solución:** 
-  1. Se agregó `includeFiles` en `vercel.json` para incluir `src/templates/**`
-  2. Esto asegura que las plantillas se copien al build de Vercel
-  3. Las plantillas ahora estarán disponibles en tiempo de ejecución
+  1. Se creó script `scripts/copy-templates.js` para copiar plantillas después del build
+  2. Se actualizó `package.json` para ejecutar el script: `next build && node scripts/copy-templates.js`
+  3. Se actualizó la API para buscar plantillas en `.next/server/templates/`
+  4. Las plantillas ahora se copian automáticamente al build
 
 ### 6. Verificación post-deploy
 

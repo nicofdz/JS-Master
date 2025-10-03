@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
     const { createReport } = await import('docx-templates')
     console.log('Dependencias importadas exitosamente')
 
-    // Rutas a las plantillas
-    const contractTemplatePath = path.join(process.cwd(), 'src/templates/contracts/ContratoTemplate.docx')
-    const hoursTemplatePath = path.join(process.cwd(), 'src/templates/contracts/HorasTemplate .docx')
+    // Rutas a las plantillas (en .next/server/templates después del build)
+    const contractTemplatePath = path.join(process.cwd(), '.next/server/templates/contracts/ContratoTemplate.docx')
+    const hoursTemplatePath = path.join(process.cwd(), '.next/server/templates/contracts/HorasTemplate .docx')
     
     console.log('Buscando plantillas en:', {
       contractTemplatePath,
