@@ -74,6 +74,15 @@ Una vez configuradas las variables de entorno:
   2. Vercel detectará automáticamente que es Next.js
   3. No necesitas configuración manual de runtime para Next.js
 
+**Error: "supabaseKey is required"**
+- **Causa:** Variables de entorno de Supabase no configuradas o incorrectas
+- **Solución:** 
+  1. Verifica que las variables estén configuradas en Vercel:
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  2. Asegúrate de que estén marcadas para todos los entornos (Production, Preview, Development)
+  3. No uses `SUPABASE_SERVICE_ROLE_KEY` en el código (ya corregido)
+
 ### 6. Verificación post-deploy
 
 Después del deploy, verifica que:
