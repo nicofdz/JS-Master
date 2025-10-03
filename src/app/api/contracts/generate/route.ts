@@ -5,6 +5,13 @@ import fs from 'fs'
 import path from 'path'
 import JSZip from 'jszip'
 
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Método GET no permitido. Use POST para generar contratos.' }, 
+    { status: 405 }
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     const data: WorkerContractData = await request.json()
@@ -21,8 +28,15 @@ export async function POST(request: NextRequest) {
     const contractTemplatePath = path.join(process.cwd(), 'src/templates/contracts/ContratoTemplate.docx')
     const hoursTemplatePath = path.join(process.cwd(), 'src/templates/contracts/HorasTemplate .docx')
     
+    console.log('Buscando plantillas en:', {
+      contractTemplatePath,
+      hoursTemplatePath,
+      cwd: process.cwd()
+    })
+    
     // Verificar que las plantillas existen
     if (!fs.existsSync(contractTemplatePath)) {
+      console.error('Plantilla de contrato no encontrada en:', contractTemplatePath)
       return NextResponse.json(
         { error: 'Plantilla de contrato no encontrada' }, 
         { status: 404 }
@@ -30,6 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!fs.existsSync(hoursTemplatePath)) {
+      console.error('Plantilla de horas no encontrada en:', hoursTemplatePath)
       return NextResponse.json(
         { error: 'Plantilla de horas no encontrada' }, 
         { status: 404 }
@@ -39,6 +54,11 @@ export async function POST(request: NextRequest) {
     // Leer las plantillas
     const contractTemplate = fs.readFileSync(contractTemplatePath)
     const hoursTemplate = fs.readFileSync(hoursTemplatePath)
+    
+    console.log('Plantillas leídas exitosamente:', {
+      contractSize: contractTemplate.length,
+      hoursSize: hoursTemplate.length
+    })
 
     // Datos para ambas plantillas
     const templateData = {
@@ -100,8 +120,16 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error generating contract:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown'
+    })
     return NextResponse.json(
-      { error: 'Error interno del servidor al generar el contrato' }, 
+      { 
+        error: 'Error interno del servidor al generar el contrato',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, 
       { status: 500 }
     )
   }

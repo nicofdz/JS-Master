@@ -83,6 +83,14 @@ Una vez configuradas las variables de entorno:
   2. Asegúrate de que estén marcadas para todos los entornos (Production, Preview, Development)
   3. No uses `SUPABASE_SERVICE_ROLE_KEY` en el código (ya corregido)
 
+**Error: "405 Method Not Allowed" al generar contratos**
+- **Causa:** API route no maneja correctamente los métodos HTTP
+- **Solución:** 
+  1. El archivo `src/app/api/contracts/generate/route.ts` ha sido actualizado
+  2. Ahora maneja tanto GET como POST correctamente
+  3. Se agregó logging para debug de plantillas
+  4. Verifica que las plantillas estén en `src/templates/contracts/`
+
 ### 6. Verificación post-deploy
 
 Después del deploy, verifica que:
