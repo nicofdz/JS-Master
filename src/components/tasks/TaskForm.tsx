@@ -228,12 +228,12 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
         throw new Error('Las horas estimadas deben ser mayor a 0')
       }
 
-      // Convertir strings vacíos a null para campos de fecha
+      // Convertir strings vacíos a undefined para campos de fecha
       const cleanedData = {
         ...data,
-        start_date: data.start_date && data.start_date.trim() !== '' ? data.start_date : null,
-        end_date: data.end_date && data.end_date.trim() !== '' ? data.end_date : null,
-        completed_at: data.completed_at && data.completed_at.trim() !== '' ? data.completed_at : null
+        start_date: data.start_date && data.start_date.trim() !== '' ? data.start_date : undefined,
+        end_date: data.end_date && data.end_date.trim() !== '' ? data.end_date : undefined,
+        completed_at: data.completed_at && data.completed_at.trim() !== '' ? data.completed_at : undefined
       }
 
       await onSubmit(cleanedData)
@@ -458,11 +458,20 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
         >
           <option value="">Sin asignar</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.full_name} ({user.rut})
-            </option>
-          ))}
+          {users.map((user) => {
+            // Manejo robusto del tipo de contrato
+            let contractType = 'A Trato' // Por defecto A Trato
+            if (user.contract_type === 'por_dia') {
+              contractType = 'Por Día'
+            } else if (user.contract_type === 'a_trato') {
+              contractType = 'A Trato'
+            }
+            return (
+              <option key={user.id} value={user.id}>
+                {user.full_name} - {contractType}
+              </option>
+            )
+          })}
         </select>
       </div>
 

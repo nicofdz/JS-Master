@@ -171,15 +171,35 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                   </div>
                   
                   <div className="text-right">
-                    <div className="text-sm text-slate-400 mb-1">
-                      Neto: <span className="text-slate-100 font-medium">{formatCurrency(invoice.net_amount || 0)}</span>
-                    </div>
-                    <div className="text-sm text-slate-400 mb-1">
-                      IVA 19%: <span className="text-slate-100 font-medium">{formatCurrency(invoice.iva_amount || 0)}</span>
-                    </div>
-                    <div className="text-lg font-bold text-slate-100 border-t border-slate-600 pt-1">
-                      Total: {formatCurrency(invoice.total_amount || 0)}
-                    </div>
+                    {(() => {
+                      const netAmount = invoice.net_amount || 0
+                      const ivaAmount = invoice.iva_amount || 0
+                      const totalPDF = invoice.total_amount || 0
+                      
+                      // Neto con descuento del 6%
+                      const netAfterDiscount = netAmount * 0.94
+                      
+                      // Total real = (Neto - 6%) - IVA
+                      const totalReal = netAfterDiscount - ivaAmount
+                      
+                      return (
+                        <>
+                          <div className="text-xs text-slate-400 mb-1">
+                            Neto: <span className="text-slate-100 font-medium">{formatCurrency(netAmount)}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 mb-2">
+                            IVA 19%: <span className="text-slate-100 font-medium">{formatCurrency(ivaAmount)}</span>
+                          </div>
+                          <div className="text-lg font-bold text-slate-100 border-t border-slate-600 pt-2">
+                            Total: {formatCurrency(totalReal)}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1 space-y-0.5">
+                            <div>Neto - 6%: <span className="text-slate-300">{formatCurrency(netAfterDiscount)}</span></div>
+                            <div>IVA: <span className="text-red-400">-{formatCurrency(ivaAmount)}</span></div>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
                 

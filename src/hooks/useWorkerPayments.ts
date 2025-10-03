@@ -8,6 +8,7 @@ export interface WorkerPaymentSummary {
   full_name: string
   rut: string
   cargo?: string
+  contract_type?: string
   total_tasks: number
   completed_tasks: number
   total_payment_due: number
@@ -33,13 +34,31 @@ export function useWorkerPayments() {
 
       console.log('🔄 Refrescando datos de pagos...')
 
-      // Usar la vista que creamos en la base de datos
-      const { data, error } = await supabase
+      // Usar la vista que creamos en la base de datos con el contract_type
+      const { data: viewData, error: viewError } = await supabase
         .from('worker_payment_summary')
         .select('*')
         .order('total_payment_due', { ascending: false })
 
-      if (error) throw error
+      if (viewError) throw viewError
+
+      // Obtener contract_type de cada trabajador
+      const workerIds = viewData?.map(w => w.worker_id) || []
+      const { data: workersData, error: workersError } = await supabase
+        .from('workers')
+        .select('id, contract_type')
+        .in('id', workerIds)
+
+      if (workersError) throw workersError
+
+      // Combinar los datos
+      const data = viewData?.map(payment => {
+        const worker = workersData?.find(w => w.id === payment.worker_id)
+        return {
+          ...payment,
+          contract_type: worker?.contract_type || 'a_trato'
+        }
+      })
 
       console.log('✅ Datos de pagos actualizados:', data?.length || 0, 'registros')
       setPayments(data || [])

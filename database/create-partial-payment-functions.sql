@@ -216,3 +216,8 @@ COMMENT ON FUNCTION public.get_available_tasks_for_payment IS 'Obtiene tareas di
 
 
 
+
+
+
+
+

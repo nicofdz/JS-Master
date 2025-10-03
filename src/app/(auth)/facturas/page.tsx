@@ -16,6 +16,8 @@ export default function FacturasPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceIncome | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   
   const { 
     invoices, 
@@ -29,6 +31,73 @@ export default function FacturasPage() {
 
   const { refreshIncomeTracking, incomeData } = useIncomeTracking()
   const stats = getInvoiceStats()
+
+  // Filtrar facturas procesadas del mes seleccionado
+  const getMonthlyIncome = () => {
+    const monthlyInvoices = invoices.filter(inv => {
+      if (inv.status !== 'processed' || !inv.issue_date) return false
+      
+      const invoiceDate = new Date(inv.issue_date)
+      return invoiceDate.getMonth() + 1 === selectedMonth && 
+             invoiceDate.getFullYear() === selectedYear
+    })
+
+    // Calcular totales usando la fórmula: (Neto - 6%) - IVA
+    let totalRealIncome = 0
+    let totalNet = 0
+    let totalIva = 0
+    
+    monthlyInvoices.forEach(inv => {
+      const netAmount = inv.net_amount || 0
+      const ivaAmount = inv.iva_amount || 0
+      
+      // Neto con descuento del 6%
+      const netAfterDiscount = netAmount * 0.94
+      
+      // Total real = (Neto - 6%) - IVA
+      const realIncome = netAfterDiscount - ivaAmount
+      
+      totalRealIncome += realIncome
+      totalNet += netAmount
+      totalIva += ivaAmount
+    })
+    
+    const count = monthlyInvoices.length
+
+    return {
+      total_income: totalRealIncome,
+      total_net: totalNet,
+      total_iva: totalIva,
+      processed_invoices_count: count,
+      total_spent_on_payments: 0 // No se usa en el componente
+    }
+  }
+
+  const monthlyIncome = getMonthlyIncome()
+
+  // Calcular el ingreso total real de TODAS las facturas procesadas (para dinero disponible)
+  const getTotalRealIncome = () => {
+    const processedInvoices = invoices.filter(inv => inv.status === 'processed')
+    
+    let totalRealIncome = 0
+    
+    processedInvoices.forEach(inv => {
+      const netAmount = inv.net_amount || 0
+      const ivaAmount = inv.iva_amount || 0
+      
+      // Neto con descuento del 6%
+      const netAfterDiscount = netAmount * 0.94
+      
+      // Total real = (Neto - 6%) - IVA
+      const realIncome = netAfterDiscount - ivaAmount
+      
+      totalRealIncome += realIncome
+    })
+    
+    return totalRealIncome
+  }
+
+  const totalRealIncome = getTotalRealIncome()
 
   const handleUploadSuccess = async () => {
     setShowUpload(false)
@@ -155,12 +224,52 @@ export default function FacturasPage() {
           </div>
         </div>
 
+        {/* Selector de Mes/Año */}
+        <div className="mb-6 bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-300 text-sm font-medium">Período:</span>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                  className="px-4 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                    <option key={month} value={month}>
+                      {new Date(2000, month - 1).toLocaleDateString('es-CL', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="px-4 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Estadísticas */}
         <div className="mb-8">
           <InvoiceStats 
             stats={stats} 
-            incomeData={incomeData}
+            incomeData={monthlyIncome}
             incomeLoading={false}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            totalRealIncome={totalRealIncome}
           />
         </div>
 

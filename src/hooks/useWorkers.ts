@@ -8,6 +8,8 @@ export interface Worker {
   email?: string
   phone?: string
   is_active: boolean
+  contract_type?: string
+  daily_rate?: number
   // Campos adicionales
   nacionalidad?: string
   ciudad?: string
@@ -27,6 +29,8 @@ export interface WorkerFormData {
   email?: string
   phone?: string
   is_active?: boolean
+  contract_type?: string
+  daily_rate?: number
   // Campos adicionales
   nacionalidad?: string
   ciudad?: string
@@ -78,6 +82,8 @@ export function useWorkers() {
           email: workerData.email || null,
           phone: workerData.phone || null,
           is_active: workerData.is_active ?? true,
+          contract_type: workerData.contract_type || 'por_dia',
+          daily_rate: workerData.daily_rate || null,
           // Campos adicionales
           nacionalidad: workerData.nacionalidad || null,
           ciudad: workerData.ciudad || null,
@@ -114,6 +120,8 @@ export function useWorkers() {
           email: workerData.email || null,
           phone: workerData.phone || null,
           is_active: workerData.is_active ?? true,
+          contract_type: workerData.contract_type || 'por_dia',
+          daily_rate: workerData.daily_rate || null,
           // Campos adicionales
           nacionalidad: workerData.nacionalidad || null,
           ciudad: workerData.ciudad || null,

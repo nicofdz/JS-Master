@@ -102,3 +102,8 @@ COMMENT ON FUNCTION public.process_worker_payment IS 'Procesa pagos y crea regis
 
 
 
+
+
+
+
+

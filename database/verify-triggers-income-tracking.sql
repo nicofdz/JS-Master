@@ -147,3 +147,8 @@ SELECT '✅ TRIGGERS Y FUNCIONES VERIFICADOS Y CORREGIDOS' as resultado;
 
 
 
+
+
+
+
+

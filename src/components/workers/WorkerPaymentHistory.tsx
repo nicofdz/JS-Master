@@ -121,10 +121,10 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'cancelled': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'completed': return 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+      case 'cancelled': return 'bg-red-500/20 text-red-400 border border-red-500/30'
+      default: return 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
     }
   }
 
@@ -139,21 +139,21 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
-          <div className="text-center py-8">Cargando historial de pagos...</div>
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
+          <div className="text-center py-8 text-slate-300">Cargando historial de pagos...</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-6xl max-h-[80vh] overflow-y-auto w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-6xl max-h-[80vh] overflow-y-auto w-full mx-4">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-xl font-semibold text-black">Historial de Pagos - {workerName}</h3>
-            <p className="text-sm text-gray-600">Registro completo de pagos realizados</p>
+            <h3 className="text-xl font-semibold text-slate-100">Historial de Pagos - {workerName}</h3>
+            <p className="text-sm text-slate-400">Registro completo de pagos realizados</p>
           </div>
           <Button variant="outline" onClick={onClose} className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
@@ -165,63 +165,63 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
           // Vista de detalles de un pago específico
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h4 className="text-lg font-medium text-black">Detalles del Pago #{selectedPayment}</h4>
+              <h4 className="text-lg font-medium text-slate-100">Detalles del Pago #{selectedPayment}</h4>
               <Button variant="outline" onClick={handleCloseDetails}>
                 ← Volver al historial
               </Button>
             </div>
 
             {loadingDetails ? (
-              <div className="text-center py-8 text-gray-600">Cargando detalles...</div>
+              <div className="text-center py-8 text-slate-300">Cargando detalles...</div>
             ) : (
               <div className="space-y-4">
-                <Card>
+                <Card className="bg-slate-700/30 border-slate-600">
                   <CardHeader>
-                    <CardTitle className="text-base text-black">Tareas Incluidas en este Pago</CardTitle>
+                    <CardTitle className="text-base text-slate-100">Tareas Incluidas en este Pago</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {taskDetails.length === 0 ? (
-                      <div className="text-center py-4 text-gray-600">
+                      <div className="text-center py-4 text-slate-400">
                         No hay detalles de tareas disponibles
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
+                        <table className="min-w-full divide-y divide-slate-600">
+                          <thead className="bg-slate-700/50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-slate-300 uppercase">
                                 Tarea
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-slate-300 uppercase">
                                 Proyecto
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-slate-300 uppercase">
                                 Apartamento
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-slate-300 uppercase">
                                 Monto
                               </th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                              <th className="px-4 py-2 text-left text-xs font-medium text-slate-300 uppercase">
                                 Fecha
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-slate-800/50 divide-y divide-slate-600">
                             {taskDetails.map((task) => (
-                              <tr key={task.task_id}>
-                                <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                              <tr key={task.task_id} className="hover:bg-slate-700/30">
+                                <td className="px-4 py-2 text-sm font-medium text-slate-100">
                                   {task.task_name}
                                 </td>
-                                <td className="px-4 py-2 text-sm text-gray-500">
+                                <td className="px-4 py-2 text-sm text-slate-300">
                                   {task.project_name}
                                 </td>
-                                <td className="px-4 py-2 text-sm text-gray-500">
+                                <td className="px-4 py-2 text-sm text-slate-300">
                                   {task.apartment_number}
                                 </td>
-                                <td className="px-4 py-2 text-sm font-medium text-green-600">
+                                <td className="px-4 py-2 text-sm font-medium text-emerald-400">
                                   {formatCurrency(task.task_payment_amount)}
                                 </td>
-                                <td className="px-4 py-2 text-sm text-gray-500">
+                                <td className="px-4 py-2 text-sm text-slate-300">
                                   {formatDate(task.task_created_at)}
                                 </td>
                               </tr>
@@ -239,47 +239,47 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
           // Vista del historial completo
           <div className="space-y-4">
             {history.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
+              <div className="text-center py-8 text-slate-400">
                 No hay historial de pagos para este trabajador
               </div>
             ) : (
               <div className="grid gap-4">
-                {history.map((payment) => (
-                  <Card key={payment.payment_id} className="hover:shadow-md transition-shadow">
+                {history.map((payment, index) => (
+                  <Card key={payment.payment_id} className="bg-slate-700/30 border-slate-600 hover:bg-slate-700/40 hover:shadow-lg transition-all">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-4 mb-2">
-                            <h4 className="text-lg font-medium">
-                              Pago #{payment.payment_id}
+                            <h4 className="text-lg font-medium text-slate-100">
+                              Pago #{index + 1}
                             </h4>
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.payment_status)}`}>
                               {getStatusText(payment.payment_status)}
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-900">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4 text-green-600" />
-                              <span className="font-medium text-gray-900">{formatCurrency(payment.total_amount)}</span>
+                              <DollarSign className="h-4 w-4 text-emerald-400" />
+                              <span className="font-medium text-slate-100">{formatCurrency(payment.total_amount)}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-blue-600" />
-                              <span className="text-gray-900">{payment.tasks_count} tareas</span>
+                              <CheckCircle className="h-4 w-4 text-blue-400" />
+                              <span className="text-slate-200">{payment.tasks_count} tareas</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-orange-600" />
-                              <span className="text-gray-900">{payment.work_days} días trabajados</span>
+                              <Clock className="h-4 w-4 text-orange-400" />
+                              <span className="text-slate-200">{payment.work_days} días trabajados</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-gray-600" />
-                              <span className="text-gray-900">{formatDate(payment.payment_date)}</span>
+                              <Calendar className="h-4 w-4 text-slate-400" />
+                              <span className="text-slate-200">{formatDate(payment.payment_date)}</span>
                             </div>
                           </div>
 
                           {payment.notes && (
-                            <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                              <strong className="text-gray-900">Notas:</strong> <span className="text-gray-700">{payment.notes}</span>
+                            <div className="mt-2 p-2 bg-slate-600/30 border border-slate-500 rounded text-sm">
+                              <strong className="text-slate-200">Notas:</strong> <span className="text-slate-300">{payment.notes}</span>
                             </div>
                           )}
                         </div>
@@ -298,7 +298,7 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
                             variant="outline"
                             size="sm"
                             onClick={() => handleEditPayment(payment)}
-                            className="flex items-center gap-1 text-blue-600 border-blue-300 hover:bg-blue-50"
+                            className="flex items-center gap-1 text-blue-400 border-blue-600 hover:bg-blue-900/30"
                           >
                             <Edit className="h-4 w-4" />
                             Editar
@@ -307,7 +307,7 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeletePayment(payment)}
-                            className="flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50"
+                            className="flex items-center gap-1 text-red-400 border-red-600 hover:bg-red-900/30"
                           >
                             <Trash2 className="h-4 w-4" />
                             Eliminar

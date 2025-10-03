@@ -89,7 +89,7 @@ export function useTasks(apartmentId?: number) {
     try {
       const { data, error } = await supabase
         .from('workers')
-        .select('id, full_name, rut')
+        .select('id, full_name, rut, contract_type')
         .eq('is_active', true)
         .order('full_name', { ascending: true })
 
@@ -239,8 +239,7 @@ export function useTasks(apartmentId?: number) {
       const dataToInsert = {
         ...taskData,
         start_date: taskData.start_date || new Date().toISOString().split('T')[0],
-        end_date: taskData.end_date || null,
-        completed_at: taskData.completed_at || null
+        end_date: taskData.end_date || null
       }
       
       const { data, error } = await supabase
@@ -307,10 +306,7 @@ export function useTasks(apartmentId?: number) {
       const dataToUpdate = {
         ...taskData,
         start_date: taskData.start_date === '' ? null : taskData.start_date,
-        end_date: taskData.end_date === '' ? null : taskData.end_date,
-        completed_at: taskData.status === 'completed' && !taskData.completed_at
-          ? new Date().toISOString()
-          : (taskData.completed_at === '' ? null : taskData.completed_at)
+        end_date: taskData.end_date === '' ? null : taskData.end_date
       }
       
       const { data, error } = await supabase

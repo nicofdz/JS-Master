@@ -65,3 +65,8 @@ SELECT 'Políticas de storage configuradas correctamente' as status;
 
 
 
+
+
+
+
+

@@ -18,6 +18,8 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
     email: '',
     phone: '',
     is_active: true,
+    contract_type: 'por_dia',
+    daily_rate: 0,
     // Campos adicionales
     nacionalidad: 'Chilena',
     ciudad: '',
@@ -39,6 +41,8 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         email: worker.email || '',
         phone: worker.phone || '',
         is_active: worker.is_active ?? true,
+        contract_type: worker.contract_type || 'por_dia',
+        daily_rate: worker.daily_rate || 0,
         // Campos adicionales
         nacionalidad: worker.nacionalidad || 'Chilena',
         ciudad: worker.ciudad || '',
@@ -66,7 +70,15 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
           [name]: formattedValue
         }))
       }
-    } else {
+    } 
+    // Convertir email a minúsculas automáticamente
+    else if (name === 'email') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value.toLowerCase()
+      }))
+    } 
+    else {
       setFormData(prev => ({
         ...prev,
         [name]: type === 'checkbox' ? checked : value
@@ -119,12 +131,12 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
         {/* Información Básica */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
+        <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+          <h3 className="text-lg font-medium text-slate-100 mb-4">Información Básica</h3>
           
           {/* Nombre completo */}
           <div className="mb-4">
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="full_name" className="block text-sm font-medium text-slate-300 mb-2">
               Nombre Completo *
             </label>
             <Input
@@ -143,7 +155,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* RUT */}
           <div className="mb-4">
-            <label htmlFor="rut" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="rut" className="block text-sm font-medium text-slate-300 mb-2">
               RUT *
             </label>
             <Input
@@ -162,7 +174,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* Email */}
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
               Email
             </label>
             <Input
@@ -181,7 +193,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* Teléfono */}
           <div className="mb-4">
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">
               Teléfono
             </label>
             <Input
@@ -197,16 +209,61 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
               <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
             )}
           </div>
+
+          {/* Tipo de Contrato */}
+          <div className="mb-4">
+            <label htmlFor="contract_type" className="block text-sm font-medium text-slate-300 mb-2">
+              Tipo de Contrato *
+            </label>
+            <Select
+              id="contract_type"
+              name="contract_type"
+              value={formData.contract_type}
+              onChange={handleChange}
+            >
+              <option value="por_dia">Por Día</option>
+              <option value="a_trato">A Trato</option>
+            </Select>
+            <p className="text-xs text-slate-400 mt-1">
+              Define si el trabajador cobra por día trabajado o por tarea completada
+            </p>
+          </div>
+
+          {/* Tarifa Diaria - Solo visible si es "por día" */}
+          {formData.contract_type === 'por_dia' && (
+            <div className="mb-4">
+              <label htmlFor="daily_rate" className="block text-sm font-medium text-slate-300 mb-2">
+                Tarifa Diaria *
+              </label>
+              <Input
+                id="daily_rate"
+                name="daily_rate"
+                type="number"
+                min="0"
+                step="1000"
+                value={formData.daily_rate || ''}
+                onChange={handleChange}
+                placeholder="Ej: 35000"
+                className={errors.daily_rate ? 'border-red-500' : ''}
+              />
+              {errors.daily_rate && (
+                <p className="mt-1 text-sm text-red-600">{errors.daily_rate}</p>
+              )}
+              <p className="text-xs text-slate-400 mt-1">
+                Monto que se paga por cada día trabajado
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Información Personal */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h3>
+        <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+          <h3 className="text-lg font-medium text-slate-100 mb-4">Información Personal</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Nacionalidad */}
             <div>
-              <label htmlFor="nacionalidad" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="nacionalidad" className="block text-sm font-medium text-slate-300 mb-2">
                 Nacionalidad
               </label>
               <Select
@@ -229,7 +286,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Ciudad */}
             <div>
-              <label htmlFor="ciudad" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="ciudad" className="block text-sm font-medium text-slate-300 mb-2">
                 Ciudad
               </label>
               <Input
@@ -244,7 +301,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Estado Civil */}
             <div>
-              <label htmlFor="estado_civil" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="estado_civil" className="block text-sm font-medium text-slate-300 mb-2">
                 Estado Civil
               </label>
               <Select
@@ -264,7 +321,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Fecha de Nacimiento */}
             <div>
-              <label htmlFor="fecha_nacimiento" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="fecha_nacimiento" className="block text-sm font-medium text-slate-300 mb-2">
                 Fecha de Nacimiento
               </label>
               <Input
@@ -279,7 +336,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* Dirección */}
           <div className="mt-4">
-            <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="direccion" className="block text-sm font-medium text-slate-300 mb-2">
               Dirección
             </label>
             <Input
@@ -294,13 +351,13 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         </div>
 
         {/* Información Laboral */}
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información Laboral</h3>
+        <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+          <h3 className="text-lg font-medium text-slate-100 mb-4">Información Laboral</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Cargo */}
             <div>
-              <label htmlFor="cargo" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="cargo" className="block text-sm font-medium text-slate-300 mb-2">
                 Cargo
               </label>
               <Select
@@ -322,7 +379,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Previsión */}
             <div>
-              <label htmlFor="prevision" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="prevision" className="block text-sm font-medium text-slate-300 mb-2">
                 Previsión (AFP)
               </label>
               <Select
@@ -345,7 +402,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Salud */}
             <div>
-              <label htmlFor="salud" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="salud" className="block text-sm font-medium text-slate-300 mb-2">
                 Sistema de Salud
               </label>
               <Select
@@ -372,16 +429,16 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
             type="checkbox"
             checked={formData.is_active}
             onChange={handleChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-500 rounded bg-slate-700"
           />
-          <label htmlFor="is_active" className="ml-2 block text-sm text-gray-700">
+          <label htmlFor="is_active" className="ml-2 block text-sm text-slate-300">
             Trabajador activo
           </label>
         </div>
       </div>
 
       {/* Botones */}
-      <div className="flex justify-end space-x-3 pt-6 border-t">
+      <div className="flex justify-end space-x-3 pt-6 border-t border-slate-600">
         <Button
           type="button"
           variant="outline"

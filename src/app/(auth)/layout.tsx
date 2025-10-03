@@ -20,7 +20,8 @@ import {
   LogOut,
   SquareStack, // Icono para Apartamentos
   CheckSquare, // Icono para Tareas
-  DollarSign // Icono para Pagos
+  DollarSign, // Icono para Pagos
+  ClipboardCheck // Icono para Asistencia
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -68,6 +69,7 @@ export default function AuthLayout({
     { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
     { name: 'Proyectos', href: '/proyectos', icon: Building2 },
     { name: 'Trabajadores', href: '/equipos', icon: Users },
+    { name: 'Asistencia', href: '/asistencia', icon: ClipboardCheck },
     { name: 'Pisos', href: '/pisos', icon: Home },
     { name: 'Apartamentos', href: '/apartamentos', icon: SquareStack },
     { name: 'Tareas', href: '/tareas', icon: CheckSquare, badge: delayedCount > 0 ? delayedCount : null },

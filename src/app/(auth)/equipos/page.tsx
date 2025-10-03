@@ -15,6 +15,7 @@ export default function TrabajadoresPage() {
   const { workers, loading, error, createWorker, updateWorker, deleteWorker, refresh } = useWorkers()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [contractTypeFilter, setContractTypeFilter] = useState<string>('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingWorker, setEditingWorker] = useState<any>(null)
   const [showContractModal, setShowContractModal] = useState(false)
@@ -28,7 +29,9 @@ export default function TrabajadoresPage() {
     const matchesStatus = statusFilter === 'all' || 
                           (statusFilter === 'active' && worker.is_active) ||
                           (statusFilter === 'inactive' && !worker.is_active)
-    return matchesSearch && matchesStatus
+    const matchesContractType = contractTypeFilter === 'all' ||
+                                worker.contract_type === contractTypeFilter
+    return matchesSearch && matchesStatus && matchesContractType
   })
 
   const handleDelete = async (workerId: number) => {
@@ -151,28 +154,64 @@ export default function TrabajadoresPage() {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, RUT, email o teléfono..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre, RUT, email o teléfono..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">Todos los estados</option>
+            <option value="active">Solo activos</option>
+            <option value="inactive">Solo inactivos</option>
+          </select>
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="all">Todos los estados</option>
-          <option value="active">Solo activos</option>
-          <option value="inactive">Solo inactivos</option>
-        </select>
+
+        {/* Toggle Tipo de Contrato */}
+        <div className="flex gap-2 bg-slate-700/30 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setContractTypeFilter('all')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              contractTypeFilter === 'all'
+                ? 'bg-slate-600 text-slate-100 shadow-md'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setContractTypeFilter('por_dia')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              contractTypeFilter === 'por_dia'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            Por Día
+          </button>
+          <button
+            onClick={() => setContractTypeFilter('a_trato')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              contractTypeFilter === 'a_trato'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            A Trato
+          </button>
+        </div>
       </div>
 
       {/* Lista de trabajadores */}
@@ -191,6 +230,14 @@ export default function TrabajadoresPage() {
                   Contacto
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tipo de Contrato
+                </th>
+                {contractTypeFilter === 'por_dia' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tarifa Diaria
+                  </th>
+                )}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -204,7 +251,7 @@ export default function TrabajadoresPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredWorkers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={contractTypeFilter === 'por_dia' ? 8 : 7} className="px-6 py-12 text-center text-gray-500">
                     {searchTerm || statusFilter !== 'all' 
                       ? 'No se encontraron trabajadores con los filtros aplicados'
                       : 'No hay trabajadores registrados'
@@ -243,6 +290,22 @@ export default function TrabajadoresPage() {
                         )}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        worker.contract_type === 'a_trato' 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {worker.contract_type === 'a_trato' ? 'A Trato' : 'Por Día'}
+                      </span>
+                    </td>
+                    {contractTypeFilter === 'por_dia' && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-green-600">
+                          ${worker.daily_rate?.toLocaleString('es-CL') || '0'}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         worker.is_active 
