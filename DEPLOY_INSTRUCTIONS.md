@@ -19,9 +19,14 @@ Para que la aplicación funcione correctamente en Vercel, necesitas configurar l
 2. **Configurar las variables de entorno:**
    - En el dashboard de Vercel, ve a tu proyecto
    - Ve a "Settings" → "Environment Variables"
-   - Agrega las siguientes variables:
-     - `NEXT_PUBLIC_SUPABASE_URL` = `https://yypydgzcavbeubppzsvh.supabase.co`
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = `tu_clave_anonima_de_supabase`
+   - Agrega las siguientes variables (sin usar secrets):
+     - **Name:** `NEXT_PUBLIC_SUPABASE_URL`
+     - **Value:** `https://yypydgzcavbeubppzsvh.supabase.co`
+     - **Environment:** Production, Preview, Development (marcar todas)
+     
+     - **Name:** `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+     - **Value:** `tu_clave_anonima_de_supabase_aqui`
+     - **Environment:** Production, Preview, Development (marcar todas)
 
 3. **Configuración del build:**
    - Framework Preset: Next.js
@@ -50,7 +55,19 @@ Una vez configuradas las variables de entorno:
 2. Espera a que se complete el build
 3. Tu aplicación estará disponible en la URL proporcionada por Vercel
 
-### 5. Verificación post-deploy
+### 5. Solución de errores comunes
+
+**Error: "Environment Variable references Secret which does not exist"**
+- **Causa:** Vercel está buscando secrets que no existen
+- **Solución:** 
+  1. Ve a "Settings" → "Environment Variables"
+  2. Asegúrate de que las variables estén configuradas como **Environment Variables** (no como Secrets)
+  3. No uses el símbolo `@` en los nombres de las variables
+  4. Las variables deben ser:
+     - `NEXT_PUBLIC_SUPABASE_URL` (sin @)
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (sin @)
+
+### 6. Verificación post-deploy
 
 Después del deploy, verifica que:
 
