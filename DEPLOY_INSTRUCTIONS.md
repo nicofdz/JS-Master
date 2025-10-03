@@ -99,6 +99,14 @@ Una vez configuradas las variables de entorno:
   3. Revisa la consola del navegador para ver los logs de debug
   4. Verifica que la petición se esté haciendo con método POST
 
+**Error: "405 con contenido HTML" en Vercel**
+- **Causa:** Problema de routing en Vercel con API routes
+- **Solución:** 
+  1. Se agregó configuración específica para Vercel (`runtime: 'nodejs'`)
+  2. Se agregó `dynamic: 'force-dynamic'` para evitar cache
+  3. Se creó archivo de configuración `route.config.js`
+  4. Se mejoró el manejo de errores con headers explícitos
+
 ### 6. Verificación post-deploy
 
 Después del deploy, verifica que:

@@ -5,6 +5,10 @@ import fs from 'fs'
 import path from 'path'
 import JSZip from 'jszip'
 
+// Configuración para Vercel
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   return NextResponse.json(
     { 
@@ -17,12 +21,12 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('=== API CONTRACTS GENERATE POST INICIADO ===')
+  console.log('Request method:', request.method)
+  console.log('Request URL:', request.url)
+  console.log('Request headers:', Object.fromEntries(request.headers.entries()))
+  
   try {
-    console.log('=== API CONTRACTS GENERATE POST ===')
-    console.log('Request method:', request.method)
-    console.log('Request URL:', request.url)
-    console.log('Request headers:', Object.fromEntries(request.headers.entries()))
-    
     const data: WorkerContractData = await request.json()
     console.log('Datos recibidos:', data)
     
@@ -129,18 +133,26 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
+    console.error('=== ERROR EN API CONTRACTS GENERATE ===')
     console.error('Error generating contract:', error)
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : 'Unknown'
     })
+    
     return NextResponse.json(
       { 
         error: 'Error interno del servidor al generar el contrato',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
       }, 
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     )
   }
 }
