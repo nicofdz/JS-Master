@@ -542,7 +542,6 @@ export default function ApartamentosPage() {
           {(towerFilter !== 'all' || projectFilter !== 'all' || statusFilter !== 'all') && (
             <p className="text-slate-500 text-sm mt-2">
               Intenta seleccionar otro filtro o proyecto
-=======
       {/* Grilla de Apartamentos */}
       {filteredApartments.length === 0 ? (
         <div className="text-center py-12">
@@ -551,7 +550,6 @@ export default function ApartamentosPage() {
           {floorFilter !== 'all' && (
             <p className="text-slate-500 text-sm mt-2">
               Intenta seleccionar otro piso o proyecto
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
             </p>
           )}
         </div>
@@ -898,7 +896,6 @@ export default function ApartamentosPage() {
                                                               <p className="text-xs text-slate-400">
                                                                 {apartment.apartment_type || 'Sin tipo'} {apartment.area ? `• ${apartment.area} m²` : ''}
                                                               </p>
-=======
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredApartments.map((apartment) => {
             const apartmentTasks = getTasksForApartment(apartment.id)
@@ -948,7 +945,6 @@ export default function ApartamentosPage() {
                       <span className="text-slate-200 font-medium">
                         {apartment.area ? `${apartment.area} m²` : '-'}
                       </span>
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                     </div>
                   </div>
 
@@ -980,7 +976,6 @@ export default function ApartamentosPage() {
                       </span>
                     </div>
                     <div className="w-full bg-slate-600 rounded-full h-2">
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       <div
                         className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${apartment.progress_percentage || 0}%` }}
@@ -1032,7 +1027,6 @@ export default function ApartamentosPage() {
                       size="sm"
                       onClick={() => setEditingApartment(apartment)}
                                                             className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-=======
                   </div>
 
                   {/* Contador de Tareas */}
@@ -1048,7 +1042,6 @@ export default function ApartamentosPage() {
                       size="sm"
                       onClick={() => setEditingApartment(apartment)}
                       className="flex-1 text-blue-400 border-blue-600 hover:bg-blue-900/30"
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       title="Editar"
                     >
                       <Edit className="w-4 h-4" />
@@ -1065,7 +1058,6 @@ export default function ApartamentosPage() {
                         apartment.status === 'blocked' 
                           ? 'text-emerald-400 border-emerald-600 hover:bg-emerald-900/30' 
                           : 'text-orange-400 border-orange-600 hover:bg-orange-900/30'
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       }`}
                       title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
                     >
@@ -1118,13 +1110,11 @@ export default function ApartamentosPage() {
               )
             })
           })()}
-=======
                   </div>
                 </CardContent>
               </Card>
             )
           })}
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         </div>
       )}
 
@@ -1161,7 +1151,6 @@ export default function ApartamentosPage() {
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}
       />
-=======
       {/* Modal de Edición */}
       <Modal
         isOpen={!!editingApartment}
@@ -1233,7 +1222,6 @@ export default function ApartamentosPage() {
           </div>
         )}
       </Modal>
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
     </div>
   )
 }
