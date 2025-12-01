@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [registerData, setRegisterData] = useState({
     email: '',
     password: '',
@@ -22,7 +23,7 @@ export default function LoginPage() {
     phone: ''
   })
 
-  const { signIn, signUp, user, loading } = useAuth()
+  const { signIn, signUp, resetPassword, user, loading } = useAuth()
   const router = useRouter()
 
   // Redireccionar si ya está autenticado
@@ -38,7 +39,7 @@ export default function LoginPage() {
 
     try {
       const { error } = await signIn(email, password)
-      
+
       if (error) {
         toast.error(error.message || 'Error al iniciar sesión')
         return
@@ -55,7 +56,7 @@ export default function LoginPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (registerData.password !== registerData.confirmPassword) {
       toast.error('Las contraseñas no coinciden')
       return
@@ -75,7 +76,7 @@ export default function LoginPage() {
         registerData.fullName,
         registerData.role
       )
-      
+
       if (error) {
         toast.error(error.message || 'Error al registrarse')
         return
@@ -91,6 +92,27 @@ export default function LoginPage() {
     }
   }
 
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      const { error } = await resetPassword(email)
+
+      if (error) {
+        toast.error(error.message || 'Error al enviar correo de recuperación')
+        return
+      }
+
+      toast.success('Correo de recuperación enviado. Revisa tu bandeja de entrada.')
+      setShowForgotPassword(false)
+    } catch (error) {
+      toast.error('Error inesperado')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -109,18 +131,55 @@ export default function LoginPage() {
             Sistema de Control de Terminaciones
           </h1>
           <p className="mt-2 text-gray-600">
-            {showRegister ? 'Crear nueva cuenta' : 'Iniciar sesión en tu cuenta'}
+            {showForgotPassword
+              ? 'Ingresa tu correo para recuperar tu contraseña'
+              : showRegister
+                ? 'Crear nueva cuenta'
+                : 'Iniciar sesión en tu cuenta'}
           </p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>
-              {showRegister ? '🔐 Registro' : '🔑 Iniciar Sesión'}
+              {showForgotPassword
+                ? '🔄 Recuperar Contraseña'
+                : showRegister
+                  ? '🔐 Registro'
+                  : '🔑 Iniciar Sesión'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {!showRegister ? (
+            {showForgotPassword ? (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <Input
+                  label="Correo electrónico"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ejemplo@correo.com"
+                  required
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Enviando...' : 'Enviar correo de recuperación'}
+                </Button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(false)}
+                    className="text-primary-600 hover:text-primary-500 text-sm"
+                  >
+                    Volver al inicio de sesión
+                  </button>
+                </div>
+              </form>
+            ) : !showRegister ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <Input
                   label="Correo electrónico"
@@ -130,7 +189,7 @@ export default function LoginPage() {
                   placeholder="ejemplo@correo.com"
                   required
                 />
-                
+
                 <Input
                   label="Contraseña"
                   type="password"
@@ -148,14 +207,25 @@ export default function LoginPage() {
                   {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </Button>
 
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowRegister(true)}
-                    className="text-primary-600 hover:text-primary-500 text-sm"
-                  >
-                    ¿No tienes cuenta? Regístrate aquí
-                  </button>
+                <div className="text-center space-y-2">
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-primary-600 hover:text-primary-500 text-sm"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowRegister(true)}
+                      className="text-primary-600 hover:text-primary-500 text-sm"
+                    >
+                      ¿No tienes cuenta? Regístrate aquí
+                    </button>
+                  </div>
                 </div>
               </form>
             ) : (
@@ -164,7 +234,7 @@ export default function LoginPage() {
                   label="Nombre completo"
                   type="text"
                   value={registerData.fullName}
-                  onChange={(e) => setRegisterData({...registerData, fullName: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
                   placeholder="Tu nombre completo"
                   required
                 />
@@ -173,7 +243,7 @@ export default function LoginPage() {
                   label="Correo electrónico"
                   type="email"
                   value={registerData.email}
-                  onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                   placeholder="ejemplo@correo.com"
                   required
                 />
@@ -184,7 +254,7 @@ export default function LoginPage() {
                   </label>
                   <select
                     value={registerData.role}
-                    onChange={(e) => setRegisterData({...registerData, role: e.target.value as any})}
+                    onChange={(e) => setRegisterData({ ...registerData, role: e.target.value as any })}
                     className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   >
@@ -199,7 +269,7 @@ export default function LoginPage() {
                   label="Teléfono (opcional)"
                   type="tel"
                   value={registerData.phone}
-                  onChange={(e) => setRegisterData({...registerData, phone: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
                   placeholder="+56 9 1234 5678"
                 />
 
@@ -207,7 +277,7 @@ export default function LoginPage() {
                   label="Contraseña"
                   type="password"
                   value={registerData.password}
-                  onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                   placeholder="••••••••"
                   helperText="Mínimo 6 caracteres"
                   required
@@ -217,7 +287,7 @@ export default function LoginPage() {
                   label="Confirmar contraseña"
                   type="password"
                   value={registerData.confirmPassword}
-                  onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
+                  onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
                   placeholder="••••••••"
                   required
                 />

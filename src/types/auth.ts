@@ -21,6 +21,7 @@ export interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ data?: any, error?: any }>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ data?: any, error?: any }>
+  resetPassword: (email: string) => Promise<{ data?: any, error?: any }>
   hasRole: (requiredRole: string | string[]) => boolean
   isAdmin: () => boolean
   isSupervisorOrAbove: () => boolean

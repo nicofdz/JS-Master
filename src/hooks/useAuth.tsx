@@ -68,7 +68,7 @@ export function useAuthState(): AuthContextType {
     const initAuth = async () => {
       try {
         const { data: { session }, error } = await authService.getSession()
-        
+
         if (error) {
           console.error('Error al obtener sesión:', error)
           setLoading(false)
@@ -78,7 +78,7 @@ export function useAuthState(): AuthContextType {
         if (session?.user && isMounted) {
           setUser(session.user)
           setSession(session)
-          
+
           // Cargar o crear perfil
           const { data: existingProfile } = await authService.getUserProfile(session.user.id)
           if (existingProfile) {
@@ -103,10 +103,10 @@ export function useAuthState(): AuthContextType {
       if (!isMounted) return
 
       setSession(session)
-      
+
       if (session?.user) {
         setUser(session.user)
-        
+
         // Cargar o crear perfil
         const { data: existingProfile } = await authService.getUserProfile(session.user.id)
         if (existingProfile) {
@@ -118,7 +118,7 @@ export function useAuthState(): AuthContextType {
         setUser(null)
         setProfile(null)
       }
-      
+
       setLoading(false)
     })
 
@@ -205,6 +205,21 @@ export function useAuthState(): AuthContextType {
     return authService.getAccessLevel(profile?.role)
   }
 
+  const resetPassword = async (email: string) => {
+    setLoading(true)
+    try {
+      const { data, error } = await authService.resetPassword(email)
+      if (error) {
+        return { error }
+      }
+      return { data }
+    } catch (error) {
+      return { error }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     user,
     profile,
@@ -218,6 +233,7 @@ export function useAuthState(): AuthContextType {
     isAdmin,
     isSupervisorOrAbove,
     getAccessLevel,
+    resetPassword,
   }
 }
 
