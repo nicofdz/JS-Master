@@ -53,8 +53,8 @@ function WorkerPaymentDetails({ workerId, workerName, onClose }: WorkerPaymentDe
   }, [workerId])
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-slate-100">Detalles de Pagos - {workerName}</h3>
           <Button variant="outline" onClick={onClose} className="text-slate-300 hover:text-slate-100">
@@ -144,7 +144,11 @@ function WorkerPaymentDetails({ workerId, workerName, onClose }: WorkerPaymentDe
   )
 }
 
-export function WorkerPaymentSummary() {
+interface WorkerPaymentSummaryProps {
+  totalRealIncome?: number
+}
+
+export function WorkerPaymentSummary({ totalRealIncome = 0 }: WorkerPaymentSummaryProps) {
   const { 
     payments, 
     loading, 
@@ -174,8 +178,15 @@ export function WorkerPaymentSummary() {
   const [searchFilter, setSearchFilter] = useState('')
 
 
-  // Filtrar trabajadores por nombre o RUT
+  // Filtrar trabajadores por nombre o RUT y solo mostrar trabajadores "a trato"
   const filteredPayments = payments.filter(worker => {
+    // Excluir al jefe por RUT
+    if (worker.rut === '13.161.546-9') return false
+    
+    // Filtrar solo trabajadores con contrato "a trato"
+    const isTratoWorker = !worker.contract_type || worker.contract_type === 'a_trato'
+    if (!isTratoWorker) return false
+    
     if (!searchFilter) return true
     
     const searchTerm = searchFilter.toLowerCase()
@@ -387,9 +398,9 @@ export function WorkerPaymentSummary() {
               <div className="flex items-center">
                 <DollarSign className="h-8 w-8 text-orange-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-400">Costos Pendientes</p>
+                  <p className="text-sm font-medium text-slate-400">Por pagar</p>
                   <p className="text-2xl font-bold text-slate-100">
-                    {formatCurrency(getTotalPendingPayments())}
+                    {formatCurrency(filteredPayments.reduce((total, worker) => total + worker.pending_payment, 0))}
                   </p>
                 </div>
               </div>
@@ -403,7 +414,7 @@ export function WorkerPaymentSummary() {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-400">Total Pagado</p>
                   <p className="text-2xl font-bold text-slate-100">
-                    {formatCurrency(payments.reduce((total, worker) => total + worker.total_paid, 0))}
+                    {formatCurrency(filteredPayments.reduce((total, worker) => total + worker.total_paid, 0))}
                   </p>
                 </div>
               </div>
@@ -415,8 +426,8 @@ export function WorkerPaymentSummary() {
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-purple-400" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-slate-400">Total Trabajadores</p>
-                  <p className="text-2xl font-bold text-slate-100">{payments.length}</p>
+                  <p className="text-sm font-medium text-slate-400">Trabajadores a Trato</p>
+                  <p className="text-2xl font-bold text-slate-100">{filteredPayments.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -432,7 +443,7 @@ export function WorkerPaymentSummary() {
                     {incomeLoading ? (
                       <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
                     ) : (
-                      formatCurrency((incomeData?.total_income || 0) - (incomeData?.total_spent_on_payments || 0))
+                      formatCurrency(totalRealIncome - (incomeData?.total_spent_on_payments || 0))
                     )}
                   </p>
                   <p className="text-xs text-slate-400">

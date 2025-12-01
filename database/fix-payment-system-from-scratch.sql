@@ -202,3 +202,7 @@ COMMENT ON VIEW public.worker_payment_summary IS 'Vista que calcula POR PAGAR ba
 
 
 
+
+
+
+

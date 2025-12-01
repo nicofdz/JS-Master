@@ -7,7 +7,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { X, Save, Plus, Trash2 } from 'lucide-react'
-import { useActivityTemplates } from '@/hooks/useActivityTemplates'
+import { useTaskTemplates } from '@/hooks/useTaskTemplates'
 import toast from 'react-hot-toast'
 
 interface ApartmentFormProps {
@@ -37,7 +37,7 @@ export function ApartmentForm({ apartment, onSubmit, onCancel, floors, projects 
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [selectedTasks, setSelectedTasks] = useState<SelectedTask[]>([])
-  const { templates, loading: templatesLoading } = useActivityTemplates()
+  const { templates, loading: templatesLoading } = useTaskTemplates()
 
   useEffect(() => {
     if (apartment) {

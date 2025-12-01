@@ -106,15 +106,17 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
         ciudad: selectedWorker.ciudad || 'No especificado',
         nacionalidad: selectedWorker.nacionalidad || 'Chilena',
         estado: selectedWorker.estado_civil || 'No especificado',
-        fecha_nacimiento: selectedWorker.fecha_nacimiento || 'No especificado',
+        fecha_nacimiento: selectedWorker.fecha_nacimiento 
+          ? formatDateToChilean(selectedWorker.fecha_nacimiento)
+          : 'No especificado',
         prevision: selectedWorker.prevision || 'No especificado',
         salud: selectedWorker.salud || 'No especificado',
         
         // Datos del trabajo
         cargo: selectedWorker.cargo || 'Trabajador',
         nombre_obra: selectedProject.name,
-        fecha_inicio: formatDateToChilean(new Date(startDate)),
-        fecha_termino: formatDateToChilean(new Date(endDate))
+        fecha_inicio: formatDateToChilean(startDate),
+        fecha_termino: formatDateToChilean(endDate)
       }
 
       // Llamar a la API para generar el contrato
@@ -164,7 +166,7 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
       isOpen={isOpen}
       onClose={handleClose}
       title="Generar Documentos de Trabajo"
-      size="lg"
+      className="modal_contratos"
     >
       <div className="space-y-6">
         {/* Selección de Trabajador */}
@@ -261,19 +263,19 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
 
         {/* Resumen del Contrato */}
         {selectedWorker && selectedProject && startDate && endDate && (
-          <Card className="bg-blue-50">
+          <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
+              <CardTitle className="flex items-center gap-2 text-slate-100">
+                <FileText className="h-5 w-5 text-blue-400" />
                 Resumen de los Documentos
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm">
-                <p><strong>Trabajador:</strong> {selectedWorker.full_name}</p>
-                <p><strong>RUT:</strong> {selectedWorker.rut}</p>
-                <p><strong>Proyecto:</strong> {selectedProject.name}</p>
-                <p><strong>Período:</strong> {formatDateToChilean(new Date(startDate))} - {formatDateToChilean(new Date(endDate))}</p>
+              <div className="space-y-2 text-sm text-slate-200">
+                <p><strong className="text-slate-300">Trabajador:</strong> {selectedWorker.full_name}</p>
+                <p><strong className="text-slate-300">RUT:</strong> {selectedWorker.rut}</p>
+                <p><strong className="text-slate-300">Proyecto:</strong> {selectedProject.name}</p>
+                <p><strong className="text-slate-300">Período:</strong> {formatDateToChilean(startDate)} - {formatDateToChilean(endDate)}</p>
               </div>
             </CardContent>
           </Card>

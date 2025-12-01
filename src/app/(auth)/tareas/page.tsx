@@ -1,245 +1,321 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useTasks } from '@/hooks'
-import { useProjectFilter } from '@/hooks/useProjectFilter'
-import { Button } from '@/components/ui/Button'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Modal } from '@/components/ui/Modal'
-import { TaskForm } from '@/components/tasks/TaskForm'
-import { TaskCard } from '@/components/tasks/TaskCard'
-import { TaskComments } from '@/components/tasks/TaskComments'
-import { TaskInfo } from '@/components/tasks/TaskInfo'
-import { Plus, Search, Filter, Edit, Trash2, Clock, User, AlertCircle, CheckCircle, XCircle, Building2, ListTodo, Play, Lock, Home } from 'lucide-react'
-import { formatDate, getStatusColor, getStatusEmoji } from '@/lib/utils'
-import { ACTIVITY_STATUSES } from '@/lib/constants'
+import { Button } from '@/components/ui/Button'
+import { Plus, Search, Building2, User } from 'lucide-react'
+import { StatusFilterCards } from '@/components/common/StatusFilterCards'
+import { TaskHierarchyV2 } from '@/components/tasks-v2/TaskHierarchyV2'
+import { TaskFormModalV2 } from '@/components/tasks-v2/TaskFormModalV2'
+import { DeletedTasksList } from '@/components/tasks-v2/DeletedTasksList'
+import { TaskTemplatesModal } from '@/components/tasks-v2/TaskTemplatesModal'
+import { Clock, Play, CheckCircle, Lock, AlertCircle, Layers, Trash2, CheckSquare, FileText } from 'lucide-react'
+import { useTasksV2 } from '@/hooks'
+import { useProjectFilter } from '@/hooks/useProjectFilter'
+import { formatApartmentNumber } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function TareasPage() {
-  const { tasks, apartments, users, projects, floors, loading, error, taskStats, refreshStats, createTask, updateTask, deleteTask } = useTasks()
+  const { 
+    tasks, 
+    projects,
+    users, 
+    floors, 
+    loading, 
+    error, 
+    taskStats, 
+    refreshStats,
+    getWorkersForProject,
+    refreshTasks,
+    fetchDeletedTasks,
+    getDeletedTasksCount,
+    restoreTask
+  } = useTasksV2()
+  
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
+  
+  const [activeTab, setActiveTab] = useState<'active' | 'trash'>('active')
   const [searchTerm, setSearchTerm] = useState('')
-  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [workerFilter, setWorkerFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'blocked' | 'cancelled' | 'on_hold' | 'delayed'>('all')
+  const [towerFilter, setTowerFilter] = useState<string>('all')
   const [floorFilter, setFloorFilter] = useState<string>('all')
   const [apartmentFilter, setApartmentFilter] = useState<string>('all')
-  const [workerFilter, setWorkerFilter] = useState<string>('all')
-  const [showDelayedOnly, setShowDelayedOnly] = useState<boolean>(false)
-  const [showPendingOnly, setShowPendingOnly] = useState<boolean>(false)
-  const [showInProgressOnly, setShowInProgressOnly] = useState<boolean>(false)
-  const [showCompletedOnly, setShowCompletedOnly] = useState<boolean>(false)
-  const [showBlockedOnly, setShowBlockedOnly] = useState<boolean>(false)
+  const [projectWorkers, setProjectWorkers] = useState<any[]>([])
+  const [loadingWorkers, setLoadingWorkers] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [editingTask, setEditingTask] = useState<any>(null)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [showCommentsModal, setShowCommentsModal] = useState(false)
-  const [selectedTaskForComments, setSelectedTaskForComments] = useState<number | null>(null)
-  const [selectedTaskData, setSelectedTaskData] = useState<any>(null)
-  const [showInfoModal, setShowInfoModal] = useState(false)
-  const [selectedTaskForInfo, setSelectedTaskForInfo] = useState<any>(null)
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [deletedTasks, setDeletedTasks] = useState<any[]>([])
+  const [loadingDeleted, setLoadingDeleted] = useState(false)
+  const [deletedTasksCount, setDeletedTasksCount] = useState(0)
 
-  // Debug inicial
-  console.log('🔍 Debug inicial:', {
-    tasks: tasks.map(t => ({ id: t.id, name: t.task_name, project: t.project_name, apartment: t.apartment_number, floor: t.floor_number })),
-    projects: projects.map(p => ({ id: p.id, name: p.name })),
-    floors: floors.map(f => ({ id: f.id, number: f.floor_number, project: f.projects?.name })),
-    selectedProjectId,
-    floorFilter
-  })
+  // Cargar conteo de tareas eliminadas al iniciar
+  useEffect(() => {
+    loadDeletedTasksCount()
+  }, [])
 
-  // Actualizar estadísticas cuando cambie el filtro de proyecto
+  // Cargar tareas eliminadas cuando se cambia al tab de papelera
+  useEffect(() => {
+    if (activeTab === 'trash' && !loadingDeleted) {
+      loadDeletedTasks()
+    }
+  }, [activeTab])
+
+  const loadDeletedTasksCount = async () => {
+    try {
+      const count = await getDeletedTasksCount()
+      setDeletedTasksCount(count)
+    } catch (error) {
+      console.error('Error loading deleted tasks count:', error)
+    }
+  }
+
+  const loadDeletedTasks = async () => {
+    setLoadingDeleted(true)
+    try {
+      const deleted = await fetchDeletedTasks()
+      setDeletedTasks(deleted)
+    } catch (error) {
+      console.error('Error loading deleted tasks:', error)
+    } finally {
+      setLoadingDeleted(false)
+    }
+  }
+
+  const handleRestoreTask = async (taskId: number) => {
+    try {
+      await restoreTask(taskId)
+      await loadDeletedTasks() // Recargar lista de eliminadas
+      await loadDeletedTasksCount() // Actualizar conteo
+      toast.success('Tarea restaurada exitosamente')
+    } catch (error: any) {
+      toast.error(`Error al restaurar tarea: ${error.message}`)
+    }
+  }
+
+  const handleTaskDeleted = async () => {
+    // Actualizar conteo cuando se elimina una tarea
+    await loadDeletedTasksCount()
+    // Si estamos en el tab de papelera, recargar la lista
+    if (activeTab === 'trash') {
+      await loadDeletedTasks()
+    }
+  }
+
+  // Cargar filtros desde localStorage al iniciar
+  useEffect(() => {
+    try {
+      const savedFilters = localStorage.getItem('tareas-filters')
+      if (savedFilters) {
+        const filters = JSON.parse(savedFilters)
+        if (filters.selectedProjectId) setSelectedProjectId(filters.selectedProjectId)
+        if (filters.workerFilter) setWorkerFilter(filters.workerFilter)
+        if (filters.statusFilter) setStatusFilter(filters.statusFilter)
+        if (filters.towerFilter) setTowerFilter(filters.towerFilter)
+        if (filters.floorFilter) setFloorFilter(filters.floorFilter)
+        if (filters.apartmentFilter) setApartmentFilter(filters.apartmentFilter)
+        if (filters.searchTerm) setSearchTerm(filters.searchTerm)
+        if (filters.activeTab) setActiveTab(filters.activeTab)
+      }
+    } catch (error) {
+      console.error('Error loading filters from localStorage:', error)
+    }
+  }, []) // Solo al montar el componente
+
+  // Guardar filtros en localStorage cuando cambian
+  useEffect(() => {
+    try {
+      const filters = {
+        selectedProjectId,
+        workerFilter,
+        statusFilter,
+        towerFilter,
+        floorFilter,
+        apartmentFilter,
+        searchTerm
+      }
+      localStorage.setItem('tareas-filters', JSON.stringify(filters))
+    } catch (error) {
+      console.error('Error saving filters to localStorage:', error)
+    }
+  }, [selectedProjectId, workerFilter, statusFilter, towerFilter, floorFilter, apartmentFilter, searchTerm])
+
+  // Actualizar estadísticas cuando cambia el proyecto
   useEffect(() => {
     if (refreshStats) {
-      const projectId = selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
+      const projectId = selectedProjectId && selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
       refreshStats(projectId)
     }
   }, [selectedProjectId, refreshStats])
 
-  // Resetear filtro de piso cuando cambie el proyecto
+  // Cargar trabajadores del proyecto seleccionado (con cancelación de requests)
+  useEffect(() => {
+    // Limpiar trabajadores inmediatamente al cambiar de proyecto
+    setProjectWorkers([])
+    setLoadingWorkers(true)
+
+    // Flag para ignorar respuestas de proyectos anteriores
+    let currentProjectId = selectedProjectId
+    let isCancelled = false
+
+    const loadProjectWorkers = async () => {
+      if (!selectedProjectId || selectedProjectId === 'all' || !getWorkersForProject) {
+        setProjectWorkers([])
+        setLoadingWorkers(false)
+        return
+      }
+
+      try {
+        const workers = await getWorkersForProject(Number(selectedProjectId))
+        
+        // Solo actualizar si este proyecto sigue siendo el seleccionado
+        if (!isCancelled && currentProjectId === selectedProjectId) {
+          setProjectWorkers(workers || [])
+        }
+      } catch (err) {
+        console.error('Error loading workers:', err)
+        if (!isCancelled && currentProjectId === selectedProjectId) {
+          setProjectWorkers([])
+        }
+      } finally {
+        if (!isCancelled && currentProjectId === selectedProjectId) {
+          setLoadingWorkers(false)
+        }
+      }
+    }
+
+    loadProjectWorkers()
+
+    // Cleanup: marcar como cancelado cuando cambia el proyecto
+    return () => {
+      isCancelled = true
+    }
+  }, [selectedProjectId]) // Removido getWorkersForProject de dependencias
+
+  // Reset cascada de filtros
+  useEffect(() => {
+    setTowerFilter('all')
+    setFloorFilter('all')
+    setApartmentFilter('all')
+    setWorkerFilter('all')
+  }, [selectedProjectId])
+
   useEffect(() => {
     setFloorFilter('all')
     setApartmentFilter('all')
-  }, [selectedProjectId])
+  }, [towerFilter])
 
-  // Resetear filtro de apartamento cuando cambie el piso
   useEffect(() => {
     setApartmentFilter('all')
   }, [floorFilter])
 
-  // Filtrar tareas por piso
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.task_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.task_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.apartment_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    // Filtro por estado (usando los filtros de tarjetas)
-    const matchesStatus = 
-      (!showPendingOnly && !showInProgressOnly && !showCompletedOnly && !showBlockedOnly) ||
-      (showPendingOnly && task.status === 'pending') ||
-      (showInProgressOnly && task.status === 'in-progress') ||
-      (showCompletedOnly && task.status === 'completed') ||
-      (showBlockedOnly && task.status === 'blocked')
-    const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
+  // Obtener torres únicas del proyecto seleccionado (desde las tareas que ya tienen tower_id y tower_number)
+  const availableTowers = useMemo(() => {
+    if (!selectedProjectId || selectedProjectId === 'all') return []
     
-    // Filtro por proyecto
-    const selectedProject = projects.find(p => p.id.toString() === selectedProjectId?.toString())
-    const selectedProjectName = selectedProject?.name
-    const matchesProject = selectedProjectId === null || selectedProjectId === 'all' || task.project_name === selectedProjectName
+    // Obtener torres únicas desde las tareas del proyecto
+    const projectTasks = tasks.filter(t => t.project_id?.toString() === selectedProjectId)
+    const uniqueTowersMap = new Map<number, { id: number; number: number }>()
     
-    // Filtro por piso
-    const selectedFloor = floors.find(f => f.id.toString() === floorFilter)
-    const selectedFloorNumber = selectedFloor?.floor_number
-    const matchesFloor = floorFilter === 'all' || task.floor_number === selectedFloorNumber
-    
-    // Filtro por apartamento
-    const selectedApartment = apartments.find(a => a.id.toString() === apartmentFilter)
-    const matchesApartment = apartmentFilter === 'all' || task.apartment_id?.toString() === apartmentFilter
-    
-    // Filtro por tareas atrasadas
-    const matchesDelayed = !showDelayedOnly || task.is_delayed === true
-    
-    // Filtro por trabajador
-    const selectedWorker = users.find(u => u.id.toString() === workerFilter)
-    const matchesWorker = workerFilter === 'all' || task.assigned_to?.toString() === workerFilter
-    
-    console.log('🔍 Filtrando tarea:', {
-      taskName: task.task_name,
-      taskProject: task.project_name,
-      taskFloor: task.floor_number,
-      taskWorker: task.assigned_user_name,
-      taskAssignedTo: task.assigned_to,
-      selectedProjectId,
-      selectedProjectName,
-      floorFilter,
-      selectedFloorNumber,
-      workerFilter,
-      selectedWorker: selectedWorker?.full_name,
-      matchesProject,
-      matchesFloor,
-      matchesWorker,
-      isDelayed: task.is_delayed,
-      showDelayedOnly,
-      matchesDelayed
+    projectTasks.forEach(task => {
+      if (task.tower_id && task.tower_number) {
+        if (!uniqueTowersMap.has(task.tower_id)) {
+          uniqueTowersMap.set(task.tower_id, {
+            id: task.tower_id,
+            number: task.tower_number
+          })
+        }
+      }
     })
     
-    return matchesSearch && matchesStatus && matchesPriority && matchesProject && matchesFloor && matchesApartment && matchesWorker && matchesDelayed
+    return Array.from(uniqueTowersMap.values()).sort((a, b) => a.number - b.number)
+  }, [tasks, selectedProjectId])
+
+  // Obtener pisos de la torre seleccionada
+  const availableFloors = useMemo(() => {
+    if (!selectedProjectId || selectedProjectId === 'all') return []
+    if (towerFilter === 'all') return []
+    
+    return floors.filter(f => 
+      f.project_id?.toString() === selectedProjectId &&
+      f.tower_id?.toString() === towerFilter
+    ).sort((a, b) => a.floor_number - b.floor_number)
+  }, [floors, selectedProjectId, towerFilter])
+
+  // Función auxiliar para extraer número del departamento para ordenamiento numérico
+  const extractApartmentNumber = (aptNumber: string): number => {
+    // Extraer el último número del string (ej: "A1 D-101" -> 101, "B0 D-108" -> 108)
+    const match = aptNumber.match(/(\d+)(?!.*\d)/)
+    return match ? parseInt(match[1], 10) : 0
+  }
+
+  // Obtener apartamentos del piso seleccionado
+  const availableApartments = useMemo(() => {
+    if (floorFilter === 'all') return []
+    
+    return tasks
+      .filter(t => t.floor_id?.toString() === floorFilter)
+      .map(t => ({ 
+        id: t.apartment_id, 
+        number: formatApartmentNumber(t.apartment_code, t.apartment_number || ''),
+        code: t.apartment_code,
+        num: t.apartment_number
+      }))
+      .filter((apt, index, self) => 
+        index === self.findIndex(a => a.id === apt.id)
+      )
+      .sort((a, b) => {
+        const numA = extractApartmentNumber(a.number || '')
+        const numB = extractApartmentNumber(b.number || '')
+        return numA - numB
+      })
+  }, [tasks, floorFilter])
+
+  // Obtener trabajadores del proyecto seleccionado (con contratos activos)
+  const availableWorkers = useMemo(() => {
+    if (!selectedProjectId || selectedProjectId === 'all') {
+      return users
+    }
+    
+    // Si está cargando, retornar array vacío para evitar mostrar trabajadores viejos
+    if (loadingWorkers) {
+      return []
+    }
+    
+    // Usar trabajadores cargados con contratos activos
+    return projectWorkers
+  }, [projectWorkers, users, selectedProjectId, loadingWorkers])
+
+  // Filtrar tareas
+  const filteredTasks = tasks.filter(task => {
+    const fullApartmentNumber = formatApartmentNumber(task.apartment_code, task.apartment_number || '')
+    const matchesSearch = task.task_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         fullApartmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (task.apartment_code?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (task.apartment_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (task.project_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    
+    const matchesProject = !selectedProjectId || selectedProjectId === 'all' || 
+                          task.project_id?.toString() === selectedProjectId
+    
+    const matchesTower = towerFilter === 'all' || 
+                        task.tower_id?.toString() === towerFilter
+    
+    const matchesFloor = floorFilter === 'all' || task.floor_id?.toString() === floorFilter
+    
+    const matchesApartment = apartmentFilter === 'all' || task.apartment_id?.toString() === apartmentFilter
+    
+    const matchesWorker = workerFilter === 'all' || 
+                         task.workers.some(w => w.id.toString() === workerFilter)
+    
+    const matchesStatus = statusFilter === 'all' 
+      ? true 
+      : statusFilter === 'delayed'
+      ? task.is_delayed === true
+      : task.status === statusFilter.replace('-', '_')
+    
+    return matchesSearch && matchesProject && matchesTower && matchesFloor && matchesApartment && matchesWorker && matchesStatus
   })
-
-  // Filtrar pisos por proyecto seleccionado
-  const availableFloors = floors.filter(floor => 
-    !selectedProjectId || selectedProjectId === 'all' || floor.project_id.toString() === selectedProjectId?.toString()
-  )
-
-  // Filtrar apartamentos por piso seleccionado
-  const availableApartments = apartments.filter(apartment => 
-    floorFilter === 'all' || apartment.floor_id?.toString() === floorFilter
-  )
-
-  // Contar tareas por estado (se calculan más abajo basadas en filteredTasks)
-
-  const handleDelete = async (taskId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta tarea? Esta acción no se puede deshacer.')) {
-      return
-    }
-    try {
-      await deleteTask(taskId)
-      toast.success('Tarea eliminada exitosamente')
-      // Refrescar estadísticas después de eliminar
-      if (refreshStats) {
-        const projectId = selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
-        refreshStats(projectId)
-      }
-    } catch (err: any) {
-      toast.error(`Error al eliminar tarea: ${err.message || 'Error desconocido'}`)
-    }
-  }
-
-  const handleStatusChange = async (taskId: number, newStatus: string) => {
-    try {
-      await updateTask(taskId, { status: newStatus })
-      // Refrescar estadísticas después de cambiar estado
-      if (refreshStats) {
-        const projectId = selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
-        refreshStats(projectId)
-      }
-    } catch (err: any) {
-      throw new Error(err.message || 'Error al actualizar estado de la tarea')
-    }
-  }
-
-  const handleCreateTask = async (data: any) => {
-    try {
-      await createTask(data)
-      setShowCreateModal(false)
-      setFormError(null)
-      // Refrescar estadísticas después de crear
-      if (refreshStats) {
-        const projectId = selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
-        refreshStats(projectId)
-      }
-    } catch (err: any) {
-      setFormError(err.message || 'Error desconocido al crear tarea.')
-    }
-  }
-
-  const handleUpdateTask = async (data: any) => {
-    if (!editingTask) return
-    try {
-      await updateTask(editingTask.id, data)
-      setEditingTask(null)
-      setFormError(null)
-      // Refrescar estadísticas después de actualizar
-      if (refreshStats) {
-        const projectId = selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
-        refreshStats(projectId)
-      }
-    } catch (err: any) {
-      setFormError(err.message || 'Error desconocido al actualizar tarea.')
-    }
-  }
-
-  const handleOpenComments = (taskId: number) => {
-    const task = tasks.find(t => t.id === taskId)
-    setSelectedTaskForComments(taskId)
-    setSelectedTaskData(task)
-    setShowCommentsModal(true)
-  }
-
-  const handleOpenInfo = (task: any) => {
-    setSelectedTaskForInfo(task)
-    setShowInfoModal(true)
-  }
-
-
-
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200'
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'low': return 'bg-green-100 text-green-800 border-green-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
-
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return <AlertCircle className="w-3 h-3" />
-      case 'high': return <AlertCircle className="w-3 h-3" />
-      case 'medium': return <Clock className="w-3 h-3" />
-      case 'low': return <CheckCircle className="w-3 h-3" />
-      default: return <Clock className="w-3 h-3" />
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return <CheckCircle className="w-4 h-4 text-green-600" />
-      case 'in_progress': return <Clock className="w-4 h-4 text-blue-600" />
-      case 'blocked': return <XCircle className="w-4 h-4 text-red-600" />
-      default: return <Clock className="w-4 h-4 text-gray-600" />
-    }
-  }
 
   if (loading) {
     return (
@@ -263,53 +339,60 @@ export default function TareasPage() {
     )
   }
 
-  // Usar las estadísticas de la base de datos
-  const totalTasks = taskStats.total
-  const pendingTasks = taskStats.pending
-  const inProgressTasks = taskStats.inProgress
-  const completedTasks = taskStats.completed
-  const blockedTasks = taskStats.blocked
-
-  // Debug: Log para verificar los datos
-  console.log('🔍 Debug Tareas:', {
-    totalTasks,
-    pendingTasks,
-    inProgressTasks,
-    completedTasks,
-    blockedTasks,
-    filteredTasksLength: filteredTasks.length,
-    tasksLength: tasks.length
-  })
-
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Gestión de Tareas</h1>
-
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Listado de Tareas</h2>
-        <Button onClick={() => setShowCreateModal(true)} className="flex items-center">
-          <Plus className="w-5 h-5 mr-2" />
-          Nueva Tarea
-        </Button>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Tareas</h1>
+        <p className="text-gray-600">Sistema avanzado de tareas con múltiples trabajadores</p>
       </div>
 
-      {/* Filtros y Búsqueda */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filtros y Búsqueda</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Botones de acción */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-800">Listado de Tareas</h2>
+        {activeTab === 'active' && (
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Nueva Tarea
+            </Button>
+            <Button 
+              onClick={() => setShowTemplatesModal(true)}
+              variant="outline"
+              className="flex items-center"
+            >
+              <FileText className="w-5 h-5 mr-2" />
+              Plantillas de Tareas
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Filtros - Solo mostrar en tab activo */}
+      {activeTab === 'active' && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Filtros y Búsqueda</CardTitle>
+          </CardHeader>
+          <CardContent>
+          {/* Primera fila */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Buscar por nombre, descripción o apartamento..."
+                placeholder="Buscar por nombre, apartamento..."
                 className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+            {/* Filtro por proyecto */}
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <select
@@ -325,65 +408,8 @@ export default function TareasPage() {
                 ))}
               </select>
             </div>
-            <div className="relative">
-              <AlertCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-              >
-                <option value="all">Todas las prioridades</option>
-                <option value="urgent">Urgente</option>
-                <option value="high">Alta</option>
-                <option value="medium">Media</option>
-                <option value="low">Baja</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                value={floorFilter}
-                onChange={(e) => setFloorFilter(e.target.value)}
-                disabled={!selectedProjectId || selectedProjectId === 'all'}
-              >
-                <option value="all">
-                  {!selectedProjectId || selectedProjectId === 'all' 
-                    ? 'Selecciona un proyecto primero' 
-                    : 'Todos los pisos'
-                  }
-                </option>
-                {availableFloors.map((floor) => (
-                  <option key={floor.id} value={floor.id}>
-                    Piso {floor.floor_number}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="relative">
-              <Home className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                value={apartmentFilter}
-                onChange={(e) => setApartmentFilter(e.target.value)}
-                disabled={floorFilter === 'all'}
-              >
-                <option value="all">
-                  {floorFilter === 'all'
-                    ? 'Selecciona un piso primero' 
-                    : 'Todos los apartamentos'
-                  }
-                </option>
-                {availableApartments.map((apartment) => (
-                  <option key={apartment.id} value={apartment.id}>
-                    Depto {apartment.apartment_number}
-                  </option>
-                ))}
-              </select>
-            </div>
+
+            {/* Filtro por trabajador */}
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <select
@@ -392,7 +418,7 @@ export default function TareasPage() {
                 onChange={(e) => setWorkerFilter(e.target.value)}
               >
                 <option value="all">Todos los trabajadores</option>
-                {users.map(worker => (
+                {availableWorkers.map(worker => (
                   <option key={worker.id} value={worker.id.toString()}>
                     {worker.full_name}
                   </option>
@@ -400,318 +426,224 @@ export default function TareasPage() {
               </select>
             </div>
           </div>
+          
+          {/* Segunda fila - Filtros de estructura */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Filtro por torre */}
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                value={towerFilter}
+                onChange={(e) => setTowerFilter(e.target.value)}
+                disabled={!selectedProjectId || selectedProjectId === 'all'}
+              >
+                <option value="all">
+                  {!selectedProjectId || selectedProjectId === 'all' ? 'Selecciona un proyecto primero' : 'Todas las torres'}
+                </option>
+                {availableTowers.map(tower => (
+                  <option key={tower.id} value={tower.id.toString()}>
+                    Torre {tower.number} {(tower as any).name ? `- ${(tower as any).name}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por piso */}
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                value={floorFilter}
+                onChange={(e) => setFloorFilter(e.target.value)}
+                disabled={towerFilter === 'all'}
+              >
+                <option value="all">
+                  {towerFilter === 'all' ? 'Selecciona una torre primero' : 'Todos los pisos'}
+                </option>
+                {availableFloors.map(floor => (
+                  <option key={floor.id} value={floor.id.toString()}>
+                    Piso {floor.floor_number}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por apartamento */}
+            <div className="relative">
+              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                value={apartmentFilter}
+                onChange={(e) => setApartmentFilter(e.target.value)}
+                disabled={floorFilter === 'all'}
+              >
+                <option value="all">
+                  {floorFilter === 'all' ? 'Selecciona un piso primero' : 'Todos los apartamentos'}
+                </option>
+                {availableApartments.map(apt => (
+                  <option key={apt.id} value={apt.id.toString()}>
+                    Depto {apt.number}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </CardContent>
       </Card>
+      )}
 
-      {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Total Tareas</p>
-                <p className="text-2xl font-bold text-slate-100">{totalTasks}</p>
-              </div>
-              <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <ListTodo className="w-5 h-5 text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showPendingOnly 
-              ? 'ring-2 ring-yellow-400 shadow-lg' 
-              : 'hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowPendingOnly(!showPendingOnly)
-            // Desactivar otros filtros de estado
-            setShowInProgressOnly(false)
-            setShowCompletedOnly(false)
-            setShowBlockedOnly(false)
-            setShowDelayedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Pendientes</p>
-                <p className="text-2xl font-bold text-slate-100">{pendingTasks}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showPendingOnly ? 'text-yellow-400' : 'text-slate-400'
-                }`}>
-                  {showPendingOnly ? '🟡 Filtrando...' : '👆 Ver pendientes'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showPendingOnly ? 'bg-yellow-500/20' : 'bg-yellow-500/10'
-              }`}>
-                <Clock className="w-5 h-5 text-yellow-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showInProgressOnly 
-              ? 'ring-2 ring-blue-400 shadow-lg' 
-              : 'hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowInProgressOnly(!showInProgressOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowCompletedOnly(false)
-            setShowBlockedOnly(false)
-            setShowDelayedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-300">En Progreso</p>
-                <p className="text-2xl font-bold text-slate-100">{inProgressTasks}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showInProgressOnly ? 'text-blue-400' : 'text-slate-400'
-                }`}>
-                  {showInProgressOnly ? '🔵 Filtrando...' : '👆 Ver en progreso'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showInProgressOnly ? 'bg-blue-500/20' : 'bg-blue-500/10'
-              }`}>
-                <Play className="w-5 h-5 text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showCompletedOnly 
-              ? 'ring-2 ring-emerald-400 shadow-lg' 
-              : 'hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowCompletedOnly(!showCompletedOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowInProgressOnly(false)
-            setShowBlockedOnly(false)
-            setShowDelayedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Completadas</p>
-                <p className="text-2xl font-bold text-slate-100">{completedTasks}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showCompletedOnly ? 'text-emerald-400' : 'text-slate-400'
-                }`}>
-                  {showCompletedOnly ? '🟢 Filtrando...' : '👆 Ver completadas'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showCompletedOnly ? 'bg-emerald-500/20' : 'bg-emerald-500/10'
-              }`}>
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showBlockedOnly 
-              ? 'ring-2 ring-red-400 shadow-lg' 
-              : 'hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowBlockedOnly(!showBlockedOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowInProgressOnly(false)
-            setShowCompletedOnly(false)
-            setShowDelayedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Bloqueadas</p>
-                <p className="text-2xl font-bold text-slate-100">{blockedTasks}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showBlockedOnly ? 'text-red-400' : 'text-slate-400'
-                }`}>
-                  {showBlockedOnly ? '🔴 Filtrando...' : '👆 Ver bloqueadas'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showBlockedOnly ? 'bg-red-500/20' : 'bg-red-500/10'
-              }`}>
-                <Lock className="w-5 h-5 text-red-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showDelayedOnly 
-              ? 'ring-2 ring-orange-400 shadow-lg' 
-              : 'hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowDelayedOnly(!showDelayedOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowInProgressOnly(false)
-            setShowCompletedOnly(false)
-            setShowBlockedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-300">Atrasadas</p>
-                <p className="text-2xl font-bold text-orange-400">{taskStats.delayed}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showDelayedOnly ? 'text-orange-400' : 'text-slate-400'
-                }`}>
-                  {showDelayedOnly ? '🔴 Filtrando...' : '👆 Ver atrasadas'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showDelayedOnly ? 'bg-orange-500/20' : 'bg-orange-500/10'
-              }`}>
-                <AlertCircle className="w-5 h-5 text-orange-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => {
+              setActiveTab('active')
+              const savedFilters = JSON.parse(localStorage.getItem('tareas-filters') || '{}')
+              localStorage.setItem('tareas-filters', JSON.stringify({ ...savedFilters, activeTab: 'active' }))
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === 'active'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <CheckSquare className="w-4 h-4" />
+            Tareas Activas
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('trash')
+              const savedFilters = JSON.parse(localStorage.getItem('tareas-filters') || '{}')
+              localStorage.setItem('tareas-filters', JSON.stringify({ ...savedFilters, activeTab: 'trash' }))
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              activeTab === 'trash'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <Trash2 className="w-4 h-4" />
+            Papelera ({activeTab === 'trash' ? deletedTasks.length : deletedTasksCount})
+          </button>
+        </nav>
       </div>
 
-      {/* Lista de Tareas */}
-      {filteredTasks.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="w-12 h-12 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron tareas</h3>
-          <p className="text-gray-500 mb-4">
-            {searchTerm || priorityFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || workerFilter !== 'all' || showPendingOnly || showInProgressOnly || showCompletedOnly || showBlockedOnly || showDelayedOnly
-              ? 'Intenta ajustar los filtros de búsqueda'
-              : 'Comienza creando tu primera tarea'
-            }
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onStatusChange={handleStatusChange}
-              onEdit={setEditingTask}
-              onDelete={handleDelete}
-              onComments={handleOpenComments}
-              onInfo={handleOpenInfo}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Modal de Creación */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false)
-          setFormError(null)
-        }}
-        title="Crear Nueva Tarea"
-        size="md"
-      >
-        {formError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong className="font-bold">¡Error!</strong>
-            <span className="block sm:inline"> {formError}</span>
-            <ul className="mt-2 list-disc list-inside">
-              <li>Asegúrate de que todos los campos obligatorios estén llenos.</li>
-              <li>Verifica tu conexión a la base de datos.</li>
-              <li>Intenta recargar la página</li>
-            </ul>
-          </div>
-        )}
-        <TaskForm
-          apartments={apartments}
-          users={users}
-          projects={projects}
-          floors={floors}
-          onSubmit={handleCreateTask}
-          onCancel={() => {
-            setShowCreateModal(false)
-            setFormError(null)
-          }}
-        />
-        
-        {/* Debug de datos que llegan al TaskForm */}
-        {(() => {
-          console.log('🔍 Datos para TaskForm:', {
-            apartments: apartments.map(a => ({ id: a.id, number: a.apartment_number, floor_id: a.floor_id })),
-            floors: floors.map(f => ({ id: f.id, number: f.floor_number, project_id: f.project_id })),
-            projects: projects.map(p => ({ id: p.id, name: p.name }))
-          })
-          return null
-        })()}
-      </Modal>
-
-      {/* Modal de Edición */}
-      <Modal
-        isOpen={!!editingTask}
-        onClose={() => setEditingTask(null)}
-        title="Editar Tarea"
-        size="md"
-      >
-        {editingTask && (
-          <TaskForm
-            task={editingTask}
-            apartments={apartments}
-            users={users}
-            projects={projects}
-            floors={floors}
-            onSubmit={handleUpdateTask}
-            onCancel={() => setEditingTask(null)}
-          />
-        )}
-      </Modal>
-
-      {/* Modal de Comentarios */}
-        {showCommentsModal && selectedTaskForComments && (
-          <TaskComments
-            taskId={selectedTaskForComments}
-            isOpen={showCommentsModal}
-            onClose={() => {
-              setShowCommentsModal(false)
-              setSelectedTaskForComments(null)
-              setSelectedTaskData(null)
+      {/* Contenido según tab activo */}
+      {activeTab === 'active' ? (
+        <>
+          {/* Tarjetas de estado (filtros rápidos clickeables) */}
+          <StatusFilterCards
+            selectedValue={statusFilter}
+            onSelect={(value) => setStatusFilter(value as typeof statusFilter)}
+            scrollTargetId="tasks-list"
+            defaultOption={{
+              value: 'all',
+              label: 'Todas',
+              icon: Layers,
+              count: taskStats.total,
+              activeColor: 'blue-400',
+              activeBg: 'blue-900/30',
+              activeBorder: 'blue-500'
             }}
+            options={[
+              {
+                value: 'pending',
+                label: 'Pendientes',
+                icon: Clock,
+                count: taskStats.pending,
+                activeColor: 'yellow-400',
+                activeBg: 'yellow-900/30',
+                activeBorder: 'yellow-500'
+              },
+              {
+                value: 'in_progress',
+                label: 'En Progreso',
+                icon: Play,
+                count: taskStats.inProgress,
+                activeColor: 'blue-400',
+                activeBg: 'blue-900/30',
+                activeBorder: 'blue-500'
+              },
+              {
+                value: 'completed',
+                label: 'Completadas',
+                icon: CheckCircle,
+                count: taskStats.completed,
+                activeColor: 'emerald-400',
+                activeBg: 'emerald-900/30',
+                activeBorder: 'emerald-500'
+              },
+              {
+                value: 'blocked',
+                label: 'Bloqueadas',
+                icon: Lock,
+                count: taskStats.blocked,
+                activeColor: 'red-400',
+                activeBg: 'red-900/30',
+                activeBorder: 'red-500'
+              },
+              {
+                value: 'delayed',
+                label: 'Atrasadas',
+                icon: AlertCircle,
+                count: taskStats.delayed,
+                activeColor: 'orange-400',
+                activeBg: 'orange-900/30',
+                activeBorder: 'orange-500'
+              }
+            ]}
           />
-        )}
 
-      {/* Modal de Información */}
-      {showInfoModal && selectedTaskForInfo && (
-        <TaskInfo
-          task={selectedTaskForInfo}
-          isOpen={showInfoModal}
-          onClose={() => {
-            setShowInfoModal(false)
-            setSelectedTaskForInfo(null)
-          }}
+          {/* Jerarquía de tareas */}
+          <div id="tasks-list">
+            <TaskHierarchyV2 
+              tasks={filteredTasks} 
+              floors={floors}
+              onTaskUpdate={async () => {
+              if (refreshTasks) {
+                refreshTasks()
+              }
+              if (refreshStats) {
+                const projectId = selectedProjectId && selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
+                refreshStats(projectId)
+              }
+              // Actualizar conteo de tareas eliminadas
+              await handleTaskDeleted()
+            }}
+            />
+          </div>
+        </>
+      ) : (
+        <DeletedTasksList 
+          deletedTasks={deletedTasks}
+          loading={loadingDeleted}
+          onRestore={handleRestoreTask}
+          onRefresh={loadDeletedTasks}
         />
       )}
 
+      {/* Modal de Crear Tarea */}
+      <TaskFormModalV2
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        mode="create"
+        onSuccess={() => {
+          if (refreshTasks) {
+            refreshTasks()
+          }
+          if (refreshStats) {
+            const projectId = selectedProjectId && selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
+            refreshStats(projectId)
+          }
+        }}
+      />
 
-
+      {/* Modal de Gestión de Plantillas */}
+      <TaskTemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+      />
     </div>
   )
 }

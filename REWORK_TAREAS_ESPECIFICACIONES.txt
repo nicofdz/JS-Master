@@ -1,0 +1,468 @@
+================================================================================
+REWORK DEL SISTEMA DE TAREAS - ESPECIFICACIONES COMPLETAS
+================================================================================
+
+FECHA: 2025-01-XX
+OBJETIVO: Reinventar el sistema de tareas para permitir múltiples trabajadores
+          por tarea y mejor manejo de materiales.
+
+================================================================================
+1. ESTRUCTURA DE TABLAS
+================================================================================
+
+1.1. TABLA: apartment_tasks (MODIFICADA)
+----------------------------------------
+
+CAMPOS QUE SE MANTIENEN:
+- id, apartment_id, task_name, task_description, task_category
+- status (pending, in_progress, completed, cancelled, on_hold, blocked)
+- priority, estimated_hours, actual_hours
+- start_date, end_date, notes
+- created_at, updated_at
+- worker_payment (monto total de la tarea, default: 0)
+- is_paid (marcado manualmente por el usuario, default: FALSE)
+- completed_at (cuando el usuario marca como completada)
+- is_delayed (campo manual, el supervisor lo marca si es necesario)
+- delay_reason (campo manual, el supervisor ingresa el motivo del retraso)
+
+CAMPOS QUE SE ELIMINAN (después de validación):
+- assigned_to (se migra a task_assignments, pero se mantiene temporalmente)
+- progress (se elimina, la tarea está completa o no)
+- actual_start_time, actual_end_time (se eliminan)
+
+CAMPOS QUE SE AGREGAN:
+- progress_photos → JSONB array de URLs (se mueve desde tabla progress_photos)
+- is_active → BOOLEAN DEFAULT TRUE (soft delete)
+
+NOTAS IMPORTANTES:
+- is_delayed y delay_reason son campos MANUALES que el supervisor ingresa
+- assigned_to se mantiene temporalmente para validación antes de eliminarlo
+
+
+1.2. TABLA: task_assignments (NUEVA)
+------------------------------------
+
+ESTRUCTURA:
+- id SERIAL PRIMARY KEY
+- apartment_task_id INTEGER NOT NULL REFERENCES apartment_tasks(id) ON DELETE CASCADE
+- worker_id INTEGER NOT NULL REFERENCES workers(id)
+- status VARCHAR DEFAULT 'assigned' CHECK (status IN ('assigned', 'in_progress', 'completed', 'cancelled'))
+- completed_at TIMESTAMP WITH TIME ZONE (solo se registra cuando la tarea principal es completada)
+- notes TEXT
+- created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+- updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+- is_active BOOLEAN DEFAULT TRUE
+- UNIQUE (apartment_task_id, worker_id) - Un trabajador solo puede estar asignado una vez a la misma tarea
+
+REGLAS DE ESTADO:
+- 'assigned' → 'in_progress' (supervisor marca que el trabajador empezó)
+- 'in_progress' → se mantiene hasta que la tarea principal sea completada
+- Solo cuando apartment_tasks.status = 'completed' → task_assignments.status = 'completed' 
+  y se registra completed_at automáticamente
+
+IMPORTANTE:
+- El trabajador NO tiene acceso a la aplicación, solo los supervisores
+- Los supervisores no pueden estar pendientes de que cada trabajador hizo su parte
+- Solo marcan la tarea como completada una vez se dé la señal
+- El estado de la asignación solo cambia a 'completed' cuando la tarea principal 
+  es marcada como completada por el usuario
+
+
+1.3. TABLA: task_assignment_materials (NUEVA)
+----------------------------------------------
+
+ESTRUCTURA:
+- id SERIAL PRIMARY KEY
+- task_assignment_id INTEGER NOT NULL REFERENCES task_assignments(id) ON DELETE CASCADE
+- material_movement_id BIGINT NOT NULL REFERENCES material_movements(id)
+- created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+- is_active BOOLEAN DEFAULT TRUE (soft delete en cascada)
+
+REGLAS:
+- Una entrega de materiales puede usarse en múltiples asignaciones
+- No hay UNIQUE constraint aquí
+- Cuando se elimina una asignación (soft delete), los materiales también se hacen 
+  soft delete (is_active = FALSE)
+
+
+1.4. TABLA: task_materials (ELIMINADA)
+---------------------------------------
+
+- Se elimina completamente después de migrar los datos
+- Los materiales ahora se asocian a través de material_movements en 
+  task_assignment_materials
+
+
+1.5. TABLA: progress_photos (MODIFICADA)
+-----------------------------------------
+
+- Se mantiene para compatibilidad
+- Las nuevas fotos se guardan en apartment_tasks.progress_photos (JSONB array)
+- Formato: ["url1", "url2", "url3"]
+
+
+1.6. TABLA: payment_tasks (MODIFICADA)
+---------------------------------------
+
+CAMPOS QUE SE AGREGAN:
+- task_assignment_id INTEGER (nullable, para rastrear qué asignación específica se pagó)
+
+CAMPOS EXISTENTES:
+- payment_id, task_id, task_payment_amount, created_at
+
+
+1.7. TABLA: worker_payment_history (MODIFICADA)
+------------------------------------------------
+
+- Se crea un registro por cada trabajador cuando se paga una tarea
+- Cada trabajador recibe su parte del pago dividido
+- El pago sale de la tarea que fue pagada por el monto total
+
+
+================================================================================
+2. FLUJO DEL SISTEMA
+================================================================================
+
+2.1. CREACIÓN DE TAREA
+-----------------------
+
+1. Usuario (supervisor) crea tarea en apartment_tasks:
+   - Define: nombre, descripción, categoría, prioridad, fechas, worker_payment (default: 0)
+   - status = 'pending'
+   - is_paid = FALSE
+   - is_delayed = FALSE (el supervisor lo marca si es necesario)
+   - delay_reason = NULL (el supervisor lo ingresa si es necesario)
+
+2. Asignación de trabajadores:
+   - Usuario asigna uno o más trabajadores
+   - Se crean registros en task_assignments:
+     - status = 'assigned'
+     - is_active = TRUE
+
+
+2.2. ASIGNACIÓN DE MATERIALES
+-------------------------------
+
+1. Entrega de materiales a trabajador:
+   - Se crea material_movement con movement_type = 'entrega'
+   - Se asocia a worker_id y project_id
+
+2. Asociar entrega a asignación:
+   - Usuario selecciona qué entregas de materiales se usaron para esa asignación
+   - Se crean registros en task_assignment_materials:
+     - task_assignment_id → asignación específica
+     - material_movement_id → entrega de materiales
+     - is_active = TRUE
+   - Una misma entrega puede asociarse a múltiples asignaciones
+
+
+2.3. PROGRESO DE LA TAREA
+--------------------------
+
+1. Trabajador inicia trabajo:
+   - Supervisor actualiza task_assignments.status = 'in_progress'
+   - La asignación se queda en 'in_progress' hasta que la tarea principal sea completada
+
+2. Tarea principal completada:
+   - Supervisor marca apartment_tasks.status = 'completed'
+   - Se registra apartment_tasks.completed_at
+   - Automáticamente (mediante trigger), todas las asignaciones activas cambian:
+     - task_assignments.status = 'completed'
+     - task_assignments.completed_at = apartment_tasks.completed_at
+   - is_paid sigue en FALSE hasta que se procese el pago
+
+
+2.4. FOTOS DE PROGRESO
+-----------------------
+
+- Se suben y se guardan en apartment_tasks.progress_photos (JSONB array)
+- Ejemplo: ["url1", "url2", "url3"]
+
+
+2.5. PROCESAMIENTO DE PAGO
+---------------------------
+
+1. Usuario marca tarea como pagada:
+   - apartment_tasks.is_paid = TRUE
+
+2. Sistema calcula reparto:
+   - Cuenta asignaciones activas: COUNT(task_assignments WHERE is_active = TRUE 
+     AND apartment_task_id = X)
+   - Calcula monto por trabajador: worker_payment / count_assignments
+
+3. Creación de registros de pago:
+   
+   a) Se crea 1 registro en worker_payment_history (pago principal):
+      - worker_id = NULL (o el primer trabajador, según lógica)
+      - total_amount = apartment_tasks.worker_payment (ej: 300,000)
+      - tasks_count = 1
+      - payment_date = CURRENT_DATE
+   
+   b) Se crean N registros en payment_tasks (uno por cada asignación activa):
+      - payment_id = ID del pago principal creado (mismo para todos)
+      - task_id = ID de la tarea
+      - task_assignment_id = ID de la asignación
+      - task_payment_amount = monto dividido por trabajador (ej: 100,000)
+   
+   c) Se crean N registros en worker_payment_history (uno por cada trabajador):
+      - worker_id = ID del trabajador
+      - total_amount = monto dividido (ej: 100,000)
+      - tasks_count = 1
+      - payment_date = CURRENT_DATE
+      - notes = "Pago de tarea [task_name] - Parte de pago ID [payment_id]"
+
+IMPORTANTE:
+- Al pagar una tarea de 300 mil, se guarda un registro de que se pagó la tarea 
+  por 300 mil (pago principal)
+- En la tabla de los trabajadores, se pone que cada uno recibe 100 mil pero el 
+  pago salió de la tarea que fue pagada por 300 mil
+
+
+2.6. ELIMINACIÓN DE ASIGNACIÓN
+-------------------------------
+
+1. Restricción:
+   - No se permite eliminar asignaciones normalmente (solo en caso de errores)
+   - Si se elimina (soft delete):
+     - task_assignments.is_active = FALSE
+     - task_assignment_materials.is_active = FALSE (cascada)
+     - Se recalcula el pago si la tarea ya estaba pagada
+
+2. Recalculo de pago:
+   - Si apartment_tasks.is_paid = TRUE:
+     - Se recalcula el monto por trabajador con las asignaciones activas restantes
+     - Se actualizan los registros en payment_tasks y worker_payment_history
+
+
+2.7. SOFT DELETE EN CASCADA
+----------------------------
+
+- apartment_tasks.is_active = FALSE:
+  - task_assignments.is_active = FALSE (cascada)
+  - task_assignment_materials.is_active = FALSE (cascada)
+
+
+2.8. RETRASOS
+--------------
+
+- Supervisor marca manualmente:
+  - apartment_tasks.is_delayed = TRUE
+  - apartment_tasks.delay_reason = "Motivo del retraso"
+- Estos campos son MANUALES, no se calculan automáticamente
+
+
+================================================================================
+3. PLAN DE MIGRACIÓN
+================================================================================
+
+FASE 1: PREPARACIÓN
+--------------------
+
+1. Crear nuevas tablas:
+   - task_assignments
+   - task_assignment_materials
+
+2. Agregar columnas a apartment_tasks:
+   - progress_photos JSONB DEFAULT '[]'::jsonb
+   - is_active BOOLEAN DEFAULT TRUE
+
+3. Modificar payment_tasks:
+   - Agregar task_assignment_id INTEGER (nullable)
+
+
+FASE 2: MIGRACIÓN DE DATOS
+----------------------------
+
+1. Migrar asignaciones:
+   - Crear task_assignments desde apartment_tasks.assigned_to
+   - Mapear estados: completed → completed, in_progress → in_progress, 
+     otros → assigned
+   - Copiar completed_at si existe
+
+2. Migrar fotos de progreso:
+   - Agregar todas las URLs de progress_photos a apartment_tasks.progress_photos
+   - Formato JSONB array
+
+3. Migrar materiales (si existen):
+   - Analizar task_materials existentes
+   - Crear material_movements ficticios o asociar a entregas existentes
+   - Crear task_assignment_materials correspondientes
+
+
+FASE 3: VALIDACIÓN
+-------------------
+
+1. Verificar integridad:
+   - Todas las tareas con assigned_to tienen al menos una asignación
+   - Las fotos se migraron correctamente
+   - Los pagos existentes siguen funcionando
+
+2. Mantener compatibilidad:
+   - assigned_to se mantiene temporalmente para validación
+   - Las funciones de pago se actualizan para usar task_assignments
+
+
+FASE 4: ACTUALIZACIÓN DE FUNCIONES
+-----------------------------------
+
+1. Actualizar process_worker_payment_simple:
+   - Buscar tareas completadas no pagadas
+   - Contar asignaciones activas por tarea
+   - Calcular monto dividido
+   - Crear 1 registro en worker_payment_history con el total (pago principal)
+   - Crear N registros en payment_tasks (uno por asignación)
+   - Crear N registros en worker_payment_history (uno por trabajador)
+
+2. Actualizar get_available_tasks_for_payment:
+   - Buscar tareas con asignaciones activas
+   - Mostrar trabajadores asignados
+
+3. Crear trigger para completar asignaciones:
+   - Cuando apartment_tasks.status = 'completed':
+     - Actualizar todas las asignaciones activas a 'completed'
+     - Registrar completed_at
+
+
+FASE 5: LIMPIEZA (después de validar)
+--------------------------------------
+
+1. Eliminar task_materials (después de migrar)
+2. Eliminar assigned_to de apartment_tasks (después de validar que todo funciona)
+3. Actualizar vistas y funciones que usen assigned_to
+
+
+================================================================================
+4. EJEMPLO DE FLUJO COMPLETO
+================================================================================
+
+ESCENARIO: Tarea "Instalación de Tabiques" con 3 trabajadores
+
+1. CREACIÓN:
+   apartment_tasks:
+   - id: 100
+   - task_name: "Instalación de Tabiques"
+   - worker_payment: 300,000
+   - status: 'pending'
+   - is_paid: FALSE
+   - is_delayed: FALSE
+   - delay_reason: NULL
+   
+   task_assignments:
+   - id: 1, apartment_task_id: 100, worker_id: 5, status: 'assigned'
+   - id: 2, apartment_task_id: 100, worker_id: 6, status: 'assigned'
+   - id: 3, apartment_task_id: 100, worker_id: 7, status: 'assigned'
+
+2. TRABAJADORES INICIAN:
+   task_assignments:
+   - id: 1, status: 'in_progress'
+   - id: 2, status: 'in_progress'
+   - id: 3, status: 'in_progress'
+
+3. ENTREGA DE MATERIALES:
+   material_movements:
+   - id: 50, movement_type: 'entrega', worker_id: 5, quantity: 10000 (tornillos)
+   - id: 51, movement_type: 'entrega', worker_id: 6, quantity: 5000 (tornillos)
+   
+   task_assignment_materials:
+   - task_assignment_id: 1, material_movement_id: 50, is_active: TRUE
+   - task_assignment_id: 2, material_movement_id: 51, is_active: TRUE
+   - task_assignment_id: 3, material_movement_id: 50, is_active: TRUE
+
+4. TAREA COMPLETADA:
+   apartment_tasks:
+   - id: 100, status: 'completed', completed_at: '2025-01-15 12:00'
+   
+   task_assignments (actualizados automáticamente por trigger):
+   - id: 1, status: 'completed', completed_at: '2025-01-15 12:00'
+   - id: 2, status: 'completed', completed_at: '2025-01-15 12:00'
+   - id: 3, status: 'completed', completed_at: '2025-01-15 12:00'
+
+5. PAGO:
+   apartment_tasks:
+   - id: 100, is_paid: TRUE
+   
+   worker_payment_history (pago principal):
+   - id: 200, worker_id: NULL, total_amount: 300,000, tasks_count: 1
+   
+   worker_payment_history (pagos individuales):
+   - id: 201, worker_id: 5, total_amount: 100,000, tasks_count: 1, 
+     notes: "Pago de tarea Instalación de Tabiques - Parte de pago ID 200"
+   - id: 202, worker_id: 6, total_amount: 100,000, tasks_count: 1, 
+     notes: "Pago de tarea Instalación de Tabiques - Parte de pago ID 200"
+   - id: 203, worker_id: 7, total_amount: 100,000, tasks_count: 1, 
+     notes: "Pago de tarea Instalación de Tabiques - Parte de pago ID 200"
+   
+   payment_tasks:
+   - payment_id: 200, task_id: 100, task_assignment_id: 1, 
+     task_payment_amount: 100,000
+   - payment_id: 200, task_id: 100, task_assignment_id: 2, 
+     task_payment_amount: 100,000
+   - payment_id: 200, task_id: 100, task_assignment_id: 3, 
+     task_payment_amount: 100,000
+
+
+================================================================================
+5. REGLAS Y VALIDACIONES IMPORTANTES
+================================================================================
+
+5.1. ESTADOS DE TAREAS
+-----------------------
+- La tarea principal se marca como completada manualmente por el supervisor
+- Cuando se marca como completada, todas las asignaciones activas se marcan 
+  automáticamente como completadas
+- El trabajador NO tiene acceso a la aplicación
+
+5.2. PAGOS
+----------
+- El pago se divide igualmente entre TODAS las asignaciones activas
+- Se crea un registro principal del pago total
+- Se crean registros individuales por cada trabajador con su parte
+- Los registros individuales referencian al pago principal en las notes
+
+5.3. MATERIALES
+---------------
+- Los materiales se asocian a asignaciones individuales, no a la tarea principal
+- Una misma entrega de materiales puede usarse en múltiples asignaciones
+- Al eliminar una asignación, los materiales asociados también se hacen soft delete
+
+5.4. SOFT DELETE
+----------------
+- Se aplica en cascada: apartment_tasks → task_assignments → task_assignment_materials
+- assigned_to se mantiene temporalmente para validación antes de eliminarlo
+
+5.5. RETRASOS
+-------------
+- is_delayed y delay_reason son campos MANUALES
+- El supervisor los marca/ingresa cuando es necesario
+- No se calculan automáticamente
+
+5.6. ESTADÍSTICAS
+-----------------
+- El tiempo promedio de completación por trabajador se calcula usando 
+  completed_at de task_assignments
+
+
+================================================================================
+6. PUNTOS PENDIENTES DE ACLARACIÓN
+================================================================================
+
+1. worker_payment_history principal:
+   - ¿El registro principal (pago total) debe tener worker_id = NULL o el primer 
+     trabajador?
+   - ¿O no crear este registro principal y solo crear los individuales?
+
+2. Relación entre pagos:
+   - ¿Cómo relacionar los pagos individuales con el pago principal?
+   - ¿Agregar un campo parent_payment_id en worker_payment_history?
+   - ¿O usar las notes para indicar la relación?
+
+3. Eliminación de pago:
+   - Si se elimina un pago, ¿se eliminan todos los registros relacionados 
+     (principal + individuales)?
+   - ¿O solo se marca como cancelado?
+
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+

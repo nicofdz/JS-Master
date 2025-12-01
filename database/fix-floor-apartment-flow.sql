@@ -2,14 +2,20 @@
 -- CORRECCIONES PARA FLUJO PISOS → DEPARTAMENTOS → TAREAS
 -- Ejecutar en Supabase SQL Editor
 -- =====================================================
+-- 
+-- ⚠️ OBSOLETO: La columna total_apartments fue eliminada en la migración
+-- remove_total_apartments_from_floors.sql ya que ahora se calcula dinámicamente
+-- 
+-- =====================================================
 
 -- =====================================================
 -- 1. MEJORAR TABLA DE PISOS
 -- =====================================================
 
--- Agregar campo para cantidad de departamentos por piso
-ALTER TABLE public.floors 
-ADD COLUMN IF NOT EXISTS total_apartments INTEGER DEFAULT 0;
+-- ⚠️ OBSOLETO - Esta columna fue eliminada
+-- Ahora el conteo de apartamentos se calcula dinámicamente
+-- ALTER TABLE public.floors 
+-- ADD COLUMN IF NOT EXISTS total_apartments INTEGER DEFAULT 0;
 
 -- Agregar campo para descripción del piso
 ALTER TABLE public.floors 

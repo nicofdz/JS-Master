@@ -14,7 +14,6 @@ import {
   Pause,
   Square,
   RotateCcw,
-  MessageSquare,
   Info,
 } from 'lucide-react'
 import { formatDate, getStatusColor, getStatusEmoji } from '@/lib/utils'
@@ -27,11 +26,10 @@ interface TaskCardProps {
   onStatusChange: (taskId: number, newStatus: string) => Promise<void>
   onEdit: (task: any) => void
   onDelete: (taskId: number) => void
-  onComments: (taskId: number) => void
-  onInfo: (task: any) => void
+  onInfo?: (task: any) => void
 }
 
-export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, onInfo }: TaskCardProps) {
+export function TaskCard({ task, onStatusChange, onEdit, onDelete, onInfo }: TaskCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
 
   const getStatusIcon = (status: string) => {
@@ -291,15 +289,17 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
               </div>
               
               <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onInfo(task)}
-                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 flex items-center space-x-1"
-                >
-                  <Info className="w-4 h-4" />
-                  <span>Info</span>
-                </Button>
+                {onInfo && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onInfo(task)}
+                    className="text-purple-400 hover:text-purple-300 hover:bg-purple-900/30 flex items-center space-x-1"
+                  >
+                    <Info className="w-4 h-4" />
+                    <span>Info</span>
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -307,15 +307,6 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onComments, o
                   className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
                 >
                   Editar
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onComments(task.id)}
-                  className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 flex items-center space-x-1"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Comentarios</span>
                 </Button>
                 <Button
                   variant="ghost"

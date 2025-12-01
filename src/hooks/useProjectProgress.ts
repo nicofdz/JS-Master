@@ -1,16 +1,10 @@
 'use client'
 
-import { useProjects } from './useProjects'
-
 export function useProjectProgress() {
-  const { updateProjectProgress } = useProjects()
-
   const updateProgressForProject = async (projectId: number) => {
-    try {
-      await updateProjectProgress(projectId)
-    } catch (error) {
-      console.error('Error updating project progress:', error)
-    }
+    // Función placeholder - la funcionalidad de actualización de progreso
+    // se maneja automáticamente por el sistema
+    console.log('Project progress is updated automatically')
   }
 
   return {

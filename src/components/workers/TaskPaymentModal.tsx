@@ -157,16 +157,16 @@ export function TaskPaymentModal({
     <Modal isOpen={isOpen} onClose={onClose} title={`Pagar Tareas - ${workerName}`}>
       <div className="space-y-4">
         {/* Resumen */}
-        <Card className="p-4 bg-blue-50">
+        <Card className="p-4 bg-blue-900/30 border border-blue-700/50">
           <div className="flex justify-between items-center">
-            <span className="font-medium">Tareas seleccionadas:</span>
-            <span className="font-bold text-lg">
+            <span className="font-medium text-slate-200">Tareas seleccionadas:</span>
+            <span className="font-bold text-lg text-slate-100">
               {selectedTasks.length} de {tasks.length}
             </span>
           </div>
           <div className="flex justify-between items-center mt-2">
-            <span className="font-medium">Total a pagar:</span>
-            <span className="font-bold text-xl text-green-600">
+            <span className="font-medium text-slate-200">Total a pagar:</span>
+            <span className="font-bold text-xl text-emerald-400">
               ${calculateTotalAmount().toLocaleString()}
             </span>
           </div>
@@ -181,7 +181,7 @@ export function TaskPaymentModal({
           >
             {selectedTasks.length === tasks.length ? 'Deseleccionar Todo' : 'Seleccionar Todo'}
           </Button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-slate-400">
             {tasks.length} tareas completadas disponibles
           </span>
         </div>
@@ -189,9 +189,9 @@ export function TaskPaymentModal({
         {/* Lista de tareas */}
         <div className="max-h-96 overflow-y-auto space-y-2">
           {loading ? (
-            <div className="text-center py-4">Cargando tareas...</div>
+            <div className="text-center py-4 text-slate-300">Cargando tareas...</div>
           ) : tasks.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
+            <div className="text-center py-4 text-slate-400">
               No hay tareas completadas pendientes de pago
             </div>
           ) : (
@@ -200,8 +200,8 @@ export function TaskPaymentModal({
                 key={task.id} 
                 className={`p-3 cursor-pointer transition-colors ${
                   selectedTasks.includes(task.id) 
-                    ? 'bg-blue-100 border-blue-300' 
-                    : 'hover:bg-gray-50'
+                    ? 'bg-blue-900/40 border-blue-500/50 shadow-md' 
+                    : 'bg-slate-700/30 border-slate-600 hover:bg-slate-700/50'
                 }`}
                 onClick={() => handleTaskToggle(task.id)}
               >
@@ -212,19 +212,19 @@ export function TaskPaymentModal({
                         type="checkbox"
                         checked={selectedTasks.includes(task.id)}
                         onChange={() => handleTaskToggle(task.id)}
-                        className="w-4 h-4 text-blue-600"
+                        className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-500 rounded"
                       />
                       <div>
-                        <h4 className="font-medium text-black">{task.task_name}</h4>
-                        <p className="text-sm text-gray-600">{getProjectInfo(task)}</p>
-                        <p className="text-xs text-gray-500">
+                        <h4 className="font-medium text-slate-100">{task.task_name}</h4>
+                        <p className="text-sm text-slate-300">{getProjectInfo(task)}</p>
+                        <p className="text-xs text-slate-400">
                           Completada: {formatDate(task.created_at)}
                         </p>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-green-600">
+                    <div className="font-bold text-emerald-400">
                       ${task.worker_payment.toLocaleString()}
                     </div>
                   </div>
@@ -236,20 +236,20 @@ export function TaskPaymentModal({
 
         {/* Notas */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
             Notas (opcional)
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Agregar notas sobre el pago..."
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-3 border border-slate-600 bg-slate-700 text-slate-100 placeholder:text-slate-400 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             rows={3}
           />
         </div>
 
         {/* Botones de acción */}
-        <div className="flex justify-end space-x-3 pt-4 border-t">
+        <div className="flex justify-end space-x-3 pt-4 border-t border-slate-600">
           <Button
             onClick={onClose}
             variant="outline"

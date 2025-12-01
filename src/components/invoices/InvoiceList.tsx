@@ -13,11 +13,15 @@ interface InvoiceListProps {
   onDelete?: (id: number) => void
   onViewPDF?: (url: string) => void
   onStatusChange?: (invoiceId: number, newStatus: string) => Promise<void>
+  externalStatusFilter?: 'all' | 'processed' | 'pending'
 }
 
-export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusChange }: InvoiceListProps) {
+export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusChange, externalStatusFilter }: InvoiceListProps) {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'status'>('date')
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'processed' | 'blocked'>('all')
+  
+  // Usar el filtro externo si está disponible, sino usar el interno
+  const activeFilter = externalStatusFilter !== undefined ? externalStatusFilter : filterStatus
 
   const getStatusColor = (status: string, isProcessed: boolean) => {
     if (status === 'pending') return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
@@ -80,10 +84,10 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
 
   const sortedAndFilteredInvoices = invoices
     .filter(invoice => {
-      if (filterStatus === 'all') return true
-      if (filterStatus === 'processed') return invoice.status === 'processed'
-      if (filterStatus === 'pending') return invoice.status === 'pending'
-      if (filterStatus === 'blocked') return invoice.status === 'blocked'
+      if (activeFilter === 'all') return true
+      if (activeFilter === 'processed') return invoice.status === 'processed'
+      if (activeFilter === 'pending') return invoice.status === 'pending'
+      if (activeFilter === 'blocked') return invoice.status === 'blocked'
       return true
     })
     .sort((a, b) => {
@@ -114,16 +118,18 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
               <option value="amount">Ordenar por monto</option>
               <option value="status">Ordenar por estado</option>
             </select>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'processed' | 'blocked')}
-              className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Todas</option>
-              <option value="pending">Pendientes</option>
-              <option value="processed">Procesadas</option>
-              <option value="blocked">Bloqueadas</option>
-            </select>
+            {externalStatusFilter === undefined && (
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'processed' | 'blocked')}
+                className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">Todas</option>
+                <option value="pending">Pendientes</option>
+                <option value="processed">Procesadas</option>
+                <option value="blocked">Bloqueadas</option>
+              </select>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -163,23 +169,44 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                         <span className="text-slate-400">Fecha:</span>
                         <span className="ml-2 text-slate-200">{invoice.issue_date ? formatDate(invoice.issue_date) : 'Sin fecha'}</span>
                       </div>
-                      <div>
-                        <span className="text-slate-400">RUT Cliente:</span>
-                        <span className="ml-2 font-mono text-slate-200">{invoice.client_rut || 'No identificado'}</span>
-                      </div>
                     </div>
                   </div>
                   
                   <div className="text-right">
-                    <div className="text-sm text-slate-400 mb-1">
-                      Neto: <span className="text-slate-100 font-medium">{formatCurrency(invoice.net_amount || 0)}</span>
-                    </div>
-                    <div className="text-sm text-slate-400 mb-1">
-                      IVA 19%: <span className="text-slate-100 font-medium">{formatCurrency(invoice.iva_amount || 0)}</span>
-                    </div>
-                    <div className="text-lg font-bold text-slate-100 border-t border-slate-600 pt-1">
-                      Total: {formatCurrency(invoice.total_amount || 0)}
-                    </div>
+                    {(() => {
+                      const netAmount = invoice.net_amount || 0
+                      const ivaAmount = invoice.iva_amount || 0
+                      
+                      // Total factura = Neto + IVA
+                      const totalFactura = netAmount + ivaAmount
+                      
+                      // PPM = Total factura * 0.06
+                      const ppm = totalFactura * 0.06
+                      
+                      // Total final = Neto - PPM
+                      const totalFinal = netAmount - ppm
+                      
+                      return (
+                        <>
+                          <div className="text-xs text-slate-400 mb-1">
+                            Neto: <span className="text-slate-100 font-medium">{formatCurrency(netAmount)}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 mb-1">
+                            IVA 19%: <span className="text-slate-100 font-medium">{formatCurrency(ivaAmount)}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 mb-2">
+                            Total factura: <span className="text-slate-100 font-medium">{formatCurrency(totalFactura)}</span>
+                          </div>
+                          <div className="text-lg font-bold text-slate-100 border-t border-slate-600 pt-2">
+                            Total: {formatCurrency(totalFinal)}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1 space-y-0.5">
+                            <div>PPM: <span className="text-red-400">-{formatCurrency(ppm)}</span></div>
+                            <div>IVA: <span className="text-red-400">-{formatCurrency(ivaAmount)}</span></div>
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
                 

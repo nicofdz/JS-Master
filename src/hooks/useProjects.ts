@@ -2,196 +2,297 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { uploadProjectPlanAlternative as uploadProjectPlan, deleteProjectPlanAlternative as deleteProjectPlan } from '@/lib/planUploadAlternative'
-import type { Database } from '@/lib/supabase'
 
-// Tipo combinado que incluye datos de projects + progress
-type Project = Database['public']['Tables']['projects']['Row'] & {
+export interface Project {
+  id: number
+  name: string
+  address?: string
+  city?: string
+  start_date?: string
+  estimated_completion?: string
+  actual_completion?: string
+  status: string
+  plan_pdf?: string
+  plan_image_url?: string
+  created_at: string
+  updated_at?: string
+  is_active?: boolean  // Campo unificado para soft delete
   progress_percentage?: number
-  floors_created?: number
-  apartments_created?: number
-  activities_completed?: number
-  total_activities?: number
   progress?: number
-  end_date?: string | null
+  total_activities?: number
+  activities_completed?: number
+  towers_count?: number
+  total_floors_count?: number
+  apartments_count?: number
+  initial_budget?: number
+  // Datos de la Empresa Cliente
+  client_company_name?: string
+  client_company_rut?: string
+  client_company_contact?: string
+  client_company_phone?: string
+  // Datos del Administrador de Obra
+  site_admin_name?: string
+  site_admin_rut?: string
+  site_admin_phone?: string
+  site_admin_email?: string
+  // Datos del Contrato
+  contract_date?: string
+  contract_type?: string
+  contract_amount?: number
+  contract_pdf_url?: string
+  specifications_pdf_url?: string
 }
-type ProjectInsert = Database['public']['Tables']['projects']['Insert']
 
-export function useProjects() {
+export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchProjects = async () => {
     try {
       setLoading(true)
-      
-      // Obtener proyectos con progreso calculado automáticamente
-      const { data: projects, error } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          floors(
-            id,
-            apartments(
-              id,
-              apartment_tasks(
-                id,
-                status
-              )
-            )
-          )
-        `)
-        .order('created_at', { ascending: false })
+      setError(null)
 
-      if (error) throw error
+      // Consulta SQL personalizada para obtener proyectos con progreso y conteo de torres
+      // Ahora filtra por is_active = true (unificado con el resto del sistema)
+      const { data, error } = await supabase.rpc('get_projects_with_progress')
 
-      // Calcular progreso basado en tareas reales
-      const projectsWithProgress = (projects || []).map(project => {
-        let totalTasks = 0
-        let completedTasks = 0
-        let totalFloors = 0
-        let totalApartments = 0
+      if (error) {
+        throw error
+      }
 
-        // Contar tareas y apartamentos por piso (manejar casos donde no hay datos)
-        if (project.floors && Array.isArray(project.floors)) {
-          project.floors.forEach((floor: any) => {
-            totalFloors++
-            if (floor.apartments && Array.isArray(floor.apartments)) {
-              floor.apartments.forEach((apartment: any) => {
-                totalApartments++
-                if (apartment.apartment_tasks && Array.isArray(apartment.apartment_tasks)) {
-                  apartment.apartment_tasks.forEach((task: any) => {
-                    totalTasks++
-                    if (task.status === 'completed') {
-                      completedTasks++
-                    }
-                  })
-                }
-              })
-            }
-          })
-        }
-
-        const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-        return {
-          ...project,
-          // Progreso calculado dinámicamente
-          progress_percentage: progressPercentage,
-          progress: progressPercentage,
-          floors_created: totalFloors,
-          apartments_created: totalApartments,
-          activities_completed: completedTasks,
-          total_activities: totalTasks,
-          // Limpiar datos anidados para evitar problemas
-          floors: undefined
-        }
-      })
-      
-      setProjects(projectsWithProgress)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar proyectos')
+      // Filtrar proyectos activos (la función RPC debería hacerlo, pero por seguridad)
+      setProjects((data || []).filter((p: any) => p.is_active !== false))
+    } catch (err: any) {
       console.error('Error fetching projects:', err)
+      setError(err.message || 'Error al cargar proyectos')
     } finally {
       setLoading(false)
     }
   }
 
-  const createProject = async (project: ProjectInsert) => {
+  const createProject = async (projectData: any) => {
     try {
-      console.log('🏗️ Creando proyecto:', project)
+      // Extraer 'towers' del form data (no existe en la tabla)
+      const { towers, plan_pdf, ...dataToSave } = projectData
       
-      // Crear el proyecto
-      const { data: projectData, error: projectError } = await supabase
+      // Limpiar campos numéricos: asegurar que cadenas vacías sean null/undefined
+      if (dataToSave.initial_budget === '' || dataToSave.initial_budget === null) {
+        dataToSave.initial_budget = null
+      } else if (typeof dataToSave.initial_budget === 'string') {
+        const parsed = parseFloat(dataToSave.initial_budget)
+        dataToSave.initial_budget = isNaN(parsed) ? null : parsed
+      }
+      
+      if (dataToSave.contract_amount === '' || dataToSave.contract_amount === null) {
+        dataToSave.contract_amount = null
+      } else if (typeof dataToSave.contract_amount === 'string') {
+        const parsed = parseFloat(dataToSave.contract_amount)
+        dataToSave.contract_amount = isNaN(parsed) ? null : parsed
+      }
+      
+      const { data, error } = await supabase
         .from('projects')
-        .insert(project)
+        .insert(dataToSave)
         .select()
         .single()
 
-      if (projectError) throw projectError
-      
-      console.log('✅ Proyecto creado:', projectData)
-      
-      // Crear pisos automáticamente si se especifica total_floors
-      if (project.total_floors && project.total_floors > 0) {
-        console.log('🏢 Creando', project.total_floors, 'pisos automáticamente')
-        
-        const floorsToCreate = []
-        for (let i = 1; i <= project.total_floors; i++) {
-          floorsToCreate.push({
-            project_id: projectData.id,
-            floor_number: i,
-            status: 'pending'
-          })
-        }
-        
-        console.log('📋 Pisos a crear:', floorsToCreate)
-        
-        const { data: floorsData, error: floorsError } = await supabase
-          .from('floors')
-          .insert(floorsToCreate)
-          .select()
+      if (error) throw error
 
-        if (floorsError) {
-          console.error('❌ Error creando pisos:', floorsError)
-          throw floorsError
-        }
-        
-        console.log('✅ Pisos creados:', floorsData)
+      // Si se especificó número de torres, crearlas automáticamente
+      if (towers && towers > 0) {
+        const towersToCreate = Array.from({ length: towers }, (_, index) => ({
+          project_id: data.id,
+          tower_number: index + 1,
+          name: `Torre ${index + 1}`
+        }))
+
+        await supabase.from('towers').insert(towersToCreate)
       }
-      
-      // Actualizar la lista local
-      setProjects(prev => [projectData, ...prev])
-      return projectData
-    } catch (err) {
-      console.error('❌ Error en createProject:', err)
-      setError(err instanceof Error ? err.message : 'Error al crear proyecto')
+
+      await fetchProjects()
+      return data
+    } catch (err: any) {
+      console.error('Error creating project:', err)
+      setError(err.message || 'Error al crear proyecto')
       throw err
     }
   }
 
-  const updateProject = async (id: number, updates: Partial<Project>) => {
+  const updateProject = async (id: number, projectData: any) => {
     try {
-      console.log('🔍 Intentando actualizar proyecto:', { id, updates })
+      // Extraer campos que no existen en la tabla
+      const { towers, plan_pdf, ...dataToSave } = projectData
+      
+      // Limpiar campos numéricos: asegurar que cadenas vacías sean null/undefined
+      if (dataToSave.initial_budget === '' || dataToSave.initial_budget === null) {
+        dataToSave.initial_budget = null
+      } else if (typeof dataToSave.initial_budget === 'string') {
+        const parsed = parseFloat(dataToSave.initial_budget)
+        dataToSave.initial_budget = isNaN(parsed) ? null : parsed
+      }
+      
+      if (dataToSave.contract_amount === '' || dataToSave.contract_amount === null) {
+        dataToSave.contract_amount = null
+      } else if (typeof dataToSave.contract_amount === 'string') {
+        const parsed = parseFloat(dataToSave.contract_amount)
+        dataToSave.contract_amount = isNaN(parsed) ? null : parsed
+      }
       
       const { data, error } = await supabase
         .from('projects')
-        .update(updates)
+        .update(dataToSave)
         .eq('id', id)
         .select()
         .single()
 
-      if (error) {
-        console.error('❌ Error de Supabase:', error)
-        throw error
-      }
-      
-      console.log('✅ Proyecto actualizado exitosamente:', data)
-      
-      // Actualizar la lista local
-      setProjects(prev => prev.map(p => p.id === id ? data : p))
+      if (error) throw error
+
+      await fetchProjects()
       return data
-    } catch (err) {
-      console.error('❌ Error completo al actualizar proyecto:', err)
-      setError(err instanceof Error ? err.message : 'Error al actualizar proyecto')
+    } catch (err: any) {
+      console.error('Error updating project:', err)
+      setError(err.message || 'Error al actualizar proyecto')
       throw err
     }
   }
 
   const deleteProject = async (id: number) => {
     try {
+      // Soft delete: marcar como eliminado usando is_active (unificado con el resto del sistema)
       const { error } = await supabase
         .from('projects')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id)
 
       if (error) throw error
-      
-      // Actualizar la lista local
-      setProjects(prev => prev.filter(p => p.id !== id))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al eliminar proyecto')
+
+      await fetchProjects()
+    } catch (err: any) {
+      console.error('Error deleting project:', err)
+      setError(err.message || 'Error al eliminar proyecto')
+      throw err
+    }
+  }
+
+  const restoreProject = async (id: number) => {
+    try {
+      // Restaurar proyecto: marcar como activo
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_active: true })
+        .eq('id', id)
+
+      if (error) throw error
+
+      await fetchProjects()
+    } catch (err: any) {
+      console.error('Error restoring project:', err)
+      setError(err.message || 'Error al restaurar proyecto')
+      throw err
+    }
+  }
+
+  const uploadPlan = async (projectId: number, file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${projectId}-${Date.now()}.${fileExt}`
+      const filePath = `project-plans/${fileName}`
+
+      // Subir archivo a storage
+      const { error: uploadError } = await supabase.storage
+        .from('project-plans')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-plans')
+        .getPublicUrl(filePath)
+
+      // Actualizar proyecto con URL del plan
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ plan_pdf: publicUrl })
+        .eq('id', projectId)
+
+      if (updateError) throw updateError
+
+      await fetchProjects()
+    } catch (err: any) {
+      console.error('Error uploading plan:', err)
+      setError(err.message || 'Error al subir plano')
+      throw err
+    }
+  }
+
+  const uploadContract = async (projectId: number, file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `contract-${projectId}-${Date.now()}.${fileExt}`
+      const filePath = `project-contracts/${fileName}`
+
+      // Subir archivo a storage
+      const { error: uploadError } = await supabase.storage
+        .from('project-documents')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-documents')
+        .getPublicUrl(filePath)
+
+      // Actualizar proyecto con URL del contrato
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ contract_pdf_url: publicUrl })
+        .eq('id', projectId)
+
+      if (updateError) throw updateError
+
+      await fetchProjects()
+      return publicUrl
+    } catch (err: any) {
+      console.error('Error uploading contract:', err)
+      setError(err.message || 'Error al subir contrato')
+      throw err
+    }
+  }
+
+  const uploadSpecifications = async (projectId: number, file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `specifications-${projectId}-${Date.now()}.${fileExt}`
+      const filePath = `project-specifications/${fileName}`
+
+      // Subir archivo a storage
+      const { error: uploadError } = await supabase.storage
+        .from('project-documents')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-documents')
+        .getPublicUrl(filePath)
+
+      // Actualizar proyecto con URL de especificaciones
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ specifications_pdf_url: publicUrl })
+        .eq('id', projectId)
+
+      if (updateError) throw updateError
+
+      await fetchProjects()
+      return publicUrl
+    } catch (err: any) {
+      console.error('Error uploading specifications:', err)
+      setError(err.message || 'Error al subir especificaciones')
       throw err
     }
   }
@@ -199,138 +300,6 @@ export function useProjects() {
   useEffect(() => {
     fetchProjects()
   }, [])
-
-  const updateProjectProgress = async (projectId: number) => {
-    try {
-      // Recalcular el progreso del proyecto específico
-      const { data: project, error } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          floors(
-            id,
-            apartments(
-              id,
-              apartment_tasks(
-                id,
-                status
-              )
-            )
-          )
-        `)
-        .eq('id', projectId)
-        .single()
-
-      if (error) throw error
-
-      let totalTasks = 0
-      let completedTasks = 0
-      let totalFloors = 0
-      let totalApartments = 0
-
-      // Contar tareas y apartamentos (manejar casos donde no hay datos)
-      if (project.floors && Array.isArray(project.floors)) {
-        project.floors.forEach((floor: any) => {
-          totalFloors++
-          if (floor.apartments && Array.isArray(floor.apartments)) {
-            floor.apartments.forEach((apartment: any) => {
-              totalApartments++
-              if (apartment.apartment_tasks && Array.isArray(apartment.apartment_tasks)) {
-                apartment.apartment_tasks.forEach((task: any) => {
-                  totalTasks++
-                  if (task.status === 'completed') {
-                    completedTasks++
-                  }
-                })
-              }
-            })
-          }
-        })
-      }
-
-      const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-
-      // Actualizar el proyecto en la lista local
-      setProjects(prev => prev.map(p => 
-        p.id === projectId 
-          ? {
-              ...p,
-              progress_percentage: progressPercentage,
-              progress: progressPercentage,
-              floors_created: totalFloors,
-              apartments_created: totalApartments,
-              activities_completed: completedTasks,
-              total_activities: totalTasks
-            }
-          : p
-      ))
-
-      return { progressPercentage, totalTasks, completedTasks }
-    } catch (err) {
-      console.error('Error updating project progress:', err)
-      throw err
-    }
-  }
-
-  const uploadPlan = async (projectId: number, file: File) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const { planPdfUrl, planImageUrl } = await uploadProjectPlan(projectId, file)
-      
-      // Actualizar el proyecto con las URLs del plano
-      const { data, error } = await supabase
-        .from('projects')
-        .update({
-          plan_pdf: planPdfUrl,
-          plan_image_url: planImageUrl,
-          plan_uploaded_at: new Date().toISOString()
-        })
-        .eq('id', projectId)
-        .select()
-
-      if (error) throw error
-
-      if (!data || data.length === 0) {
-        throw new Error('No se pudo actualizar el proyecto')
-      }
-
-      const updatedProject = data[0]
-
-      // Actualizar la lista local
-      setProjects(prev => prev.map(p => p.id === projectId ? updatedProject : p))
-      return updatedProject
-    } catch (err) {
-      console.error('Error uploading plan:', err)
-      setError(err instanceof Error ? err.message : 'Error al subir el plano')
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const removePlan = async (projectId: number) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      await deleteProjectPlan(projectId)
-      
-      // Actualizar la lista local
-      setProjects(prev => prev.map(p => 
-        p.id === projectId 
-          ? { ...p, plan_pdf: null, plan_image_url: null, plan_uploaded_at: null }
-          : p
-      ))
-    } catch (err) {
-      console.error('Error removing plan:', err)
-      setError(err instanceof Error ? err.message : 'Error al eliminar el plano')
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return {
     projects,
@@ -340,8 +309,9 @@ export function useProjects() {
     createProject,
     updateProject,
     deleteProject,
-    updateProjectProgress,
+    restoreProject,
     uploadPlan,
-    removePlan
+    uploadContract,
+    uploadSpecifications
   }
 }

@@ -4,15 +4,11 @@ export interface UnifiedProject {
   id: number
   name: string
   address: string | null
-  totalFloors: number | null
-  unitsPerFloor: number | null
   status: string
   globalProgress: number
   estimatedCompletion: string
   currentFloor?: number
   // Campos específicos de datos reales
-  total_floors?: number | null
-  units_per_floor?: number | null
   progress_percentage?: number | null
 }
 
@@ -39,20 +35,15 @@ export function normalizeProject(project: any, isRealData: boolean): UnifiedProj
       id: project.id,
       name: project.name,
       address: project.address,
-      totalFloors: project.total_floors,
-      unitsPerFloor: project.units_per_floor,
       status: project.status,
       globalProgress: project.progress_percentage || 0,
-      estimatedCompletion: '2024-12-31', // Default para datos reales
-      currentFloor: Math.ceil((project.total_floors || 1) * ((project.progress_percentage || 0) / 100))
+      estimatedCompletion: '2024-12-31' // Default para datos reales
     }
   } else {
     return {
       id: project.id,
       name: project.name,
       address: project.address,
-      totalFloors: project.totalFloors,
-      unitsPerFloor: project.unitsPerFloor,
       status: project.status,
       globalProgress: project.globalProgress,
       estimatedCompletion: project.estimatedCompletion,

@@ -322,33 +322,79 @@ TOTAL$${Math.round(Math.abs(fileHash) * 1000 * 1.19).toLocaleString()}
     console.log('Monto Total:', extractedData.totalAmount)
     console.log('Fecha:', extractedData.issueDate)
 
-    // Subir archivo a Supabase Storage
-    const fileName = `invoice-${Date.now()}-${file.name}`
-    let publicUrl = ''
+    // Función para subir archivo con reintentos
+    const uploadFileWithRetry = async (file: File, fileName: string, maxRetries = 3): Promise<string | null> => {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`🔄 Intento ${attempt}/${maxRetries} de subida del archivo: ${fileName}`)
+          
+          // Subir archivo
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('invoices')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            })
+
+          if (uploadError) {
+            console.error(`❌ Error en intento ${attempt}:`, uploadError)
+            
+            // Si es el último intento, lanzar error
+            if (attempt === maxRetries) {
+              throw new Error(`Error subiendo archivo después de ${maxRetries} intentos: ${uploadError.message}`)
+            }
+            
+            // Esperar antes del siguiente intento
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+            continue
+          }
+
+          console.log(`✅ Archivo subido exitosamente en intento ${attempt}`)
+          
+          // Obtener URL pública del archivo
+          const { data: { publicUrl } } = supabase.storage
+            .from('invoices')
+            .getPublicUrl(fileName)
+          
+          if (!publicUrl) {
+            throw new Error('No se pudo generar URL pública del archivo')
+          }
+          
+          console.log('🔗 URL pública generada:', publicUrl)
+          return publicUrl
+          
+        } catch (error) {
+          console.error(`❌ Error en intento ${attempt}:`, error)
+          
+          if (attempt === maxRetries) {
+            throw error
+          }
+          
+          // Esperar antes del siguiente intento
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        }
+      }
+      
+      return null
+    }
+
+    // Subir archivo a Supabase Storage con reintentos
+    const fileName = `invoice-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+    let publicUrl: string | null = null
     
     try {
-      console.log('Intentando subir archivo a storage...')
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('invoices')
-        .upload(fileName, file)
-
-      if (uploadError) {
-        console.error('Error uploading file:', uploadError)
-        console.log('Continuando sin archivo en storage...')
-        publicUrl = ''
-      } else {
-        console.log('Archivo subido exitosamente')
-        // Obtener URL pública del archivo
-        const { data: { publicUrl: url } } = supabase.storage
-          .from('invoices')
-          .getPublicUrl(fileName)
-        publicUrl = url
-        console.log('URL pública generada:', publicUrl)
+      console.log('📤 Iniciando subida del archivo a storage...')
+      publicUrl = await uploadFileWithRetry(file, fileName)
+      
+      if (!publicUrl) {
+        throw new Error('No se pudo subir el archivo después de todos los intentos')
       }
+      
     } catch (storageError) {
-      console.error('Storage error:', storageError)
-      console.log('Continuando sin archivo en storage...')
-      publicUrl = ''
+      console.error('❌ Error crítico subiendo archivo:', storageError)
+      return NextResponse.json({ 
+        error: 'Error crítico subiendo archivo: ' + (storageError as Error).message 
+      }, { status: 500 })
     }
 
     // Validar y limpiar montos antes de guardar
@@ -364,8 +410,11 @@ TOTAL$${Math.round(Math.abs(fileHash) * 1000 * 1.19).toLocaleString()}
       totalAmount: safeTotalAmount
     })
 
-    // Guardar en base de datos
+    // Guardar en base de datos (solo si el PDF se subió correctamente)
     try {
+      console.log('💾 Guardando factura en base de datos...')
+      console.log('PDF URL:', publicUrl)
+      
       const { data: invoiceData, error: dbError } = await supabase
         .from('invoice_income')
         .insert({
@@ -388,7 +437,7 @@ TOTAL$${Math.round(Math.abs(fileHash) * 1000 * 1.19).toLocaleString()}
           iva_amount: safeIvaAmount,
           additional_tax: safeAdditionalTax,
           total_amount: safeTotalAmount,
-          pdf_url: publicUrl,
+          pdf_url: publicUrl, // Asegurar que siempre tenga URL
           raw_text: limitedRawText,
           parsed_data: extractedData,
           status: 'pending',
@@ -398,19 +447,45 @@ TOTAL$${Math.round(Math.abs(fileHash) * 1000 * 1.19).toLocaleString()}
         .single()
 
       if (dbError) {
-        console.error('Error saving to database:', dbError)
+        console.error('❌ Error saving to database:', dbError)
+        
+        // Si falla la BD, intentar eliminar el archivo del storage
+        try {
+          console.log('🧹 Intentando limpiar archivo del storage...')
+          await supabase.storage
+            .from('invoices')
+            .remove([fileName])
+        } catch (cleanupError) {
+          console.error('Error limpiando archivo:', cleanupError)
+        }
+        
         return NextResponse.json({ 
           error: 'Error al guardar en base de datos: ' + dbError.message 
         }, { status: 500 })
       }
 
+      console.log('✅ Factura guardada exitosamente en base de datos')
+      console.log('ID de factura:', invoiceData.id)
+
       return NextResponse.json({
         success: true,
         data: invoiceData,
-        extractedData
+        extractedData,
+        pdfUrl: publicUrl
       })
     } catch (dbError) {
-      console.error('Database error:', dbError)
+      console.error('❌ Database error:', dbError)
+      
+      // Si falla la BD, intentar eliminar el archivo del storage
+      try {
+        console.log('🧹 Intentando limpiar archivo del storage...')
+        await supabase.storage
+          .from('invoices')
+          .remove([fileName])
+      } catch (cleanupError) {
+        console.error('Error limpiando archivo:', cleanupError)
+      }
+      
       return NextResponse.json({ 
         error: 'Error de base de datos: ' + (dbError as Error).message 
       }, { status: 500 })

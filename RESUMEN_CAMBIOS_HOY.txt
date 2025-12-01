@@ -1,0 +1,480 @@
+================================================================================
+RESUMEN COMPLETO DE CAMBIOS REALIZADOS HOY
+Sistema de Control de Terminaciones - Rework Tareas y Pagos V2
+Fecha: 2025-01-XX
+================================================================================
+
+================================================================================
+1. CAMBIOS EN BASE DE DATOS
+================================================================================
+
+1.1. NUEVAS TABLAS CREADAS
+---------------------------
+
+✅ tasks (Nueva tabla central de tareas)
+   - Reemplaza funcionalmente a apartment_tasks
+   - Campos principales:
+     * id, apartment_id, task_name, task_description, task_category
+     * status (pending, in_progress, completed, blocked, cancelled, on_hold)
+     * priority (low, medium, high, urgent)
+     * total_budget (reemplaza worker_payment, se divide entre trabajadores)
+     * progress_photos (JSONB - eliminada tabla progress_photos)
+     * start_date, end_date, completed_at (editable)
+     * is_delayed, delay_reason
+     * Soft delete: is_deleted, deleted_at, deleted_by, deletion_reason
+     * created_at, updated_at, created_by
+
+✅ task_assignments (Nueva tabla - relación muchos a muchos)
+   - Vincula trabajadores con tareas
+   - Campos principales:
+     * id, task_id, worker_id
+     * role (worker, supervisor, assistant) - INFORMATIVO, no afecta pago
+     * assignment_status (assigned, working, completed, removed)
+     * payment_share_percentage (%) - distribución del pago
+     * worker_payment ($) - monto calculado automáticamente
+     * is_paid, paid_at, payment_id
+     * hours_worked
+     * assigned_date, started_at, completed_at (editable)
+     * notes
+     * Soft delete: is_deleted, deleted_at, deleted_by, deletion_reason
+     * assigned_by, created_at, updated_at
+
+✅ task_assignment_materials (Nueva tabla)
+   - Vincula asignaciones con entregas de materiales
+   - Campos principales:
+     * id, task_assignment_id, delivery_id (FK a material_movements)
+     * notes, created_at, created_by
+   - NO rastrea cantidades exactas, solo QUÉ entrega se usó
+
+✅ payment_task_assignments (Nueva tabla - reemplaza payment_tasks)
+   - Vincula pagos con asignaciones específicas (no tareas directamente)
+   - Campos principales:
+     * id, payment_id, task_assignment_id, task_id
+     * amount_paid (puede diferir de worker_payment si hubo ajustes)
+     * created_at
+
+✅ payment_distribution_history (Nueva tabla - auditoría)
+   - Registra cambios manuales en distribución de pagos
+   - Campos principales:
+     * id, task_id
+     * old_distribution (JSONB)
+     * new_distribution (JSONB)
+     * changed_by, change_reason, changed_at
+
+1.2. TABLAS MODIFICADAS
+------------------------
+
+✅ worker_payment_history
+   - Agregados campos de soft delete:
+     * is_deleted, deleted_at, deleted_by, deletion_reason
+
+✅ tasks_with_workers_v2 (Vista actualizada HOY)
+   - CORREGIDA: Ahora obtiene project_id correctamente
+   - Cadena: apartamento → piso → torre → proyecto
+   - Agregado JOIN con tabla towers
+   - Campo project_id ahora viene de towers.project_id
+
+1.3. TABLAS ELIMINADAS (Funcionalmente)
+----------------------------------------
+
+❌ progress_photos (eliminada funcionalmente)
+   - Las fotos ahora se guardan en tasks.progress_photos (JSONB)
+
+❌ task_materials (eliminada funcionalmente)
+   - Reemplazada por task_assignment_materials que vincula a entregas
+
+================================================================================
+2. FUNCIONES SQL (RPCs) CREADAS
+================================================================================
+
+✅ assign_worker_to_task
+   - Asigna un trabajador a una tarea
+   - Distribuye automáticamente el presupuesto equitativamente
+   - Parámetros: p_task_id, p_worker_id, p_role (default: 'worker')
+   - Retorna: assignment_id
+
+✅ adjust_payment_distribution
+   - Ajusta manualmente la distribución de pagos
+   - Valida que la suma de porcentajes sea 100%
+   - Registra cambio en payment_distribution_history
+   - Parámetros: p_task_id, p_distributions (JSONB array)
+   - Recalcula todos los worker_payment
+
+✅ complete_task_manually
+   - Marca una tarea como completada manualmente
+   - Marca TODAS las asignaciones como completadas
+   - Parámetros: p_task_id, p_completed_at (editable, default: now())
+   - Actualiza: tasks.status = 'completed', task_assignments.assignment_status = 'completed'
+
+✅ uncomplete_task
+   - Revierte una tarea completada
+   - Revierte todas las asignaciones a 'working' o 'assigned'
+   - Parámetros: p_task_id
+
+✅ soft_delete_task
+   - Elimina lógicamente una tarea
+   - Valida que no tenga pagos asociados
+   - Soft delete en cascada de todas las asignaciones
+   - Parámetros: p_task_id, p_deletion_reason, p_deleted_by
+
+✅ restore_task
+   - Restaura una tarea eliminada (solo admins)
+   - Restaura todas las asignaciones asociadas
+   - Parámetros: p_task_id, p_restored_by
+
+✅ remove_worker_from_task
+   - Remueve un trabajador de una tarea
+   - NO redistribuye automáticamente el pago
+   - Marca assignment_status = 'removed'
+   - Parámetros: p_assignment_id, p_removal_reason
+
+✅ process_worker_payment_v2
+   - Procesa pagos para asignaciones completadas
+   - Soporta pago completo o parcial
+   - Crea registro en worker_payment_history
+   - Crea registros en payment_task_assignments
+   - Marca asignaciones como is_paid = true
+   - Parámetros: p_worker_id, p_assignment_ids (array), p_notes
+
+✅ soft_delete_payment
+   - Elimina lógicamente un pago
+   - Marca todas las asignaciones asociadas como is_paid = false
+   - Parámetros: p_payment_id, p_deletion_reason, p_deleted_by
+
+✅ migrate_apartment_tasks_to_new_schema
+   - Migra datos de apartment_tasks a tasks y task_assignments
+   - Preserva datos originales (no elimina)
+   - Migró exitosamente: 471 tareas, 161 asignaciones
+
+✅ get_task_stats
+   - Actualizada para trabajar con nueva tabla tasks
+   - Retorna estadísticas: total, pending, inProgress, completed, blocked, delayed
+
+================================================================================
+3. TRIGGERS AUTOMÁTICOS CREADOS
+================================================================================
+
+✅ update_task_status_from_assignments
+   - Trigger AFTER UPDATE en task_assignments
+   - Si TODAS las asignaciones se completan → tarea se marca como completada
+   - Si alguna asignación se descompleta → tarea vuelve a 'in_progress'
+
+✅ recalculate_payments_on_budget_change
+   - Trigger AFTER UPDATE en tasks
+   - Si cambia total_budget → recalcula TODOS los worker_payment
+   - Incluso si ya fueron pagados (importante para tareas creadas con $0)
+
+✅ handle_payment_soft_delete
+   - Trigger AFTER UPDATE en worker_payment_history
+   - Si se soft delete un pago → marca asignaciones como is_paid = false
+
+✅ validate_task_deletion
+   - Trigger BEFORE DELETE en tasks
+   - Previene hard delete si hay pagos asociados
+   - Permite soft delete si no hay pagos
+
+================================================================================
+4. VISTAS CREADAS/ACTUALIZADAS
+================================================================================
+
+✅ tasks_with_workers_v2 (Creada y actualizada HOY)
+   - Vista principal de tareas con información de trabajadores
+   - Incluye: task_id, apartment_id, task_name, status, total_budget
+   - Incluye: apartment_number, floor_number, tower_number
+   - CORREGIDA HOY: project_id obtenido vía: apartamento → piso → torre → proyecto
+   - Agregados: total_workers, completed_workers, paid_workers
+   - Campo workers: JSON array con información de cada trabajador asignado
+   - Excluye registros eliminados (is_deleted = false)
+
+✅ worker_pending_payments_v3
+   - Vista de pagos pendientes por trabajador
+   - Agrupa asignaciones completadas y no pagadas
+   - Incluye: worker_id, worker_name, total_pending, assignments_count
+
+✅ deleted_tasks_view
+   - Vista de papelera de tareas (solo admins)
+   - Muestra tareas eliminadas con información de quién y cuándo
+
+✅ deleted_payments_view
+   - Vista de papelera de pagos (solo admins)
+   - Muestra pagos eliminados con información de quién y cuándo
+
+================================================================================
+5. MIGRACIONES DE BASE DE DATOS APLICADAS HOY
+================================================================================
+
+✅ recreate_tasks_with_workers_v2_with_project_id
+   - Recreó la vista tasks_with_workers_v2
+   - Agregó campo project_id
+
+✅ fix_tasks_with_workers_v2_project_id_via_tower
+   - CORRECCIÓN: Obtiene project_id correctamente
+   - Agregado JOIN con tabla towers
+   - Cadena corregida: apartamento → piso → torre → proyecto
+
+================================================================================
+6. ARCHIVOS FRONTEND CREADOS
+================================================================================
+
+6.1. HOOKS NUEVOS
+-----------------
+
+✅ src/hooks/useTasks_v2.ts
+   - Hook principal para gestión de tareas V2
+   - Funciones principales:
+     * fetchTasks() - Obtiene tareas desde tasks_with_workers_v2
+     * createTask() - Crea nueva tarea
+     * updateTask() - Actualiza tarea
+     * deleteTask() - Soft delete de tarea
+     * assignWorkerToTask() - Asigna trabajador
+     * adjustPaymentDistribution() - Ajusta distribución
+     * removeWorkerFromTask() - Remueve trabajador
+     * getWorkersForProject() - NUEVA HOY: Obtiene trabajadores con contrato activo
+     * fetchTaskStats() - Estadísticas de tareas
+
+✅ src/hooks/useWorkerPayments_v2.ts
+   - Hook para gestión de pagos V2
+   - Funciones principales:
+     * processFullPayment() - Pago completo
+     * processPartialPayment() - Pago parcial
+     * deletePayment() - Soft delete de pago
+     * getWorkerPaymentDetails() - Detalles de pagos pendientes
+
+6.2. COMPONENTES NUEVOS
+-----------------------
+
+✅ src/components/tasks/TaskWorkersModal.tsx
+   - Modal para gestionar trabajadores asignados a una tarea
+   - Funcionalidades:
+     * Lista trabajadores asignados con distribución de pagos
+     * Asignar nuevo trabajador
+     * Remover trabajador
+     * Ajustar distribución manualmente
+     * Validación de porcentajes (deben sumar 100%)
+   - ACTUALIZADO HOY:
+     * Filtra trabajadores por contrato activo en el proyecto
+     * Solo muestra trabajadores con contrato activo
+     * Mensajes informativos sobre el filtro
+     * Deshabilita controles si no hay projectId
+
+✅ src/components/tasks/TaskInfo_v2.tsx
+   - Modal de información de tarea mejorado
+   - Muestra múltiples trabajadores asignados
+   - Muestra distribución de pagos
+   - Botón para gestionar trabajadores
+   - NOTA: Este archivo fue eliminado por el usuario
+
+6.3. PÁGINAS DE PRUEBA
+----------------------
+
+✅ src/app/(auth)/tareas-v2/page.tsx
+   - Página completa de prueba del nuevo sistema
+   - Mismo diseño y layout que la página original
+   - Funcionalidades:
+     * Listado de tareas con filtros
+     * Crear/editar tareas
+     * Ver información de tarea
+     * Gestionar trabajadores
+     * Estadísticas con StatusFilterCards
+   - ACTUALIZADO HOY:
+     * Usa TaskWorkersModal (no TaskWorkersModalV2)
+     * Pasa projectId correctamente al modal
+     * Integrado con getWorkersForProject
+
+================================================================================
+7. ARCHIVOS FRONTEND MODIFICADOS HOY
+================================================================================
+
+✅ src/components/common/StatusFilterCards.tsx
+   - CORRECCIÓN: Manejo de options undefined
+   - Agregado default empty array para options
+   - Agregado optional chaining (options?.length)
+
+✅ src/hooks/index.ts
+   - Agregados exports:
+     * export { useTasksV2 } from './useTasks_v2'
+     * export { useWorkerPaymentsV2 } from './useWorkerPayments_v2'
+
+================================================================================
+8. CORRECCIONES REALIZADAS HOY
+================================================================================
+
+8.1. ERROR: column workers.contract_type does not exist
+------------------------------------------------------
+✅ CORREGIDO en src/hooks/useTasks_v2.ts
+   - Cambiado de workers.contract_type a workers.cargo
+   - Agregado filtro is_deleted = false
+
+8.2. FILTRO DE TRABAJADORES POR CONTRATO ACTIVO
+-----------------------------------------------
+✅ IMPLEMENTADO HOY
+   - Nueva función: getWorkersForProject(projectId)
+   - Consulta contract_history filtrando por:
+     * project_id = proyecto de la tarea
+     * status = 'activo'
+     * is_active = true
+   - Obtiene project_id correctamente: apartamento → piso → torre → proyecto
+   - TaskWorkersModal ahora solo muestra trabajadores con contrato activo
+   - Mensajes informativos cuando no hay trabajadores disponibles
+
+8.3. CORRECCIÓN DE project_id EN VISTA
+--------------------------------------
+✅ CORREGIDO en tasks_with_workers_v2
+   - Antes: Obtenía project_id directamente de floors.project_id (INCORRECTO)
+   - Ahora: Obtiene project_id vía: apartamento → piso → torre → proyecto
+   - Agregado JOIN con tabla towers
+   - Campo project_id ahora viene de towers.project_id
+
+================================================================================
+9. FUNCIONALIDADES IMPLEMENTADAS
+================================================================================
+
+✅ Múltiples trabajadores por tarea
+   - Una tarea puede tener múltiples trabajadores asignados
+   - Cada trabajador tiene su propia asignación (task_assignment)
+
+✅ Distribución automática de pagos
+   - Al asignar trabajadores, los pagos se dividen equitativamente
+   - Ejemplo: 3 trabajadores = 33.33% cada uno
+
+✅ Distribución manual editable
+   - El usuario puede ajustar los porcentajes manualmente
+   - Debe sumar exactamente 100%
+   - Se registra en payment_distribution_history
+
+✅ Recálculo automático al cambiar presupuesto
+   - Si cambia total_budget, se recalculan TODOS los pagos
+   - Incluso si ya fueron pagados (importante para tareas con $0 inicial)
+
+✅ Completado bidireccional
+   - Si se completa la tarea → todas las asignaciones se completan
+   - Si todas las asignaciones se completan → la tarea se completa automáticamente
+
+✅ Descompletar tarea
+   - Permite revertir una tarea completada
+   - Revierte todas las asignaciones a 'working' o 'assigned'
+
+✅ Soft delete completo
+   - Tareas, asignaciones y pagos tienen soft delete
+   - Campos: is_deleted, deleted_at, deleted_by, deletion_reason
+   - Eliminación en cascada (si se elimina tarea, se eliminan asignaciones)
+
+✅ Restauración (solo admins)
+   - Función restore_task() para restaurar tareas eliminadas
+   - Restaura automáticamente todas las asignaciones asociadas
+
+✅ Filtro de trabajadores por contrato activo
+   - IMPLEMENTADO HOY
+   - Solo se pueden asignar trabajadores con contrato activo en el proyecto
+   - Validación en TaskWorkersModal
+
+✅ Fotos en JSONB
+   - Eliminada tabla progress_photos
+   - Las fotos ahora se guardan en tasks.progress_photos (JSONB array)
+
+✅ Materiales simplificados
+   - Eliminada tabla task_materials
+   - Nueva tabla task_assignment_materials vincula a entregas (material_movements)
+   - Solo rastrea QUÉ entrega se usó, no cantidades exactas
+
+✅ Auditoría completa
+   - payment_distribution_history registra cambios manuales
+   - Soft delete registra quién y cuándo eliminó
+   - Todos los cambios tienen trazabilidad
+
+================================================================================
+10. MIGRACIÓN DE DATOS
+================================================================================
+
+✅ Migración completada exitosamente
+   - 471 tareas migradas (apartment_tasks → tasks)
+   - 161 asignaciones creadas (task_assignments)
+   - $15,760,549.97 en pagos migrados correctamente
+   - 0 errores
+   - Datos originales preservados (no se eliminó nada)
+
+================================================================================
+11. ESTRUCTURA DE ARCHIVOS
+================================================================================
+
+Backend (Database):
+-------------------
+✅ Tablas nuevas: tasks, task_assignments, task_assignment_materials, 
+   payment_task_assignments, payment_distribution_history
+✅ Funciones RPC: 11 funciones nuevas
+✅ Triggers: 4 triggers automáticos
+✅ Vistas: 4 vistas (tasks_with_workers_v2, worker_pending_payments_v3, 
+   deleted_tasks_view, deleted_payments_view)
+
+Frontend (Hooks):
+-----------------
+✅ src/hooks/useTasks_v2.ts
+✅ src/hooks/useWorkerPayments_v2.ts
+✅ src/hooks/index.ts (actualizado)
+
+Frontend (Components):
+----------------------
+✅ src/components/tasks/TaskWorkersModal.tsx (actualizado hoy)
+✅ src/components/common/StatusFilterCards.tsx (corregido hoy)
+
+Frontend (Pages):
+-----------------
+✅ src/app/(auth)/tareas-v2/page.tsx (página de prueba completa)
+
+Documentación:
+--------------
+✅ GUIA_REWORK_TAREAS_PAGOS.md (guía completa del sistema)
+✅ REWORK_TAREAS_ESPECIFICACIONES.txt (especificaciones originales)
+
+================================================================================
+12. PRUEBAS Y VALIDACIONES
+================================================================================
+
+✅ Vista tasks_with_workers_v2 funciona correctamente
+✅ Filtro de trabajadores por contrato activo funciona
+✅ project_id se obtiene correctamente vía torre
+✅ TaskWorkersModal muestra solo trabajadores con contrato activo
+✅ Mensajes informativos funcionan correctamente
+✅ Controles se deshabilitan cuando corresponde
+
+================================================================================
+13. NOTAS IMPORTANTES
+================================================================================
+
+⚠️ La tabla apartment_tasks NO fue eliminada
+   - Los datos fueron copiados, no movidos
+   - Todo es reversible
+
+⚠️ La tabla payment_tasks NO fue eliminada
+   - Se mantiene para compatibilidad
+   - Nueva tabla payment_task_assignments es la que se usa ahora
+
+⚠️ Solo se pueden asignar trabajadores con contrato activo
+   - Validación implementada hoy
+   - Obtiene project_id correctamente: apartamento → piso → torre → proyecto
+
+⚠️ El campo role en task_assignments es INFORMATIVO
+   - No afecta el cálculo de pagos
+   - Solo sirve para reportes y visualización
+
+⚠️ El campo progress fue eliminado
+   - Las tareas están completadas o no (status = 'completed')
+   - No hay porcentajes de progreso
+
+================================================================================
+14. PRÓXIMOS PASOS SUGERIDOS
+================================================================================
+
+1. Probar todas las funcionalidades en /tareas-v2
+2. Validar que los filtros funcionen correctamente
+3. Probar asignación de múltiples trabajadores
+4. Probar ajuste manual de distribución
+5. Probar completado bidireccional
+6. Probar soft delete y restauración
+7. Probar procesamiento de pagos
+8. Una vez validado todo, migrar completamente reemplazando /tareas
+
+================================================================================
+FIN DEL RESUMEN
+================================================================================
+

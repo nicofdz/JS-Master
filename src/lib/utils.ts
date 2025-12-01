@@ -104,3 +104,16 @@ export function formatCurrency(amount: number): string {
     maximumFractionDigits: 0
   }).format(amount)
 }
+
+/**
+ * Formatea el número de departamento concatenando código y número si existe código
+ * @param apartment_code - Código del departamento (ej: "A1 D")
+ * @param apartment_number - Número del departamento (ej: "104")
+ * @returns String formateado (ej: "A1 D-104" o "104")
+ */
+export function formatApartmentNumber(apartment_code: string | null | undefined, apartment_number: string | number): string {
+  if (apartment_code && apartment_code.trim()) {
+    return `${apartment_code.trim()}-${apartment_number}`
+  }
+  return apartment_number.toString()
+}

@@ -47,10 +47,10 @@ export function PlanUploadTest() {
       
       console.log('✅ Proyecto encontrado:', project.name)
       
-      const result = await uploadPlan(projectId, file)
+      await uploadPlan(projectId, file)
       
-      console.log('✅ Subida exitosa:', result)
-      setResult(`✅ Subida exitosa! PDF: ${result.plan_pdf}, Imagen: ${result.plan_image_url}`)
+      console.log('✅ Subida exitosa')
+      setResult(`✅ Subida exitosa!`)
       
     } catch (error: any) {
       console.error('❌ Error en subida:', error)

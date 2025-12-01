@@ -433,55 +433,102 @@ TOTAL$${Math.abs(fileHash) * 1240}
     console.log('ivaAmount original:', extractedData.ivaAmount)
     console.log('totalAmount original:', extractedData.totalAmount)
     
-    // Función simplificada para convertir montos
+    // Función para convertir montos con límites seguros
     const convertAmount = (amount: string): number => {
       console.log('Convirtiendo monto:', amount)
       if (!amount) return 0
       
-      // Método simple: solo quitar $ y espacios, mantener puntos y comas
       const cleaned = amount.replace(/[$]/g, '').trim()
       console.log('Después de quitar $:', cleaned)
       
-      // Si tiene puntos como separadores de miles (formato chileno), removerlos
+      let result = 0
+      
       if (cleaned.includes('.')) {
         const parts = cleaned.split('.')
         console.log('Partes separadas por puntos:', parts)
         
-        // Si tiene más de 2 partes, son separadores de miles
         if (parts.length > 2) {
-          // Unir todas las partes (separadores de miles)
-          const result = parseFloat(parts.join(''))
+          // Separadores de miles (formato chileno)
+          result = parseFloat(parts.join(''))
           console.log('Resultado sin separadores de miles:', result)
-          return result
         } else if (parts.length === 2) {
-          // Podría ser decimal o separador de miles
-          // Si la última parte tiene 2 dígitos, es decimal
           if (parts[1].length === 2) {
-            const result = parseFloat(cleaned)
+            // Decimal
+            result = parseFloat(cleaned)
             console.log('Resultado con decimal:', result)
-            return result
           } else {
-            // Es separador de miles
-            const result = parseFloat(parts.join(''))
+            // Separador de miles
+            result = parseFloat(parts.join(''))
             console.log('Resultado separador de miles:', result)
-            return result
           }
         }
+      } else {
+        result = parseFloat(cleaned)
+        console.log('Resultado final:', result)
       }
       
-      // Si no tiene puntos o es formato simple
-      const result = parseFloat(cleaned)
-      console.log('Resultado final:', result)
-      return result
+      // Validar que el resultado esté dentro de los límites de DECIMAL(12,2)
+      // Máximo: 9,999,999,999.99 (menor que 10^10)
+      const maxValue = 9999999999.99
+      const minValue = 0
+      
+      if (isNaN(result)) {
+        console.warn('⚠️ Valor no numérico detectado:', amount)
+        return 0
+      }
+      
+      if (result > maxValue) {
+        console.warn('⚠️ Valor excede máximo permitido:', result, '-> limitado a', maxValue)
+        return maxValue
+      }
+      
+      if (result < minValue) {
+        console.warn('⚠️ Valor negativo detectado:', result, '-> limitado a', minValue)
+        return minValue
+      }
+      
+      // Redondear a 2 decimales
+      return Math.round(result * 100) / 100
     }
     
     const netAmount = convertAmount(extractedData.netAmount)
     const ivaAmount = convertAmount(extractedData.ivaAmount)
     const totalAmount = convertAmount(extractedData.totalAmount)
+    const additionalTax = convertAmount(extractedData.additionalTax || '0')
     
-    console.log('netAmount convertido:', netAmount)
-    console.log('ivaAmount convertido:', ivaAmount)
-    console.log('totalAmount convertido:', totalAmount)
+    console.log('Montos convertidos:', { netAmount, ivaAmount, totalAmount, additionalTax })
+    
+    // Validación final de montos antes de guardar
+    const validateAmount = (value: number, fieldName: string): number => {
+      if (isNaN(value) || !isFinite(value)) {
+        console.warn(`⚠️ ${fieldName} no es un número válido:`, value)
+        return 0
+      }
+      
+      if (value > 9999999999.99) {
+        console.warn(`⚠️ ${fieldName} excede el máximo permitido:`, value)
+        return 9999999999.99
+      }
+      
+      if (value < 0) {
+        console.warn(`⚠️ ${fieldName} es negativo:`, value)
+        return 0
+      }
+      
+      return Math.round(value * 100) / 100
+    }
+    
+    const safeNetAmount = validateAmount(netAmount, 'netAmount')
+    const safeIvaAmount = validateAmount(ivaAmount, 'ivaAmount')
+    const safeTotalAmount = validateAmount(totalAmount, 'totalAmount')
+    const safeAdditionalTax = validateAmount(additionalTax, 'additionalTax')
+    
+    console.log('Montos validados:', { 
+      safeNetAmount, 
+      safeIvaAmount, 
+      safeTotalAmount, 
+      safeAdditionalTax 
+    })
     
     // Subir PDF a Supabase Storage
     let pdfUrl = null
@@ -529,11 +576,11 @@ TOTAL$${Math.abs(fileHash) * 1240}
       description: limitText(extractedData.description || '', 500),
       contract_number: limitText(extractedData.contractNumber || '', 100),
       payment_method: limitText(extractedData.paymentMethod || '', 100),
-      net_amount: netAmount,
+      net_amount: safeNetAmount,
       iva_percentage: extractedData.ivaPercentage || 19.00,
-      iva_amount: ivaAmount,
-      additional_tax: extractedData.additionalTax ? parseFloat(extractedData.additionalTax.replace(/[^\d.-]/g, '')) : 0,
-      total_amount: totalAmount,
+      iva_amount: safeIvaAmount,
+      additional_tax: safeAdditionalTax,
+      total_amount: safeTotalAmount,
       pdf_url: pdfUrl, // 🔥 AHORA GUARDA LA URL DEL PDF
       raw_text: limitText(validatedText, 5000),
       parsed_data: extractedData,

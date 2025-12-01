@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
+import { NotificationCenter } from '@/components/layout/NotificationCenter'
 import { ROLE_LABELS } from '@/types/auth'
 import { 
   BarChart3, 
@@ -20,7 +21,16 @@ import {
   LogOut,
   SquareStack, // Icono para Apartamentos
   CheckSquare, // Icono para Tareas
-  DollarSign // Icono para Pagos
+  DollarSign, // Icono para Pagos
+  ClipboardCheck, // Icono para Asistencia
+  Wrench, // Icono para Herramientas
+  Boxes, // Icono para Materiales
+  Receipt, // Icono para Gastos
+  FolderKanban, // Icono para sección Proyectos
+  UsersRound, // Icono para sección Personal
+  Package, // Icono para sección Inventario
+  CreditCard, // Icono para sección Finanzas
+  PieChart // Icono para sección Reportes
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -64,16 +74,50 @@ export default function AuthLayout({
     setSidebarOpen(false)
   }
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-    { name: 'Proyectos', href: '/proyectos', icon: Building2 },
-    { name: 'Trabajadores', href: '/equipos', icon: Users },
-    { name: 'Pisos', href: '/pisos', icon: Home },
-    { name: 'Apartamentos', href: '/apartamentos', icon: SquareStack },
-    { name: 'Tareas', href: '/tareas', icon: CheckSquare, badge: delayedCount > 0 ? delayedCount : null },
-    { name: 'Facturas', href: '/facturas', icon: DollarSign },
-    { name: 'Pagos', href: '/pagos', icon: DollarSign },
-    { name: 'Reportes', href: '/reportes', icon: TrendingUp },
+  const navigationSections = [
+    {
+      title: 'PROYECTOS',
+      icon: FolderKanban,
+      items: [
+        { name: 'Obras', href: '/proyectos', icon: Building2 },
+        { name: 'Pisos', href: '/pisos', icon: Home },
+        { name: 'Apartamentos', href: '/apartamentos', icon: SquareStack },
+        { name: 'Tareas', href: '/tareas', icon: CheckSquare, badge: delayedCount > 0 ? delayedCount : null },
+      ]
+    },
+    {
+      title: 'PERSONAL',
+      icon: UsersRound,
+      items: [
+        { name: 'Trabajadores/Contratos', href: '/trabajadores', icon: Users },
+        { name: 'Asistencia', href: '/asistencia', icon: ClipboardCheck },
+      ]
+    },
+    {
+      title: 'INVENTARIO',
+      icon: Package,
+      items: [
+        { name: 'Herramientas', href: '/herramientas', icon: Wrench },
+        { name: 'Materiales', href: '/materiales', icon: Boxes },
+      ]
+    },
+    {
+      title: 'FINANZAS',
+      icon: CreditCard,
+      items: [
+        { name: 'Facturas', href: '/facturas', icon: DollarSign },
+        { name: 'Gastos', href: '/gastos', icon: Receipt },
+        { name: 'Pagos', href: '/pagos', icon: DollarSign },
+      ]
+    },
+    {
+      title: 'REPORTES',
+      icon: PieChart,
+      items: [
+        { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+        { name: 'Reportes', href: '/reportes', icon: TrendingUp },
+      ]
+    },
   ]
 
   if (loading) {
@@ -111,31 +155,49 @@ export default function AuthLayout({
               <div className="flex-shrink-0 flex items-center px-4">
                 <h1 className="text-lg font-semibold text-slate-100">JS Master</h1>
               </div>
-              <nav className="mt-5 px-2 space-y-1">
-                {navigation.map((item) => {
-                  const IconComponent = item.icon
-                  const active = isActive(item.href)
+              <nav className="mt-5 px-2 space-y-4">
+                {navigationSections.map((section) => {
+                  const SectionIcon = section.icon
                   return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={handleLinkClick}
-                      className={`group flex items-center justify-between px-2 py-2 text-base font-medium rounded-md ${
-                        active 
-                          ? 'bg-slate-700 text-slate-100' 
-                          : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        <IconComponent className={`mr-3 w-5 h-5 ${active ? 'text-blue-400' : 'text-slate-400'}`} />
-                        {item.name}
+                    <div key={section.title} className="space-y-1">
+                      {/* Título de sección */}
+                      <div className="px-2 py-1 flex items-center gap-2">
+                        <SectionIcon className="w-4 h-4 text-slate-500" />
+                        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          {section.title}
+                        </h3>
                       </div>
-                      {item.badge && (
-                        <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
+                      
+                      {/* Items de la sección */}
+                      <div className="space-y-1">
+                        {section.items.map((item) => {
+                          const IconComponent = item.icon
+                          const active = isActive(item.href)
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              onClick={handleLinkClick}
+                              className={`group flex items-center justify-between pl-8 pr-2 py-2 text-base font-medium rounded-md transition-all ${
+                                active 
+                                  ? 'bg-slate-700 text-slate-100 border-l-4 border-blue-500' 
+                                  : 'text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 hover:border-l-4 hover:border-slate-600'
+                              }`}
+                            >
+                              <div className="flex items-center">
+                                <IconComponent className={`mr-3 w-4 h-4 ${active ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-300'}`} />
+                                <span className="text-sm">{item.name}</span>
+                              </div>
+                              {item.badge && (
+                                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                                  {item.badge}
+                                </span>
+                              )}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
                   )
                 })}
               </nav>
@@ -151,30 +213,48 @@ export default function AuthLayout({
             <div className="flex items-center flex-shrink-0 px-4">
               <h1 className="text-lg font-semibold text-slate-100">JS Master</h1>
             </div>
-            <nav className="mt-5 flex-1 px-2 space-y-1">
-              {navigation.map((item) => {
-                const IconComponent = item.icon
-                const active = isActive(item.href)
+            <nav className="mt-5 flex-1 px-2 space-y-4">
+              {navigationSections.map((section) => {
+                const SectionIcon = section.icon
                 return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center justify-between px-2 py-2 text-sm font-medium rounded-md ${
-                      active 
-                        ? 'bg-slate-700 text-slate-100' 
-                        : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <IconComponent className={`mr-3 w-5 h-5 ${active ? 'text-blue-400' : 'text-slate-400'}`} />
-                      {item.name}
+                  <div key={section.title} className="space-y-1">
+                    {/* Título de sección */}
+                    <div className="px-2 py-1 flex items-center gap-2">
+                      <SectionIcon className="w-4 h-4 text-slate-500" />
+                      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        {section.title}
+                      </h3>
                     </div>
-                    {item.badge && (
-                      <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
+                    
+                    {/* Items de la sección */}
+                    <div className="space-y-1">
+                      {section.items.map((item) => {
+                        const IconComponent = item.icon
+                        const active = isActive(item.href)
+                        return (
+                          <Link
+                            key={item.name}
+                            href={item.href}
+                            className={`group flex items-center justify-between pl-8 pr-2 py-2 text-sm font-medium rounded-md transition-all ${
+                              active 
+                                ? 'bg-slate-700 text-slate-100 border-l-4 border-blue-500' 
+                                : 'text-slate-300 hover:bg-slate-700/50 hover:text-slate-100 hover:border-l-4 hover:border-slate-600'
+                            }`}
+                          >
+                            <div className="flex items-center">
+                              <IconComponent className={`mr-3 w-4 h-4 ${active ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-300'}`} />
+                              <span className="text-sm">{item.name}</span>
+                            </div>
+                            {item.badge && (
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
             </nav>
@@ -224,6 +304,9 @@ export default function AuthLayout({
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Centro de Notificaciones */}
+            <NotificationCenter />
+            
             <Image 
               src="/logo/logo jsmaster.png" 
               alt="JS Master Logo" 

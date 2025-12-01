@@ -86,3 +86,7 @@ COMMENT ON FUNCTION public.process_partial_payment IS 'Procesa un pago parcial s
 
 
 
+
+
+
+

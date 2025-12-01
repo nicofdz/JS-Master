@@ -1,58 +1,131 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useApartments, useTasks } from '@/hooks'
+import { useApartments } from '@/hooks'
+import { useTasksV2 } from '@/hooks/useTasks_v2'
 import { useProjectFilter } from '@/hooks/useProjectFilter'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
-import { ApartmentForm } from '@/components/apartments/ApartmentForm'
-import { TaskRow } from '@/components/tasks/TaskRow'
-import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock } from 'lucide-react'
-import { formatDate, getStatusColor, getStatusEmoji, getStatusText } from '@/lib/utils'
+import { ApartmentFormModalV2 } from '@/components/apartments/ApartmentFormModalV2'
+import { ApartmentTasksModal } from '@/components/projects/ApartmentTasksModal'
+import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTemplatesModal'
+import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock, Layers, Eye, Circle, CheckCircle2, AlertTriangle, XCircle, FileText } from 'lucide-react'
+import { StatusFilterCards } from '@/components/common/StatusFilterCards'
+import { formatDate, getStatusColor, getStatusEmoji, getStatusText, formatApartmentNumber } from '@/lib/utils'
+
+// Función para obtener icono de estado en lugar de emoji
+const getStatusIcon = (status: string | null | undefined) => {
+  if (!status) return <Circle className="w-3 h-3" />
+  
+  switch (status) {
+    case 'completed': return <CheckCircle2 className="w-3 h-3" />
+    case 'good': return <CheckCircle2 className="w-3 h-3" />
+    case 'active': return <CheckCircle2 className="w-3 h-3" />
+    case 'in-progress':
+    case 'in_progress': return <Clock className="w-3 h-3" />
+    case 'warning': return <AlertTriangle className="w-3 h-3" />
+    case 'danger': return <XCircle className="w-3 h-3" />
+    case 'blocked': return <XCircle className="w-3 h-3" />
+    case 'delayed': return <AlertCircle className="w-3 h-3" />
+    case 'pending': return <Circle className="w-3 h-3" />
+    default: return <Circle className="w-3 h-3" />
+  }
+}
 import { APARTMENT_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
 
 export default function ApartamentosPage() {
   const { apartments, floors, projects, loading, error, createApartment, updateApartment, deleteApartment } = useApartments()
-  const { tasks, users, createTask, updateTask, deleteTask } = useTasks()
+  const { tasks, loading: tasksLoading, createTask } = useTasksV2()
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
   const [searchTerm, setSearchTerm] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('all')
-  const [floorFilter, setFloorFilter] = useState<string>('all')
-  const [showPendingOnly, setShowPendingOnly] = useState<boolean>(false)
-  const [showInProgressOnly, setShowInProgressOnly] = useState<boolean>(false)
-  const [showCompletedOnly, setShowCompletedOnly] = useState<boolean>(false)
-  const [showBlockedOnly, setShowBlockedOnly] = useState<boolean>(false)
+  const [towerFilter, setTowerFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed' | 'blocked'>('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [editingApartment, setEditingApartment] = useState<any>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [selectedFloorForApartment, setSelectedFloorForApartment] = useState<{ floorId: number; towerId: number; projectId: number } | null>(null)
   const [expandedApartments, setExpandedApartments] = useState<Set<number>>(new Set())
+  const [selectedApartmentForTasks, setSelectedApartmentForTasks] = useState<any>(null)
+  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set())
+  const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
+  const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
+  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false)
 
-  // Resetear filtro de piso cuando cambie el proyecto
+  // Resetear filtro de torre cuando cambie el proyecto
   useEffect(() => {
-    setFloorFilter('all')
+    setTowerFilter('all')
   }, [projectFilter])
+
+  // Cargar estado expandido desde localStorage
+  useEffect(() => {
+    try {
+      const savedProjects = localStorage.getItem('apartamentos_expanded_projects')
+      const savedTowers = localStorage.getItem('apartamentos_expanded_towers')
+      const savedFloors = localStorage.getItem('apartamentos_expanded_floors')
+
+      if (savedProjects) {
+        setExpandedProjects(new Set(JSON.parse(savedProjects)))
+      } else {
+        // Por defecto, expandir todos los proyectos
+        const allProjectIds = new Set(apartments.map(apt => apt.project_id || 0).filter(id => id > 0))
+        setExpandedProjects(allProjectIds)
+      }
+
+      if (savedTowers) {
+        setExpandedTowers(new Set(JSON.parse(savedTowers)))
+      } else {
+        // Por defecto, expandir todas las torres
+        const allTowerIds = new Set(apartments.map(apt => (apt as any).tower_id || 0).filter(id => id > 0))
+        setExpandedTowers(allTowerIds)
+      }
+
+      if (savedFloors) {
+        setExpandedFloors(new Set(JSON.parse(savedFloors)))
+      }
+
+      setHasLoadedFromStorage(true)
+    } catch (err) {
+      console.error('Error loading expanded state from localStorage:', err)
+      setHasLoadedFromStorage(true)
+    }
+  }, [apartments.length]) // Solo cuando cambia la cantidad de apartamentos
+
+  // Guardar estado expandido en localStorage
+  useEffect(() => {
+    if (!hasLoadedFromStorage) return
+
+    try {
+      localStorage.setItem('apartamentos_expanded_projects', JSON.stringify(Array.from(expandedProjects)))
+      localStorage.setItem('apartamentos_expanded_towers', JSON.stringify(Array.from(expandedTowers)))
+      localStorage.setItem('apartamentos_expanded_floors', JSON.stringify(Array.from(expandedFloors)))
+    } catch (err) {
+      console.error('Error saving expanded state to localStorage:', err)
+    }
+  }, [expandedProjects, expandedTowers, expandedFloors, hasLoadedFromStorage])
+
 
   // Filtrar apartamentos (igual que en pisos)
   const filteredApartments = apartments.filter(apartment => {
-    const matchesSearch = apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const fullNumber = formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)
+    const matchesSearch = fullNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    // Filtro por estado (usando los filtros de tarjetas)
-    const matchesStatus = 
-      (!showPendingOnly && !showInProgressOnly && !showCompletedOnly && !showBlockedOnly) ||
-      (showPendingOnly && apartment.status === 'pending') ||
-      (showInProgressOnly && apartment.status === 'in-progress') ||
-      (showCompletedOnly && apartment.status === 'completed') ||
-      (showBlockedOnly && apartment.status === 'blocked')
+    // Filtro por estado (usando el filtro de tarjetas)
+    const matchesStatus = statusFilter === 'all' || apartment.status === statusFilter
     
-    const matchesProject = projectFilter === 'all' || (apartment.project_id && apartment.project_id.toString() === projectFilter)
-    const matchesGlobalProject = selectedProjectId === null || (apartment.project_id && apartment.project_id.toString() === selectedProjectId)
-    const matchesFloor = floorFilter === 'all' || (apartment.floor_id && apartment.floor_id.toString() === floorFilter)
+    // Si hay un filtro local de proyecto, usarlo; si no, usar el filtro global
+    const projectToMatch = projectFilter !== 'all' ? projectFilter : (selectedProjectId ? selectedProjectId.toString() : null)
+    const matchesProject = !projectToMatch || (apartment.project_id && apartment.project_id.toString() === projectToMatch)
+    const matchesTower = towerFilter === 'all' || ((apartment as any).tower_id && (apartment as any).tower_id.toString() === towerFilter)
     
-    return matchesSearch && matchesStatus && matchesProject && matchesGlobalProject && matchesFloor
+    return matchesSearch && matchesStatus && matchesProject && matchesTower
   })
 
   // Obtener proyectos únicos para el filtro (igual que en pisos)
@@ -60,19 +133,42 @@ export default function ApartamentosPage() {
     new Map(apartments.map(apartment => [apartment.project_id || 0, { id: apartment.project_id || 0, name: apartment.project_name || 'Sin proyecto' }])).values()
   )
 
-  // Obtener pisos únicos para el filtro (solo del proyecto seleccionado)
-  const uniqueFloors = projectFilter === 'all' 
-    ? [] // No mostrar pisos si no hay proyecto seleccionado
+  // Obtener torres únicas para el filtro (solo del proyecto seleccionado)
+  const uniqueTowers = projectFilter === 'all' 
+    ? [] // No mostrar torres si no hay proyecto seleccionado
     : Array.from(
         new Map(apartments
           .filter(apartment => apartment.project_id && apartment.project_id.toString() === projectFilter)
-          .map(apartment => [apartment.floor_id || 0, { id: apartment.floor_id || 0, number: apartment.floor_number || 0, project_name: apartment.project_name || 'Sin proyecto' }])
+          .map(apartment => [(apartment as any).tower_id || 0, { id: (apartment as any).tower_id || 0, number: (apartment as any).tower_number || 0, name: (apartment as any).tower_name || 'Sin torre' }])
         ).values()
       ).sort((a, b) => a.number - b.number)
 
   // Obtener tareas por apartamento
   const getTasksForApartment = (apartmentId: number) => {
     return tasks.filter(task => task.apartment_id === apartmentId)
+  }
+
+  // Obtener trabajadores únicos que trabajaron en un departamento
+  const getWorkersForApartment = (apartmentId: number) => {
+    const apartmentTasks = getTasksForApartment(apartmentId)
+    const workersSet = new Set<string>()
+    const workersMap = new Map<number, { id: number; full_name: string }>()
+
+    apartmentTasks.forEach(task => {
+      if (task.workers && Array.isArray(task.workers)) {
+        task.workers.forEach((worker: any) => {
+          if (worker.id && worker.full_name && !workersSet.has(`${worker.id}`)) {
+            workersSet.add(`${worker.id}`)
+            workersMap.set(worker.id, {
+              id: worker.id,
+              full_name: worker.full_name
+            })
+          }
+        })
+      }
+    })
+
+    return Array.from(workersMap.values())
   }
 
   // Toggle para expandir/contraer apartamento
@@ -83,6 +179,43 @@ export default function ApartamentosPage() {
         newSet.delete(apartmentId)
       } else {
         newSet.add(apartmentId)
+      }
+      return newSet
+    })
+  }
+
+  // Toggles para jerarquía
+  const toggleProjectExpansion = (projectId: number) => {
+    setExpandedProjects(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId)
+      } else {
+        newSet.add(projectId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleTowerExpansion = (towerId: number) => {
+    setExpandedTowers(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(towerId)) {
+        newSet.delete(towerId)
+      } else {
+        newSet.add(towerId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleFloorExpansion = (floorId: number) => {
+    setExpandedFloors(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(floorId)) {
+        newSet.delete(floorId)
+      } else {
+        newSet.add(floorId)
       }
       return newSet
     })
@@ -211,35 +344,6 @@ export default function ApartamentosPage() {
     }
   }
 
-  const handleCreateTask = async (data: any) => {
-    try {
-      await createTask(data)
-      toast.success('Tarea creada exitosamente')
-    } catch (err: any) {
-      toast.error(`Error al crear tarea: ${err.message || 'Error desconocido'}`)
-      throw err
-    }
-  }
-
-  const handleUpdateTask = async (id: number, data: any) => {
-    try {
-      await updateTask(id, data)
-      toast.success('Tarea actualizada exitosamente')
-    } catch (err: any) {
-      toast.error(`Error al actualizar tarea: ${err.message || 'Error desconocido'}`)
-      throw err
-    }
-  }
-
-  const handleDeleteTask = async (id: number) => {
-    try {
-      await deleteTask(id)
-      toast.success('Tarea eliminada exitosamente')
-    } catch (err: any) {
-      toast.error(`Error al eliminar tarea: ${err.message || 'Error desconocido'}`)
-      throw err
-    }
-  }
 
   if (loading) {
     return (
@@ -265,13 +369,17 @@ export default function ApartamentosPage() {
 
   // Apartamentos filtrados solo por proyecto (sin filtro de estado)
   const apartmentsForStats = apartments.filter(apartment => {
-    const matchesSearch = apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const fullNumber = formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)
+    const matchesSearch = fullNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesProject = projectFilter === 'all' || (apartment.project_id && apartment.project_id.toString() === projectFilter)
-    const matchesGlobalProject = selectedProjectId === null || (apartment.project_id && apartment.project_id.toString() === selectedProjectId)
+    // Si hay un filtro local de proyecto, usarlo; si no, usar el filtro global
+    const projectToMatch = projectFilter !== 'all' ? projectFilter : (selectedProjectId ? selectedProjectId.toString() : null)
+    const matchesProject = !projectToMatch || (apartment.project_id && apartment.project_id.toString() === projectToMatch)
     
-    return matchesSearch && matchesProject && matchesGlobalProject
+    return matchesSearch && matchesProject
   })
 
   const totalApartments = apartmentsForStats.length
@@ -296,10 +404,19 @@ export default function ApartamentosPage() {
 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-gray-800">Listado de Apartamentos</h2>
-        <Button onClick={() => setShowCreateModal(true)} className="flex items-center">
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowTemplatesModal(true)} variant="outline">
+            <FileText className="mr-2 h-4 w-4" />
+            Plantillas de Departamentos
+          </Button>
+          <Button onClick={() => {
+            setSelectedFloorForApartment(null)
+            setShowCreateModal(true)
+          }} className="flex items-center">
           <Plus className="w-5 h-5 mr-2" />
           Nuevo Apartamento
         </Button>
+        </div>
       </div>
 
       {/* Filtros y Búsqueda */}
@@ -338,392 +455,605 @@ export default function ApartamentosPage() {
                 className={`pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none ${
                   projectFilter === 'all' ? 'bg-gray-100 cursor-not-allowed' : ''
                 }`}
-                value={floorFilter}
-                onChange={(e) => setFloorFilter(e.target.value)}
+                value={towerFilter}
+                onChange={(e) => setTowerFilter(e.target.value)}
                 disabled={projectFilter === 'all'}
               >
                 <option value="all">
-                  {projectFilter === 'all' ? 'Selecciona un proyecto primero' : 'Todos los pisos'}
+                  {projectFilter === 'all' ? 'Selecciona un proyecto primero' : 'Todas las torres'}
                 </option>
-                {uniqueFloors.map((floor) => (
-                  <option key={floor.id} value={floor.id}>
-                    Piso {floor.number}
+                {uniqueTowers.map((tower) => {
+                  // Si el nombre es igual al número, solo mostrar el número
+                  const displayName = tower.name === `Torre ${tower.number}` || tower.name === `Torre ${tower.number}` || tower.name === `Torre${tower.number}` 
+                    ? `Torre ${tower.number}` 
+                    : `Torre ${tower.number} - ${tower.name}`
+                  return (
+                    <option key={tower.id} value={tower.id}>
+                      {displayName}
                   </option>
-                ))}
+                  )
+                })}
               </select>
             </div>
           </div>
         </CardContent>
       </Card>
       
-      {/* Indicador de filtro de proyecto activo */}
-      {selectedProjectId && (
-        <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-4">
-          <Building2 className="w-4 h-4 text-blue-600" />
-          <span className="text-sm text-blue-800">
-            Filtrado por: {projects.find(p => p.id.toString() === selectedProjectId)?.name}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSelectedProjectId(null)}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            Limpiar
-          </Button>
-        </div>
-      )}
 
       {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Apartamentos</p>
-                <p className="text-2xl font-bold text-gray-900">{totalApartments}</p>
-              </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Building className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showPendingOnly 
-              ? 'ring-2 ring-yellow-500 bg-yellow-50 shadow-lg' 
-              : 'hover:bg-yellow-50 hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowPendingOnly(!showPendingOnly)
-            // Desactivar otros filtros de estado
-            setShowInProgressOnly(false)
-            setShowCompletedOnly(false)
-            setShowBlockedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900">{pendingApartments}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showPendingOnly ? 'text-yellow-600' : 'text-gray-500'
-                }`}>
-                  {showPendingOnly ? '🟡 Filtrando...' : '👆 Ver pendientes'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showPendingOnly ? 'bg-yellow-200' : 'bg-gray-100'
-              }`}>
-                <Clock className="w-5 h-5 text-gray-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showInProgressOnly 
-              ? 'ring-2 ring-blue-500 bg-blue-50 shadow-lg' 
-              : 'hover:bg-blue-50 hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowInProgressOnly(!showInProgressOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowCompletedOnly(false)
-            setShowBlockedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">En Progreso</p>
-                <p className="text-2xl font-bold text-gray-900">{inProgressApartments}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showInProgressOnly ? 'text-blue-600' : 'text-gray-500'
-                }`}>
-                  {showInProgressOnly ? '🔵 Filtrando...' : '👆 Ver en progreso'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showInProgressOnly ? 'bg-blue-200' : 'bg-blue-100'
-              }`}>
-                <Play className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showCompletedOnly 
-              ? 'ring-2 ring-green-500 bg-green-50 shadow-lg' 
-              : 'hover:bg-green-50 hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowCompletedOnly(!showCompletedOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowInProgressOnly(false)
-            setShowBlockedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completados</p>
-                <p className="text-2xl font-bold text-gray-900">{completedApartments}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showCompletedOnly ? 'text-green-600' : 'text-gray-500'
-                }`}>
-                  {showCompletedOnly ? '🟢 Filtrando...' : '👆 Ver completados'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showCompletedOnly ? 'bg-green-200' : 'bg-green-100'
-              }`}>
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-            showBlockedOnly 
-              ? 'ring-2 ring-red-500 bg-red-50 shadow-lg' 
-              : 'hover:bg-red-50 hover:shadow-md'
-          }`}
-          onClick={() => {
-            setShowBlockedOnly(!showBlockedOnly)
-            // Desactivar otros filtros de estado
-            setShowPendingOnly(false)
-            setShowInProgressOnly(false)
-            setShowCompletedOnly(false)
-          }}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Bloqueados</p>
-                <p className="text-2xl font-bold text-gray-900">{blockedApartments}</p>
-                <p className={`text-xs mt-1 font-medium ${
-                  showBlockedOnly ? 'text-red-600' : 'text-gray-500'
-                }`}>
-                  {showBlockedOnly ? '🔴 Filtrando...' : '👆 Ver bloqueados'}
-                </p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                showBlockedOnly ? 'bg-red-200' : 'bg-red-100'
-              }`}>
-                <Lock className="w-5 h-5 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatusFilterCards
+        selectedValue={statusFilter}
+        onSelect={(value) => setStatusFilter(value as 'all' | 'pending' | 'in-progress' | 'completed' | 'blocked')}
+        scrollTargetId="apartments-list"
+        defaultOption={{
+          value: 'all',
+          label: 'Todos',
+          icon: Layers,
+          count: totalApartments,
+          activeColor: 'blue-400',
+          activeBg: 'blue-900/30',
+          activeBorder: 'blue-500'
+        }}
+        options={[
+          {
+            value: 'pending',
+            label: 'Pendientes',
+            icon: Clock,
+            count: pendingApartments,
+            activeColor: 'yellow-400',
+            activeBg: 'yellow-900/30',
+            activeBorder: 'yellow-500'
+          },
+          {
+            value: 'in-progress',
+            label: 'En Progreso',
+            icon: Play,
+            count: inProgressApartments,
+            activeColor: 'emerald-400',
+            activeBg: 'emerald-900/30',
+            activeBorder: 'emerald-500'
+          },
+          {
+            value: 'completed',
+            label: 'Completados',
+            icon: CheckCircle,
+            count: completedApartments,
+            activeColor: 'emerald-400',
+            activeBg: 'emerald-900/30',
+            activeBorder: 'emerald-500'
+          },
+          {
+            value: 'blocked',
+            label: 'Bloqueados',
+            icon: Lock,
+            count: blockedApartments,
+            activeColor: 'red-400',
+            activeBg: 'red-900/30',
+            activeBorder: 'red-500'
+          }
+        ]}
+      />
 
-      {/* Tabla de Apartamentos */}
+
+      {/* Vista Jerárquica de Departamentos */}
       {filteredApartments.length === 0 ? (
-        <p className="text-center text-gray-500">No se encontraron apartamentos.</p>
+        <div className="text-center py-12">
+          <Home className="w-16 h-16 mx-auto text-slate-400 mb-4" />
+          <p className="text-slate-400 text-lg">No se encontraron departamentos.</p>
+          {(towerFilter !== 'all' || projectFilter !== 'all' || statusFilter !== 'all') && (
+            <p className="text-slate-500 text-sm mt-2">
+              Intenta seleccionar otro filtro o proyecto
+            </p>
+          )}
+        </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Apartamento
-                </th>
-                {projectFilter === 'all' && (
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Piso/Proyecto
-                  </th>
-                )}
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Área
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Progreso
-                </th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Acciones</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredApartments.map((apartment) => {
-                const isExpanded = expandedApartments.has(apartment.id)
-                const apartmentTasks = getTasksForApartment(apartment.id)
-                
-                return (
-                  <>
-                    {/* Fila del apartamento */}
-                    <tr 
-                      key={apartment.id} 
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => toggleApartmentExpansion(apartment.id)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 mr-2 text-gray-400" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 mr-2 text-gray-400" />
-                          )}
-                          <div className="text-sm font-medium text-gray-900">
-                            {apartment.apartment_number}
-                          </div>
-                        </div>
-                      </td>
-                      {projectFilter === 'all' && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            Piso {apartment.floor_number}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {apartment.project_name}
-                          </div>
-                        </td>
-                      )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {apartment.apartment_type || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {apartment.area ? `${apartment.area} m²` : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          getStatusColor(apartment.status)
-                        }`}>
-                          {getStatusEmoji(apartment.status)} {getStatusText(apartment.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full"
-                            style={{ width: `${apartment.progress_percentage || 0}%` }}
-                          ></div>
-                        </div>
-                        <span className="ml-2">{apartment.progress_percentage || 0}%</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingApartment(apartment)}
-                            className="text-primary-600 hover:text-primary-900"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleBlockApartment(apartment.id, apartment.status)}
-                            className={apartment.status === 'blocked' ? 'text-green-600 hover:text-green-900' : 'text-orange-600 hover:text-orange-900'}
-                            title={apartment.status === 'blocked' ? 'Desbloquear apartamento' : 'Bloquear apartamento'}
-                          >
-                            {apartment.status === 'blocked' ? (
-                              <Unlock className="w-4 h-4" />
-                            ) : (
-                              <Lock className="w-4 h-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(apartment.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+        <div id="apartments-list" className="space-y-6">
+          {(() => {
+            // Agrupar departamentos por proyecto > torre > piso
+            const apartmentsByProject = filteredApartments.reduce((acc, apartment) => {
+              const projectId = apartment.project_id || 0
+              const towerId = (apartment as any).tower_id || 0
+              const floorId = apartment.floor_id || 0
+              
+              if (!acc[projectId]) {
+                acc[projectId] = {
+                  projectId,
+                  projectName: apartment.project_name || 'Proyecto Desconocido',
+                  towers: {} as Record<number, {
+                    towerId: number
+                    towerNumber: number
+                    towerName: string
+                    floors: Record<number, {
+                      floorId: number
+                      floorNumber: number
+                      apartments: typeof filteredApartments
+                    }>
+                  }>
+                }
+              }
+              
+              if (!acc[projectId].towers[towerId]) {
+                acc[projectId].towers[towerId] = {
+                  towerId,
+                  towerNumber: (apartment as any).tower_number || 0,
+                  towerName: (apartment as any).tower_name || `Torre ${(apartment as any).tower_number || 0}`,
+                  floors: {}
+                }
+              }
+              
+              if (!acc[projectId].towers[towerId].floors[floorId]) {
+                acc[projectId].towers[towerId].floors[floorId] = {
+                  floorId,
+                  floorNumber: apartment.floor_number || 0,
+                  apartments: []
+                }
+              }
+              
+              acc[projectId].towers[towerId].floors[floorId].apartments.push(apartment)
+              return acc
+            }, {} as Record<number, {
+              projectId: number
+              projectName: string
+              towers: Record<number, {
+                towerId: number
+                towerNumber: number
+                towerName: string
+                floors: Record<number, {
+                  floorId: number
+                  floorNumber: number
+                  apartments: typeof filteredApartments
+                }>
+              }>
+            }>)
 
-                    {/* Fila de tareas expandible */}
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={6} className="px-0 py-0">
-                          <TaskRow
-                            tasks={apartmentTasks}
-                            apartmentId={apartment.id}
-                            apartmentNumber={apartment.apartment_number}
-                            apartments={apartments}
-                            users={users}
-                            floors={floors}
-                            projects={projects}
-                            onCreateTask={handleCreateTask}
-                            onUpdateTask={handleUpdateTask}
-                            onDeleteTask={handleDeleteTask}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                )
-              })}
-            </tbody>
-          </table>
+            // Función para extraer el número del código del departamento
+            const extractApartmentNumber = (apartmentNumber: string): number => {
+              // Extraer todos los números del string
+              const numbers = apartmentNumber.match(/\d+/g)
+              if (!numbers || numbers.length === 0) return 0
+              // Usar el último número encontrado (generalmente el más relevante, ej: "A1 D-104" -> 104)
+              return parseInt(numbers[numbers.length - 1]) || 0
+            }
+
+            // Ordenar departamentos por número en cada piso
+            (Object.values(apartmentsByProject) as Array<{
+              projectId: number
+              projectName: string
+              towers: Record<number, {
+                towerId: number
+                towerNumber: number
+                towerName: string
+                floors: Record<number, {
+                  floorId: number
+                  floorNumber: number
+                  apartments: typeof filteredApartments
+                }>
+              }>
+            }>).forEach(project => {
+              Object.values(project.towers).forEach(tower => {
+                Object.values(tower.floors).forEach(floor => {
+                  floor.apartments.sort((a: any, b: any) => {
+                    const numA = extractApartmentNumber(a.apartment_number)
+                    const numB = extractApartmentNumber(b.apartment_number)
+                    return numA - numB
+                  })
+                })
+              })
+            })
+            
+            return (Object.values(apartmentsByProject) as Array<{
+              projectId: number
+              projectName: string
+              towers: Record<number, {
+                towerId: number
+                towerNumber: number
+                towerName: string
+                floors: Record<number, {
+                  floorId: number
+                  floorNumber: number
+                  apartments: typeof filteredApartments
+                }>
+              }>
+            }>).map((projectGroup, projectIndex) => {
+              const isProjectExpanded = expandedProjects.has(projectGroup.projectId)
+              
+              // Calcular estadísticas del proyecto
+              const allProjectApartments = Object.values(projectGroup.towers)
+                .flatMap(tower => Object.values(tower.floors).flatMap(floor => floor.apartments))
+              
+              const totalApartments = allProjectApartments.length
+              const totalTasks = allProjectApartments.reduce((sum, apt) => sum + (apt.tasks_count || 0), 0)
+              const completedTasks = allProjectApartments.reduce((sum, apt) => {
+                const aptTasks = getTasksForApartment(apt.id)
+                return sum + aptTasks.filter(t => t.status === 'completed').length
+              }, 0)
+              const averageProgress = totalApartments > 0
+                ? Math.round(allProjectApartments.reduce((sum, apt) => sum + (apt.progress_percentage || 0), 0) / totalApartments)
+                : 0
+            
+            return (
+                <div key={projectGroup.projectId} className={`space-y-4 ${projectIndex > 0 ? 'mt-8 pt-6 border-t-2 border-slate-600' : ''}`}>
+                  {/* Header de Proyecto - Colapsable */}
+                  <div 
+                    className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
+                    onClick={() => toggleProjectExpansion(projectGroup.projectId)}
+                  >
+                    <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        {isProjectExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-slate-300" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-slate-300" />
+                        )}
+                        <Building2 className="w-4 h-4 text-blue-400" />
+                        <p className="text-sm font-medium text-slate-200">
+                          {projectGroup.projectName}
+                        </p>
+                    </div>
+                      <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-2">
+                          <span className="text-slate-400">Progreso:</span>
+                          <div className="flex items-center gap-1">
+                            <div className="w-16 bg-slate-800 rounded-full h-1.5">
+                              <div
+                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                                style={{ width: `${averageProgress}%` }}
+                              />
+                            </div>
+                            <span className="text-slate-300 font-medium w-8">{averageProgress}%</span>
+                          </div>
+                        </div>
+                        {totalTasks > 0 && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400">Tareas:</span>
+                            <span className="text-slate-300 font-medium">{completedTasks}/{totalTasks}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <span className="text-slate-400">Deptos:</span>
+                          <span className="text-slate-300 font-medium">{totalApartments}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Torres del Proyecto */}
+                  {isProjectExpanded && (
+                    <div className="space-y-4 ml-4">
+                      {Object.values(projectGroup.towers)
+                        .sort((a, b) => a.towerNumber - b.towerNumber)
+                        .map((towerGroup) => {
+                          const isTowerExpanded = expandedTowers.has(towerGroup.towerId)
+                          
+                          // Calcular estadísticas de la torre
+                          const allTowerApartments = Object.values(towerGroup.floors)
+                            .flatMap(floor => floor.apartments)
+                          const towerTotalTasks = allTowerApartments.reduce((sum, apt) => sum + (apt.tasks_count || 0), 0)
+                          const towerCompletedTasks = allTowerApartments.reduce((sum, apt) => {
+                            const aptTasks = getTasksForApartment(apt.id)
+                            return sum + aptTasks.filter(t => t.status === 'completed').length
+                          }, 0)
+                          const towerAverageProgress = allTowerApartments.length > 0
+                            ? Math.round(allTowerApartments.reduce((sum, apt) => sum + (apt.progress_percentage || 0), 0) / allTowerApartments.length)
+                            : 0
+
+                          return (
+                            <div key={towerGroup.towerId} className="space-y-3">
+                              {/* Header de Torre - Colapsable */}
+                              <div 
+                                className="bg-slate-700/40 rounded-lg border border-slate-600 px-4 py-2 cursor-pointer hover:bg-slate-700/60 transition-colors"
+                                onClick={() => toggleTowerExpansion(towerGroup.towerId)}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    {isTowerExpanded ? (
+                                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                    ) : (
+                                      <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                                    )}
+                                    <Building className="w-3.5 h-3.5 text-purple-400" />
+                                    <p className="text-xs font-medium text-slate-300">
+                                      {towerGroup.towerName}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-xs">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-slate-400">Progreso:</span>
+                                      <span className="text-slate-300 font-medium">{towerAverageProgress}%</span>
+                                    </div>
+                                    {towerTotalTasks > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-slate-400">Tareas:</span>
+                                        <span className="text-slate-300 font-medium">{towerCompletedTasks}/{towerTotalTasks}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-slate-400">Deptos:</span>
+                                      <span className="text-slate-300 font-medium">{allTowerApartments.length}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Pisos de la Torre */}
+                              {isTowerExpanded && (
+                                <div className="space-y-3 ml-4">
+                                  {Object.values(towerGroup.floors)
+                                    .sort((a, b) => a.floorNumber - b.floorNumber)
+                                    .map((floorGroup) => {
+                                      const isFloorExpanded = expandedFloors.has(floorGroup.floorId)
+                                      
+                                      // Calcular estadísticas del piso
+                                      const floorTotalTasks = floorGroup.apartments.reduce((sum, apt) => sum + (apt.tasks_count || 0), 0)
+                                      const floorCompletedTasks = floorGroup.apartments.reduce((sum, apt) => {
+                                        const aptTasks = getTasksForApartment(apt.id)
+                                        return sum + aptTasks.filter(t => t.status === 'completed').length
+                                      }, 0)
+                                      const floorAverageProgress = floorGroup.apartments.length > 0
+                                        ? Math.round(floorGroup.apartments.reduce((sum, apt) => sum + (apt.progress_percentage || 0), 0) / floorGroup.apartments.length)
+                                        : 0
+
+                                      return (
+                                        <div key={floorGroup.floorId} className="space-y-3">
+                                          {/* Header de Piso - Colapsable */}
+                                          <div 
+                                            className="bg-slate-700/30 rounded-lg border border-slate-600 px-3 py-2 cursor-pointer hover:bg-slate-700/50 transition-colors"
+                                            onClick={() => toggleFloorExpansion(floorGroup.floorId)}
+                                          >
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center gap-2">
+                                                {isFloorExpanded ? (
+                                                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                                                ) : (
+                                                  <ChevronRight className="w-3 h-3 text-slate-400" />
+                                                )}
+                                                <Layers className="w-3 h-3 text-green-400" />
+                                                <p className="text-xs font-medium text-slate-300">
+                                                  Piso {floorGroup.floorNumber}
+                                                </p>
+                                              </div>
+                                              <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 text-xs">
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-slate-400">Progreso:</span>
+                                                    <span className="text-slate-300 font-medium">{floorAverageProgress}%</span>
+                                                  </div>
+                                                  {floorTotalTasks > 0 && (
+                                                    <div className="flex items-center gap-1">
+                                                      <span className="text-slate-400">Tareas:</span>
+                                                      <span className="text-slate-300 font-medium">{floorCompletedTasks}/{floorTotalTasks}</span>
+                    </div>
+                  )}
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-slate-400">Deptos:</span>
+                                                    <span className="text-slate-300 font-medium">{floorGroup.apartments.length}</span>
+                                                  </div>
+                                                </div>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setSelectedFloorForApartment({
+                                                      floorId: floorGroup.floorId,
+                                                      towerId: towerGroup.towerId,
+                                                      projectId: projectGroup.projectId
+                                                    })
+                                                    setShowCreateModal(true)
+                                                  }}
+                                                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                                                  title="Agregar Departamento"
+                                                >
+                                                  <Plus className="w-4 h-4 mr-1" />
+                                                  Agregar
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Departamentos del Piso - FILAS SIMPLES */}
+                                          {isFloorExpanded && (
+                                            <div className="space-y-2 ml-4">
+                                              {floorGroup.apartments.map((apartment) => {
+                                                const apartmentTasks = getTasksForApartment(apartment.id)
+                                                const completedTasks = apartmentTasks.filter(t => t.status === 'completed').length
+                                                const apartmentWorkers = getWorkersForApartment(apartment.id)
+                                                
+                                                // Función para abreviar nombres
+                                                const abbreviateName = (fullName: string): string => {
+                                                  const parts = fullName.trim().split(' ')
+                                                  if (parts.length >= 2) {
+                                                    return `${parts[0]} ${parts[1][0]}.`
+                                                  }
+                                                  return fullName
+                                                }
+                                                
+                                                return (
+                                                  <div
+                                                    key={apartment.id}
+                                                    className="bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-800/70 hover:border-slate-600 transition-all cursor-pointer"
+                                                    onClick={() => setSelectedApartmentForTasks(apartment)}
+                                                  >
+                                                    <div className="p-4">
+                                                      <div className="flex items-center justify-between">
+                                                        {/* Información Principal */}
+                                                        <div className="flex items-center gap-4 flex-1">
+                                                          <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                              <Home className="w-4 h-4 text-blue-400" />
+                    </div>
+                                                            <div>
+                                                              <h3 className="text-base font-semibold text-slate-100">
+                                                                {formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)}
+                                                              </h3>
+                                                              <p className="text-xs text-slate-400">
+                                                                {apartment.apartment_type || 'Sin tipo'} {apartment.area ? `• ${apartment.area} m²` : ''}
+                                                              </p>
+                    </div>
+                  </div>
+
+                  {/* Estado */}
+                                                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${
+                      getStatusColor(apartment.status)
+                    }`}>
+                      {getStatusIcon(apartment.status)}
+                      {getStatusText(apartment.status)}
+                    </span>
+
+                  {/* Progreso */}
+                                                          <div className="flex items-center gap-2 flex-1 max-w-xs">
+                                                            <div className="flex-1 bg-slate-700 rounded-full h-2">
+                      <div
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${apartment.progress_percentage || 0}%` }}
+                      ></div>
+                    </div>
+                                                            <span className="text-xs text-slate-300 font-medium w-10 text-right">
+                                                              {apartment.progress_percentage || 0}%
+                                                            </span>
+                  </div>
+
+                                                          {/* Tareas */}
+                                                          <div className="flex items-center gap-2 text-sm">
+                                                            <CheckCircle className="w-4 h-4 text-green-400" />
+                                                            <span className="text-slate-300 font-medium">
+                                                              {completedTasks}/{apartmentTasks.length}
+                                                            </span>
+                                                          </div>
+
+                                                          {/* Trabajadores */}
+                                                          <div className="flex items-center gap-2 text-sm">
+                                                            <Users className="w-4 h-4 text-blue-400" />
+                                                            {apartmentWorkers.length > 0 ? (
+                                                              <div className="flex items-center gap-1 flex-wrap">
+                                                                {apartmentWorkers.slice(0, 3).map((worker) => (
+                                                                  <span
+                                                                    key={worker.id}
+                                                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                                                    title={worker.full_name}
+                                                                  >
+                                                                    {abbreviateName(worker.full_name)}
+                                                                  </span>
+                                                                ))}
+                                                                {apartmentWorkers.length > 3 && (
+                                                                  <span className="text-xs text-slate-400">
+                                                                    +{apartmentWorkers.length - 3}
+                                                                  </span>
+                                                                )}
+                                                              </div>
+                                                            ) : (
+                                                              <span className="text-xs text-slate-400">No hay nadie</span>
+                                                            )}
+                                                          </div>
+                  </div>
+
+                  {/* Acciones */}
+                                                        <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                                                            variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingApartment(apartment)}
+                                                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                      title="Editar"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                                                            variant="ghost"
+                      size="sm"
+                      onClick={() => handleBlockApartment(apartment.id, apartment.status)}
+                                                            className={`${
+                        apartment.status === 'blocked' 
+                                                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30' 
+                                                                : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
+                      }`}
+                      title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
+                    >
+                      {apartment.status === 'blocked' ? (
+                        <Unlock className="w-4 h-4" />
+                      ) : (
+                        <Lock className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                                                            variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(apartment.id)}
+                                                            className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => {
+                                                              e.stopPropagation()
+                                                              setSelectedApartmentForTasks(apartment)
+                                                            }}
+                                                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                                                            title="Ver detalles del departamento"
+                                                          >
+                                                            <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                )
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
+                                </div>
+                              )}
+                  </div>
+                          )
+                        })}
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          })()}
         </div>
       )}
 
-      {/* Modal de Creación */}
-      <Modal
+
+
+      {/* Modal de Creación de Departamento */}
+      <ApartmentFormModalV2
         isOpen={showCreateModal}
         onClose={() => {
           setShowCreateModal(false)
-          setFormError(null)
+          setSelectedFloorForApartment(null)
         }}
-        title="Crear Nuevo Apartamento"
-        size="md"
-      >
-        {formError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong className="font-bold">¡Error!</strong>
-            <span className="block sm:inline"> {formError}</span>
-            <ul className="mt-2 list-disc list-inside">
-              <li>Asegúrate de que todos los campos obligatorios estén llenos.</li>
-              <li>Verifica tu conexión a la base de datos.</li>
-              <li>Intenta recargar la página</li>
-            </ul>
-          </div>
-        )}
-        <ApartmentForm
-          floors={floors}
-          projects={projects}
-          onSubmit={handleCreateApartment}
-          onCancel={() => {
-            setShowCreateModal(false)
-            setFormError(null)
-          }}
-        />
-      </Modal>
+        onSuccess={() => {
+          // Refrescar la lista de apartamentos
+          window.location.reload() // Temporal, luego usar refresh del hook
+        }}
+        initialFloorId={selectedFloorForApartment?.floorId}
+        initialTowerId={selectedFloorForApartment?.towerId}
+        initialProjectId={selectedFloorForApartment?.projectId}
+      />
 
-      {/* Modal de Edición */}
-      <Modal
-        isOpen={!!editingApartment}
-        onClose={() => setEditingApartment(null)}
-        title="Editar Apartamento"
-        size="md"
-      >
-        {editingApartment && (
-          <ApartmentForm
-            apartment={editingApartment}
-            floors={floors}
-            projects={projects}
-            onSubmit={handleUpdateApartment}
-            onCancel={() => setEditingApartment(null)}
-          />
-        )}
-      </Modal>
+      {/* Modal de Tareas del Apartamento */}
+      {selectedApartmentForTasks && (
+        <ApartmentTasksModal
+        isOpen={!!selectedApartmentForTasks}
+        onClose={() => setSelectedApartmentForTasks(null)}
+                apartmentId={selectedApartmentForTasks.id}
+                apartmentNumber={formatApartmentNumber(selectedApartmentForTasks.apartment_code, selectedApartmentForTasks.apartment_number)}
+        />
+      )}
+
+      {/* Modal de Plantillas de Departamentos */}
+      <ApartmentTemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+      />
     </div>
   )
 }

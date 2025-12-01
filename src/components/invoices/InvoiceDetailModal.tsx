@@ -79,10 +79,6 @@ export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailMo
                   <p className="text-black">{invoice.client_name || 'No especificada'}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-600">RUT:</span>
-                  <p className="text-black font-mono">{invoice.client_rut || 'No especificado'}</p>
-                </div>
-                <div>
                   <span className="text-sm font-medium text-gray-600">Dirección:</span>
                   <p className="text-black">{invoice.client_address || 'No especificada'}</p>
                 </div>

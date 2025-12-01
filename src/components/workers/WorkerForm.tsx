@@ -26,7 +26,8 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
     fecha_nacimiento: '',
     prevision: '',
     salud: '',
-    cargo: ''
+    cargo: '',
+    cargo_personalizado: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -47,7 +48,8 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         fecha_nacimiento: worker.fecha_nacimiento || '',
         prevision: worker.prevision || '',
         salud: worker.salud || '',
-        cargo: worker.cargo || ''
+        cargo: (worker.cargo && !['Obrero', 'Maestro', 'Jefe de Cuadrilla', 'Supervisor', 'Especialista', 'Ayudante', 'Maestro Tabiquero', 'Ayudante Maestro'].includes(worker.cargo)) ? 'Otro' : (worker.cargo || ''),
+        cargo_personalizado: (worker.cargo && !['Obrero', 'Maestro', 'Jefe de Cuadrilla', 'Supervisor', 'Especialista', 'Ayudante', 'Maestro Tabiquero', 'Ayudante Maestro'].includes(worker.cargo)) ? worker.cargo : ''
       })
     }
   }, [worker])
@@ -66,7 +68,31 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
           [name]: formattedValue
         }))
       }
-    } else {
+    } 
+    // Convertir email a minúsculas automáticamente
+    else if (name === 'email') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value.toLowerCase()
+      }))
+    }
+    // Manejar cargo personalizado
+    else if (name === 'cargo_personalizado') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        cargo: 'Otro' // Mantener "Otro" en el select para que no se resetee
+      }))
+    }
+    // Manejar cambio de cargo en el select
+    else if (name === 'cargo') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        cargo_personalizado: value === 'Otro' ? prev.cargo_personalizado : '' // Limpiar si no es "Otro"
+      }))
+    }
+    else {
       setFormData(prev => ({
         ...prev,
         [name]: type === 'checkbox' ? checked : value
@@ -111,7 +137,14 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
     e.preventDefault()
     
     if (validateForm()) {
-      onSave(formData)
+      // Preparar los datos para guardar
+      const dataToSave = {
+        ...formData,
+        // Si hay cargo personalizado, usar ese valor; sino usar el cargo del select
+        cargo: formData.cargo_personalizado?.trim() || formData.cargo
+      }
+      
+      onSave(dataToSave)
     }
   }
 
@@ -119,12 +152,12 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-6">
         {/* Información Básica */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información Básica</h3>
+        <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+          <h3 className="text-lg font-medium text-slate-100 mb-4">Información Básica</h3>
           
           {/* Nombre completo */}
           <div className="mb-4">
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="full_name" className="block text-sm font-medium text-slate-300 mb-2">
               Nombre Completo *
             </label>
             <Input
@@ -143,7 +176,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* RUT */}
           <div className="mb-4">
-            <label htmlFor="rut" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="rut" className="block text-sm font-medium text-slate-300 mb-2">
               RUT *
             </label>
             <Input
@@ -162,7 +195,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* Email */}
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
               Email
             </label>
             <Input
@@ -181,7 +214,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* Teléfono */}
           <div className="mb-4">
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">
               Teléfono
             </label>
             <Input
@@ -197,16 +230,17 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
               <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
             )}
           </div>
+
         </div>
 
         {/* Información Personal */}
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información Personal</h3>
+        <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+          <h3 className="text-lg font-medium text-slate-100 mb-4">Información Personal</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Nacionalidad */}
             <div>
-              <label htmlFor="nacionalidad" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="nacionalidad" className="block text-sm font-medium text-slate-300 mb-2">
                 Nacionalidad
               </label>
               <Select
@@ -229,7 +263,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Ciudad */}
             <div>
-              <label htmlFor="ciudad" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="ciudad" className="block text-sm font-medium text-slate-300 mb-2">
                 Ciudad
               </label>
               <Input
@@ -244,7 +278,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Estado Civil */}
             <div>
-              <label htmlFor="estado_civil" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="estado_civil" className="block text-sm font-medium text-slate-300 mb-2">
                 Estado Civil
               </label>
               <Select
@@ -264,7 +298,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Fecha de Nacimiento */}
             <div>
-              <label htmlFor="fecha_nacimiento" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="fecha_nacimiento" className="block text-sm font-medium text-slate-300 mb-2">
                 Fecha de Nacimiento
               </label>
               <Input
@@ -279,7 +313,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
           {/* Dirección */}
           <div className="mt-4">
-            <label htmlFor="direccion" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="direccion" className="block text-sm font-medium text-slate-300 mb-2">
               Dirección
             </label>
             <Input
@@ -294,13 +328,13 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         </div>
 
         {/* Información Laboral */}
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información Laboral</h3>
+        <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+          <h3 className="text-lg font-medium text-slate-100 mb-4">Información Laboral</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Cargo */}
             <div>
-              <label htmlFor="cargo" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="cargo" className="block text-sm font-medium text-slate-300 mb-2">
                 Cargo
               </label>
               <Select
@@ -310,19 +344,32 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
                 onChange={handleChange}
               >
                 <option value="">Seleccionar...</option>
-                <option value="Obrero">Obrero</option>
+                <option value="Maestro Tabiquero">Maestro Tabiquero</option>
                 <option value="Maestro">Maestro</option>
-                <option value="Jefe de Cuadrilla">Jefe de Cuadrilla</option>
                 <option value="Supervisor">Supervisor</option>
-                <option value="Especialista">Especialista</option>
-                <option value="Ayudante">Ayudante</option>
+                <option value="Ayudante Maestro">Ayudante Maestro</option>
                 <option value="Otro">Otro</option>
               </Select>
+              
+              {/* Input personalizado cuando se selecciona "Otro" */}
+              {formData.cargo === 'Otro' && (
+                <div className="mt-2">
+                  <Input
+                    id="cargo_personalizado"
+                    name="cargo_personalizado"
+                    type="text"
+                    value={formData.cargo_personalizado || ''}
+                    onChange={handleChange}
+                    placeholder="Especificar cargo personalizado..."
+                    className="mt-1"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Previsión */}
             <div>
-              <label htmlFor="prevision" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="prevision" className="block text-sm font-medium text-slate-300 mb-2">
                 Previsión (AFP)
               </label>
               <Select
@@ -345,7 +392,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
             {/* Salud */}
             <div>
-              <label htmlFor="salud" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="salud" className="block text-sm font-medium text-slate-300 mb-2">
                 Sistema de Salud
               </label>
               <Select
@@ -372,16 +419,16 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
             type="checkbox"
             checked={formData.is_active}
             onChange={handleChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-500 rounded bg-slate-700"
           />
-          <label htmlFor="is_active" className="ml-2 block text-sm text-gray-700">
+          <label htmlFor="is_active" className="ml-2 block text-sm text-slate-300">
             Trabajador activo
           </label>
         </div>
       </div>
 
       {/* Botones */}
-      <div className="flex justify-end space-x-3 pt-6 border-t">
+      <div className="flex justify-end space-x-3 pt-6 border-t border-slate-600">
         <Button
           type="button"
           variant="outline"

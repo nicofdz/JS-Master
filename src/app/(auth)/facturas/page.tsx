@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { InvoiceUpload } from '@/components/invoices/InvoiceUpload'
 import { InvoiceList } from '@/components/invoices/InvoiceList'
 import { InvoiceStats } from '@/components/invoices/InvoiceStats'
+import { InvoiceChart } from '@/components/invoices/InvoiceChart'
 import { InvoiceEditModal } from '@/components/invoices/InvoiceEditModal'
+import { useProjects } from '@/hooks/useProjects'
 import { useInvoices } from '@/hooks/useInvoices'
 import { InvoiceIncome } from '@/hooks/useInvoices'
 import { useIncomeTracking } from '@/hooks/useIncomeTracking'
@@ -16,6 +18,11 @@ export default function FacturasPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceIncome | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all')
+  const [selectedYear, setSelectedYear] = useState(0) // 0 = Todos los años
+  const [projectFilter, setProjectFilter] = useState('all')
+  const [chartYear, setChartYear] = useState(0)
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | 'processed' | 'pending'>('all')
   
   const { 
     invoices, 
@@ -28,13 +35,199 @@ export default function FacturasPage() {
   } = useInvoices()
 
   const { refreshIncomeTracking, incomeData } = useIncomeTracking()
+  const { projects } = useProjects()
   const stats = getInvoiceStats()
+
+  // Sincronizar el año del gráfico con el año seleccionado
+  useEffect(() => {
+    setChartYear(selectedYear)
+  }, [selectedYear])
+
+  // Filtrar facturas procesadas del mes seleccionado
+  const getMonthlyIncome = () => {
+    console.log('📊 Calculando ingresos mensuales:', { selectedMonth, selectedYear, projectFilter })
+    
+    const monthlyInvoices = invoices.filter(inv => {
+      if (inv.status !== 'processed' || !inv.issue_date) return false
+      
+      // Filtro por proyecto
+      const projectId = projectFilter !== 'all' ? parseInt(projectFilter) : null
+      if (projectId && inv.project_id !== projectId) return false
+      
+      const invoiceDate = new Date(inv.issue_date)
+      
+      // Si se selecciona "all" en meses, mostrar todos los meses del año
+      if (selectedMonth === 'all') {
+        // Si también es "todos los años", mostrar todo
+        if (selectedYear === 0) {
+          console.log('✅ Incluyendo factura (todos los meses, todos los años):', inv.invoice_number)
+          return true
+        }
+        const yearMatch = invoiceDate.getFullYear() === selectedYear
+        console.log(`🔍 Factura ${inv.invoice_number} - Año ${invoiceDate.getFullYear()} vs ${selectedYear}: ${yearMatch}`)
+        return yearMatch
+      }
+      
+      // Si no, usar el filtro de mes normal
+      if (selectedYear === 0) {
+        // Si es "todos los años", solo filtrar por mes
+        const monthMatch = invoiceDate.getMonth() + 1 === selectedMonth
+        console.log(`🔍 Factura ${inv.invoice_number} - Mes ${invoiceDate.getMonth() + 1} vs ${selectedMonth}: ${monthMatch}`)
+        return monthMatch
+      }
+      
+      const monthMatch = invoiceDate.getMonth() + 1 === selectedMonth
+      const yearMatch = invoiceDate.getFullYear() === selectedYear
+      console.log(`🔍 Factura ${inv.invoice_number} - Mes ${invoiceDate.getMonth() + 1} vs ${selectedMonth}, Año ${invoiceDate.getFullYear()} vs ${selectedYear}: ${monthMatch && yearMatch}`)
+      return monthMatch && yearMatch
+    })
+    
+    console.log(`📈 Facturas filtradas: ${monthlyInvoices.length} de ${invoices.length}`)
+
+    // Calcular totales usando las nuevas fórmulas
+    let totalRealIncome = 0
+    let totalNet = 0
+    let totalIva = 0
+    
+    monthlyInvoices.forEach(inv => {
+      const netAmount = inv.net_amount || 0
+      const ivaAmount = inv.iva_amount || 0
+      
+      // Total factura = Neto + IVA
+      const totalFactura = netAmount + ivaAmount
+      
+      // PPM = Total factura * 0.06
+      const ppm = totalFactura * 0.06
+      
+      // Total real = Neto - PPM
+      const realIncome = netAmount - ppm
+      
+      totalRealIncome += realIncome
+      totalNet += netAmount
+      totalIva += ivaAmount
+    })
+    
+    const count = monthlyInvoices.length
+
+    return {
+      total_income: totalRealIncome,
+      total_net: totalNet,
+      total_iva: totalIva,
+      processed_invoices_count: count,
+      total_spent_on_payments: 0 // No se usa en el componente
+    }
+  }
+
+  const monthlyIncome = getMonthlyIncome()
+
+  // Calcular el ingreso total real de TODAS las facturas procesadas (para dinero disponible)
+  const getTotalRealIncome = () => {
+    const processedInvoices = invoices.filter(inv => {
+      if (inv.status !== 'processed') return false
+      
+      // Filtro por proyecto
+      const projectId = projectFilter !== 'all' ? parseInt(projectFilter) : null
+      if (projectId && inv.project_id !== projectId) return false
+      
+      return true
+    })
+    
+    let totalRealIncome = 0
+    
+    processedInvoices.forEach(inv => {
+      const netAmount = inv.net_amount || 0
+      const ivaAmount = inv.iva_amount || 0
+      
+      // Total factura = Neto + IVA
+      const totalFactura = netAmount + ivaAmount
+      
+      // PPM = Total factura * 0.06
+      const ppm = totalFactura * 0.06
+      
+      // Total real = Neto - PPM
+      const realIncome = netAmount - ppm
+      
+      totalRealIncome += realIncome
+    })
+    
+    return totalRealIncome
+  }
+
+  const totalRealIncome = getTotalRealIncome()
+
+  // Filtrar facturas por mes y año para la lista
+  const getFilteredInvoices = () => {
+    return invoices.filter(inv => {
+      if (!inv.issue_date) return false
+      
+      // Filtro por proyecto
+      const projectId = projectFilter !== 'all' ? parseInt(projectFilter) : null
+      if (projectId && inv.project_id !== projectId) return false
+      
+      const invoiceDate = new Date(inv.issue_date)
+      
+      // Si se selecciona "all" en meses, mostrar todos los meses del año
+      if (selectedMonth === 'all') {
+        // Si también es "todos los años", mostrar todo
+        if (selectedYear === 0) {
+          return true
+        }
+        return invoiceDate.getFullYear() === selectedYear
+      }
+      
+      // Si no, usar el filtro de mes normal
+      if (selectedYear === 0) {
+        // Si es "todos los años", solo filtrar por mes
+        return invoiceDate.getMonth() + 1 === selectedMonth
+      }
+      
+      return invoiceDate.getMonth() + 1 === selectedMonth && 
+             invoiceDate.getFullYear() === selectedYear
+    })
+  }
+
+  const filteredInvoices = getFilteredInvoices()
+
+  // Calcular estadísticas basadas en las facturas filtradas (por mes/año/proyecto)
+  const getFilteredStats = () => {
+    const total = filteredInvoices.length
+    const processed = filteredInvoices.filter(inv => inv.status === 'processed').length
+    const pending = filteredInvoices.filter(inv => inv.status === 'pending').length
+    const blocked = filteredInvoices.filter(inv => inv.status === 'blocked').length
+    
+    // Ingresos reales (solo facturas procesadas del filtro)
+    const processedInvoices = filteredInvoices.filter(inv => inv.status === 'processed')
+    const realIncomeAmount = processedInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0)
+    const realIncomeNet = processedInvoices.reduce((sum, inv) => sum + (inv.net_amount || 0), 0)
+    const realIncomeIva = processedInvoices.reduce((sum, inv) => sum + (inv.iva_amount || 0), 0)
+    
+    // Total de todas las facturas filtradas (para referencia)
+    const totalAmount = filteredInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0)
+    const totalNet = filteredInvoices.reduce((sum, inv) => sum + (inv.net_amount || 0), 0)
+    const totalIva = filteredInvoices.reduce((sum, inv) => sum + (inv.iva_amount || 0), 0)
+
+    return {
+      total,
+      processed,
+      pending,
+      blocked,
+      totalAmount,
+      totalNet,
+      totalIva,
+      realIncomeAmount,
+      realIncomeNet,
+      realIncomeIva
+    }
+  }
+
+  const filteredStats = getFilteredStats()
 
   const handleUploadSuccess = async () => {
     setShowUpload(false)
     await fetchInvoices()
     await refreshIncomeTracking()
   }
+
 
   const handleEdit = (invoice: InvoiceIncome) => {
     setSelectedInvoice(invoice)
@@ -98,6 +291,26 @@ export default function FacturasPage() {
     window.open(url, '_blank')
   }
 
+  const handleMonthClick = (month: number) => {
+    console.log('🖱️ Click en mes del gráfico:', month)
+    setSelectedMonth(month)
+    // Sincronizar el año del gráfico con el año seleccionado
+    setChartYear(selectedYear)
+    scrollToFilters()
+  }
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year)
+    setSelectedMonth('all')  // Resetear a "Todos los meses" al cambiar el año
+  }
+
+  const scrollToFilters = () => {
+    const filtersSection = document.querySelector('[data-filters-section]')
+    if (filtersSection) {
+      filtersSection.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
 
   if (loading) {
     return (
@@ -155,12 +368,90 @@ export default function FacturasPage() {
           </div>
         </div>
 
+        {/* Filtro de Proyecto */}
+        <div className="mb-6 bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-300 text-sm font-medium">Proyecto:</span>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="px-4 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">Todos los proyectos</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Gráfico de Ingresos */}
+        <div className="mb-8">
+          <InvoiceChart 
+            projectId={projectFilter !== 'all' ? parseInt(projectFilter) : undefined}
+            onMonthClick={handleMonthClick}
+            onYearChange={handleYearChange}
+          />
+        </div>
+        <div className="mb-6 bg-slate-800/50 border border-slate-700 rounded-lg p-4" data-filters-section>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-300 text-sm font-medium">Período:</span>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                  className="px-4 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">Todos los meses</option>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                    <option key={month} value={month}>
+                      {new Date(2000, month - 1).toLocaleDateString('es-CL', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="px-4 py-2 bg-slate-700 border border-slate-600 text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={0}>Todos los años</option>
+                  {Array.from({ length: 4 }, (_, i) => 2023 + i).map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
         {/* Estadísticas */}
         <div className="mb-8">
           <InvoiceStats 
-            stats={stats} 
-            incomeData={incomeData}
+            stats={filteredStats} 
+            incomeData={monthlyIncome}
             incomeLoading={false}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            totalRealIncome={totalRealIncome}
+            showAllMonths={selectedMonth === 'all'}
+            statusFilter={invoiceStatusFilter}
+            onStatusFilterChange={setInvoiceStatusFilter}
           />
         </div>
 
@@ -187,13 +478,15 @@ export default function FacturasPage() {
         )}
 
 
+
         {/* Lista de Facturas */}
         <InvoiceList
-          invoices={invoices}
+          invoices={filteredInvoices}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onViewPDF={handleViewPDF}
           onStatusChange={handleStatusChange}
+          externalStatusFilter={invoiceStatusFilter}
         />
 
         {/* Modal de Edición */}

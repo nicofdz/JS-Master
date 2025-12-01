@@ -17,6 +17,7 @@ interface TaskFormData {
   estimated_hours?: number
   worker_payment?: number
   assigned_to?: number | null
+  contract_id?: number | null  // ← Nuevo: ID del contrato del trabajador
   start_date?: string
   end_date?: string
   completed_at?: string
@@ -32,9 +33,10 @@ interface TaskFormProps {
   floors?: any[]
   onSubmit: (data: TaskFormData) => Promise<void>
   onCancel: () => void
+  getAvailableWorkersForProject?: (projectId: number) => Promise<any[]>  // ← Nueva función opcional
 }
 
-export function TaskForm({ task, apartmentId, apartments = [], users = [], projects = [], floors = [], onSubmit, onCancel }: TaskFormProps) {
+export function TaskForm({ task, apartmentId, apartments = [], users = [], projects = [], floors = [], onSubmit, onCancel, getAvailableWorkersForProject }: TaskFormProps) {
   const [loading, setLoading] = useState(false)
   
   // Inicializar estados basándose en la tarea si existe
@@ -44,11 +46,19 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
   const [selectedFloorId, setSelectedFloorId] = useState<number | null>(
     task?.floor_id || null
   )
+  
+  // ← Nuevo: Estados para trabajadores con contrato
+  const [availableWorkers, setAvailableWorkers] = useState<any[]>([])
+  const [loadingWorkers, setLoadingWorkers] = useState(false)
+  const [selectedWorkerContract, setSelectedWorkerContract] = useState<any>(null)
 
   // Encontrar el apartamento seleccionado para pre-seleccionar datos
   const selectedApartment = apartments.find(apt => apt.id === (task?.apartment_id || apartmentId))
   const selectedFloor = selectedApartment ? floors.find(floor => floor.id === selectedApartment.floor_id) : null
   const selectedProject = selectedFloor ? projects.find(project => project.id === selectedFloor.project_id) : null
+  
+  // Determinar si los campos deben estar deshabilitados (cuando se pasa apartmentId desde fuera)
+  const isPreFilled = !task && !!apartmentId && !!selectedApartment && !!selectedFloor && !!selectedProject
 
   // Debug logs
   console.log('🔍 TaskForm Debug:', {
@@ -120,7 +130,11 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
     })
     
     if (!task && apartmentId && selectedApartment && selectedFloor && selectedProject) {
-      console.log('✅ Inicializando TaskForm con datos del apartamento')
+      console.log('✅ Inicializando TaskForm con datos del apartamento', {
+        apartmentId,
+        floorId: selectedFloor.id,
+        projectId: selectedProject.id
+      })
       setSelectedProjectId(selectedProject.id)
       setSelectedFloorId(selectedFloor.id)
       reset({
@@ -134,6 +148,18 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
       })
     }
   }, [task, apartmentId, selectedApartment, selectedFloor, selectedProject, reset])
+  
+  // Asegurar que los estados se actualicen cuando cambien los valores calculados
+  useEffect(() => {
+    if (!task && apartmentId && selectedApartment && selectedFloor && selectedProject) {
+      if (selectedProjectId !== selectedProject.id) {
+        setSelectedProjectId(selectedProject.id)
+      }
+      if (selectedFloorId !== selectedFloor.id) {
+        setSelectedFloorId(selectedFloor.id)
+      }
+    }
+  }, [task, apartmentId, selectedApartment, selectedFloor, selectedProject, selectedProjectId, selectedFloorId])
 
   // Filtrar pisos por proyecto seleccionado
   const availableFloors = floors.filter(floor => 
@@ -205,6 +231,31 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
       }
     }
   }, [watchedApartmentId, apartments, floors])
+  
+  // ← Nuevo: Cargar trabajadores con contrato activo cuando se selecciona proyecto
+  useEffect(() => {
+    const loadWorkersForProject = async () => {
+      if (!selectedProjectId || !getAvailableWorkersForProject) {
+        setAvailableWorkers([])
+        return
+      }
+      
+      try {
+        setLoadingWorkers(true)
+        const workers = await getAvailableWorkersForProject(selectedProjectId)
+        setAvailableWorkers(workers || [])
+        console.log('✅ Trabajadores con contrato cargados:', workers?.length || 0)
+      } catch (error) {
+        console.error('Error cargando trabajadores:', error)
+        setAvailableWorkers([])
+        toast.error('Error al cargar trabajadores del proyecto')
+      } finally {
+        setLoadingWorkers(false)
+      }
+    }
+    
+    loadWorkersForProject()
+  }, [selectedProjectId, getAvailableWorkersForProject])
 
   const handleFormSubmit = async (data: TaskFormData) => {
     setLoading(true)
@@ -228,12 +279,12 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
         throw new Error('Las horas estimadas deben ser mayor a 0')
       }
 
-      // Convertir strings vacíos a null para campos de fecha
+      // Convertir strings vacíos a undefined para campos de fecha
       const cleanedData = {
         ...data,
-        start_date: data.start_date && data.start_date.trim() !== '' ? data.start_date : null,
-        end_date: data.end_date && data.end_date.trim() !== '' ? data.end_date : null,
-        completed_at: data.completed_at && data.completed_at.trim() !== '' ? data.completed_at : null
+        start_date: data.start_date && data.start_date.trim() !== '' ? data.start_date : undefined,
+        end_date: data.end_date && data.end_date.trim() !== '' ? data.end_date : undefined,
+        completed_at: data.completed_at && data.completed_at.trim() !== '' ? data.completed_at : undefined
       }
 
       await onSubmit(cleanedData)
@@ -264,7 +315,8 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
             // Resetear apartamento cuando cambie el proyecto
             reset({ ...watch(), apartment_id: 0 })
           }}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
+          disabled={isPreFilled}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
           <option value="">Seleccionar proyecto...</option>
           {projects.map((project) => (
@@ -289,7 +341,7 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
             // Resetear apartamento cuando cambie el piso
             reset({ ...watch(), apartment_id: 0 })
           }}
-          disabled={!selectedProjectId}
+          disabled={!selectedProjectId || isPreFilled}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
           <option value="">Seleccionar piso...</option>
@@ -309,7 +361,7 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
         <select
           id="apartment_id"
           {...register('apartment_id', { required: 'El apartamento es obligatorio' })}
-          disabled={!selectedFloorId}
+          disabled={!selectedFloorId || isPreFilled}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
           <option value="">Seleccionar apartamento...</option>
@@ -450,20 +502,90 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
       {/* Asignado a */}
       <div>
         <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 mb-2">
-          Asignado a
+          Asignado a {selectedProjectId && getAvailableWorkersForProject && <span className="text-xs text-gray-500">(con contrato activo)</span>}
         </label>
-        <select
-          id="assigned_to"
-          {...register('assigned_to', { valueAsNumber: true })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-        >
-          <option value="">Sin asignar</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.full_name} ({user.rut})
+        {loadingWorkers ? (
+          <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+            Cargando trabajadores...
+          </div>
+        ) : (
+          <select
+            id="assigned_to"
+            {...register('assigned_to', { valueAsNumber: true })}
+            onChange={(e) => {
+              const workerId = e.target.value ? Number(e.target.value) : null
+              
+              // Si hay trabajadores con contrato, buscar el contrato del trabajador seleccionado
+              if (workerId && availableWorkers.length > 0) {
+                const workerData = availableWorkers.find(w => w.worker_id === workerId)
+                if (workerData) {
+                  setSelectedWorkerContract(workerData)
+                  // Actualizar el contract_id en el formulario (hidden field se encargará)
+                } else {
+                  setSelectedWorkerContract(null)
+                }
+              } else {
+                setSelectedWorkerContract(null)
+              }
+            }}
+            disabled={!selectedProjectId && !!getAvailableWorkersForProject}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          >
+            <option value="">
+              {!selectedProjectId && getAvailableWorkersForProject 
+                ? 'Selecciona un proyecto primero' 
+                : 'Sin asignar'}
             </option>
-          ))}
-        </select>
+            {(availableWorkers.length > 0 ? availableWorkers : users).map((worker) => {
+              // Si es de availableWorkers (con contrato)
+              if (worker.worker_id) {
+                return (
+                  <option key={worker.worker_id} value={worker.worker_id}>
+                    {worker.worker_name} - {worker.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
+                    {worker.contract_number && ` (${worker.contract_number})`}
+                  </option>
+                )
+              }
+              // Si es de users (fallback sin contrato)
+              let contractType = 'A Trato'
+              if (worker.contract_type === 'por_dia') {
+                contractType = 'Por Día'
+              } else if (worker.contract_type === 'a_trato') {
+                contractType = 'A Trato'
+              }
+              return (
+                <option key={worker.id} value={worker.id}>
+                  {worker.full_name} - {contractType}
+                </option>
+              )
+            })}
+          </select>
+        )}
+        
+        {/* Campo hidden para guardar contract_id */}
+        {selectedWorkerContract && (
+          <input type="hidden" {...register('contract_id')} value={selectedWorkerContract.contract_id} />
+        )}
+        
+        {/* Mostrar info del contrato seleccionado */}
+        {selectedWorkerContract && (
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
+            <p className="font-medium text-blue-900">📋 Información del Contrato</p>
+            <div className="mt-1 space-y-1 text-blue-800">
+              <p><strong>Contrato:</strong> {selectedWorkerContract.contract_number || 'S/N'}</p>
+              <p><strong>Tipo:</strong> {selectedWorkerContract.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
+                {selectedWorkerContract.contract_type === 'por_dia' && selectedWorkerContract.daily_rate && (
+                  <span className="ml-2 text-blue-700">(${ new Intl.NumberFormat('es-CL').format(selectedWorkerContract.daily_rate)}/día)</span>
+                )}
+              </p>
+              <p><strong>Vigencia:</strong> {new Date(selectedWorkerContract.contract_start).toLocaleDateString('es-CL')}
+                {selectedWorkerContract.contract_end && (
+                  <span> - {new Date(selectedWorkerContract.contract_end).toLocaleDateString('es-CL')}</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fechas */}

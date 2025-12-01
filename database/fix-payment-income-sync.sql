@@ -128,6 +128,15 @@ BEGIN
       v_user_id
   ) RETURNING id INTO v_payment_id;
 
+  -- Crear las relaciones con las tareas seleccionadas en payment_tasks
+  INSERT INTO public.payment_tasks (payment_id, task_id, task_payment_amount)
+  SELECT v_payment_id, at.id, at.worker_payment
+  FROM public.apartment_tasks at
+  WHERE at.id = ANY(p_selected_tasks)
+    AND at.assigned_to = p_worker_id
+    AND at.status = 'completed'
+    AND (at.is_paid = FALSE OR at.is_paid IS NULL);
+
   -- CRÍTICO: Marcar tareas seleccionadas como pagadas
   UPDATE public.apartment_tasks 
   SET is_paid = TRUE 
@@ -167,6 +176,10 @@ FROM income_tracking
 WHERE id = 1;
 
 SELECT '✅ SOLUCIÓN APLICADA EXITOSAMENTE' as resultado;
+
+
+
+
 
 
 

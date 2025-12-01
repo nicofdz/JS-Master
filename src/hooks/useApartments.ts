@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useFloors } from './useFloors'
 
-type Apartment = Database['public']['Tables']['apartments']['Row'] & {
+type Apartment = any & {
   floor_number?: number
   project_id?: number
   project_name?: string
@@ -13,7 +13,7 @@ type Apartment = Database['public']['Tables']['apartments']['Row'] & {
   progress_percentage?: number
   tasks?: any[]
 }
-type ApartmentInsert = Database['public']['Tables']['apartments']['Insert']
+type ApartmentInsert = any
 
 export function useApartments(floorId?: number) {
   const [apartments, setApartments] = useState<Apartment[]>([])
@@ -79,9 +79,23 @@ export function useApartments(floorId?: number) {
         .from('apartments')
         .select(`
           *,
-          floors(floor_number, projects(id, name)),
-          apartment_tasks(id, status)
+          floors!inner(
+            id,
+            floor_number,
+            tower_id,
+            towers!inner(
+              id,
+              tower_number,
+              name,
+              projects!inner(
+                id,
+                name
+              )
+            )
+          ),
+          tasks(id, status, is_deleted)
         `)
+        .eq('is_active', true)
         .order('apartment_number', { ascending: true })
 
       if (floorId) {
@@ -100,14 +114,19 @@ export function useApartments(floorId?: number) {
       // Procesar datos para incluir información adicional
       const processedApartments = (data || []).map(apartment => {
         const floor = apartment.floors as any
-        const project = floor?.projects as any
-        const tasks = apartment.apartment_tasks || []
+        const tower = floor?.towers as any
+        const project = tower?.projects as any
+        const tasks = (apartment.tasks || []).filter((task: any) => !task.is_deleted) // Filtrar tareas eliminadas
         const completedTasks = tasks.filter((task: any) => task.status === 'completed').length
         const totalTasks = tasks.length
         
         return {
           ...apartment,
+          floor_id: floor?.id || 0,
           floor_number: floor?.floor_number || 0,
+          tower_id: tower?.id || 0,
+          tower_number: tower?.tower_number || 0,
+          tower_name: tower?.name || `Torre ${tower?.tower_number || 0}`,
           project_id: project?.id || 0,
           project_name: project?.name || 'Proyecto Desconocido',
           tasks_count: totalTasks,
@@ -237,13 +256,358 @@ export function useApartments(floorId?: number) {
     }
   }
 
+  const hardDeleteApartment = async (id: number) => {
+    try {
+      // Verificar que el departamento esté desactivado antes de eliminar definitivamente
+      const { data: aptData, error: fetchError } = await supabase
+        .from('apartments')
+        .select('is_active, apartment_number')
+        .eq('id', id)
+        .single()
+      
+      if (fetchError) {
+        console.error('Error obteniendo apartamento:', fetchError)
+        throw fetchError
+      }
+
+      if (aptData?.is_active) {
+        throw new Error('No se puede eliminar definitivamente un departamento activo. Primero debe ser eliminado (soft delete).')
+      }
+
+      // Eliminar definitivamente las tareas que NO están completadas
+      // Las tareas completadas se mantienen para preservar el historial financiero
+      // NOTA: En el nuevo sistema, las tareas usan soft delete, pero para eliminación permanente
+      // del apartamento, eliminamos físicamente las tareas no completadas
+      const { error: tasksDeleteError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('apartment_id', id)
+        .neq('status', 'completed')
+        .eq('is_deleted', false)
+
+      if (tasksDeleteError) {
+        console.error('Error eliminando tareas no completadas:', tasksDeleteError)
+        // No lanzamos error aquí, solo lo registramos
+        // Continuamos con la eliminación del departamento
+      } else {
+        console.log('✅ Tareas no completadas eliminadas definitivamente')
+      }
+
+      // Eliminar definitivamente el departamento
+      // Las tareas completadas se mantendrán con apartment_id = NULL gracias al constraint ON DELETE SET NULL
+      const { error } = await supabase
+        .from('apartments')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        console.error('Error de Supabase al eliminar definitivamente apartamento:', error)
+        throw error
+      }
+
+      // Actualizar la lista local
+      setApartments(prev => prev.filter(a => a.id !== id))
+      
+      console.log('✅ Departamento eliminado definitivamente. Las tareas completadas se mantienen con apartment_id = NULL')
+      return true
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar definitivamente apartamento'
+      console.error('Error completo en hardDeleteApartment:', err)
+      setError(errorMessage)
+      throw err
+    }
+  }
+
+  const softDeleteApartment = async (id: number) => {
+    try {
+      // Obtener el departamento actual para agregar prefijo al número
+      // Esto es necesario porque hay una restricción UNIQUE (floor_id, apartment_number)
+      // Si no modificamos el nombre, no podríamos crear otro departamento con el mismo número
+      let apartment = apartments.find(a => a.id === id)
+      let currentNumber = apartment?.apartment_number || ''
+      
+      // Si no está en el array local, obtenerlo de la BD
+      if (!apartment || !currentNumber) {
+        const { data: aptData, error: fetchError } = await supabase
+          .from('apartments')
+          .select('apartment_number')
+          .eq('id', id)
+          .single()
+        
+        if (fetchError) {
+          console.error('Error obteniendo apartamento:', fetchError)
+          // Continuar con string vacío si no se puede obtener
+        } else if (aptData) {
+          currentNumber = aptData.apartment_number || ''
+        }
+      }
+      
+      // Agregar prefijo [ELIMINADO] para evitar conflictos de unicidad
+      // La columna ahora permite hasta 50 caracteres, suficiente para el prefijo
+      const newNumber = currentNumber.startsWith('[ELIMINADO] ')
+        ? currentNumber
+        : `[ELIMINADO] ${currentNumber}`
+
+      // Cancelar tareas pendientes/en progreso/bloqueadas (NO las completadas)
+      // Las tareas completadas se mantienen para preservar el historial financiero
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('is_deleted', false)
+        .eq('apartment_id', id)
+        .in('status', ['pending', 'in-progress', 'blocked'])
+
+      if (tasksError) {
+        console.error('Error cancelando tareas del apartamento:', tasksError)
+        // No lanzamos error aquí, solo lo registramos
+        // Continuamos con la eliminación del departamento
+      } else {
+        console.log('✅ Tareas pendientes/en progreso/bloqueadas canceladas correctamente')
+      }
+
+      const { data, error } = await supabase
+        .from('apartments')
+        .update({ 
+          is_active: false,
+          apartment_number: newNumber
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          floors!inner(floor_number, projects!inner(name))
+        `)
+        .single()
+
+      if (error) {
+        console.error('Error de Supabase al eliminar apartamento:', error)
+        throw error
+      }
+
+      // Actualizar la lista local (remover de la lista ya que filtramos por is_active)
+      setApartments(prev => prev.filter(a => a.id !== id))
+      return data
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar apartamento'
+      console.error('Error completo en softDeleteApartment:', err)
+      setError(errorMessage)
+      throw err
+    }
+  }
+
+  const getNextApartmentNumber = async (floorId: number): Promise<string> => {
+    try {
+      // Obtener todos los departamentos activos del piso
+      const { data, error } = await supabase
+        .from('apartments')
+        .select('apartment_number')
+        .eq('floor_id', floorId)
+        .eq('is_active', true)
+
+      if (error) throw error
+
+      if (!data || data.length === 0) {
+        return '1'
+      }
+
+      // Extraer todos los números de cada código y encontrar el más grande
+      let maxNumber = 0
+      
+      data.forEach(apt => {
+        const apartmentNumber = apt.apartment_number
+        
+        // Buscar todos los números en el string
+        const allNumbers = apartmentNumber.match(/\d+/g)
+        
+        if (allNumbers && allNumbers.length > 0) {
+          // Convertir todos los números a enteros y encontrar el máximo
+          const numbers = allNumbers.map((n: string) => parseInt(n, 10))
+          const currentMax = Math.max(...numbers)
+          
+          // Actualizar el máximo global
+          if (currentMax > maxNumber) {
+            maxNumber = currentMax
+          }
+        }
+      })
+
+      // Retornar el siguiente número
+      return (maxNumber + 1).toString()
+    } catch (err) {
+      console.error('Error getting next apartment number:', err)
+      throw err
+    }
+  }
+
+  const fetchAllApartments = async (includeInactive: boolean = true) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      let query = supabase
+        .from('apartments')
+        .select(`
+          *,
+          floors!inner(
+            id,
+            floor_number,
+            tower_id,
+            towers!inner(
+              id,
+              tower_number,
+              name,
+              projects!inner(
+                id,
+                name
+              )
+            )
+          ),
+          tasks(id, status, is_deleted)
+        `)
+        .order('apartment_number', { ascending: true })
+
+      // Si includeInactive es false, solo obtener activos
+      if (!includeInactive) {
+        query = query.eq('is_active', true)
+      }
+
+      if (floorId) {
+        query = query.eq('floor_id', floorId)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('❌ Error en fetchAllApartments:', error)
+        throw error
+      }
+      
+      console.log('✅ Datos de apartamentos obtenidos (incluyendo inactivos):', data?.length, 'apartamentos')
+
+      // Procesar datos para incluir información adicional
+      const processedApartments = (data || []).map(apartment => {
+        const floor = apartment.floors as any
+        const tower = floor?.towers as any
+        const project = tower?.projects as any
+        const tasks = (apartment.tasks || []).filter((task: any) => !task.is_deleted) // Filtrar tareas eliminadas
+        const completedTasks = tasks.filter((task: any) => task.status === 'completed').length
+        const totalTasks = tasks.length
+        
+        return {
+          ...apartment,
+          floor_id: floor?.id || 0,
+          floor_number: floor?.floor_number || 0,
+          tower_id: tower?.id || 0,
+          tower_number: tower?.tower_number || 0,
+          tower_name: tower?.name || `Torre ${tower?.tower_number || 0}`,
+          project_id: project?.id || 0,
+          project_name: project?.name || 'Proyecto Desconocido',
+          tasks_count: totalTasks,
+          progress_percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
+        }
+      })
+
+      setApartments(processedApartments)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar apartamentos')
+      console.error('Error fetching all apartments:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const restoreApartment = async (id: number) => {
+    try {
+      // Obtener el departamento actual para remover el prefijo [ELIMINADO]
+      const { data: aptData, error: fetchError } = await supabase
+        .from('apartments')
+        .select('apartment_number')
+        .eq('id', id)
+        .single()
+      
+      if (fetchError) {
+        console.error('Error obteniendo apartamento:', fetchError)
+        throw fetchError
+      }
+
+      let currentNumber = aptData?.apartment_number || ''
+      
+      // Remover el prefijo [ELIMINADO] si existe
+      const restoredNumber = currentNumber.startsWith('[ELIMINADO] ')
+        ? currentNumber.replace('[ELIMINADO] ', '')
+        : currentNumber
+
+      // Restaurar tareas canceladas a 'pending' (no podemos saber su estado original)
+      // Solo restaurar las que fueron canceladas por la eliminación del departamento
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .update({ 
+          status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('apartment_id', id)
+        .eq('status', 'cancelled')
+        .eq('is_deleted', false)
+
+      if (tasksError) {
+        console.error('Error restaurando tareas del apartamento:', tasksError)
+        // No lanzamos error aquí, solo lo registramos
+        // Continuamos con la restauración del departamento
+      } else {
+        console.log('✅ Tareas canceladas restauradas a pending correctamente')
+      }
+
+      const { data, error } = await supabase
+        .from('apartments')
+        .update({ 
+          is_active: true,
+          apartment_number: restoredNumber
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          floors!inner(floor_number, projects!inner(name))
+        `)
+        .single()
+
+      if (error) {
+        console.error('Error de Supabase al restaurar apartamento:', error)
+        throw error
+      }
+
+      // Actualizar la lista local
+      const restoredApartment = {
+        ...data,
+        floor_number: (data.floors as any)?.floor_number || 0,
+        project_name: (data.floors as any)?.projects?.name || 'Proyecto Desconocido',
+        tasks_count: 0,
+        progress_percentage: 0
+      }
+      
+      setApartments(prev => {
+        const filtered = prev.filter(a => a.id !== id)
+        return [...filtered, restoredApartment].sort((a, b) => a.apartment_number.localeCompare(b.apartment_number))
+      })
+      
+      return data
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al restaurar apartamento'
+      console.error('Error completo en restoreApartment:', err)
+      setError(errorMessage)
+      throw err
+    }
+  }
+
   const updateApartmentStatusFromTasks = async (apartmentId: number) => {
     try {
-      // Obtener todas las tareas del apartamento
+      // Obtener todas las tareas del apartamento (excluyendo eliminadas)
       const { data: tasks, error: tasksError } = await supabase
-        .from('apartment_tasks')
+        .from('tasks')
         .select('status')
         .eq('apartment_id', apartmentId)
+        .eq('is_deleted', false)
 
       if (tasksError) throw tasksError
 
@@ -292,9 +656,14 @@ export function useApartments(floorId?: number) {
     loading,
     error,
     refresh: fetchApartments,
+    fetchAllApartments,
     createApartment,
     updateApartment,
     deleteApartment,
+    softDeleteApartment,
+    hardDeleteApartment,
+    restoreApartment,
+    getNextApartmentNumber,
     updateApartmentStatusFromTasks
   }
 }

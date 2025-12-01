@@ -13,6 +13,7 @@ type Task = {
   status: string
   priority?: string
   assigned_to?: number
+  contract_id?: number  // ← Nuevo: ID del contrato bajo el cual se realizó la tarea
   start_date?: string
   end_date?: string
   actual_start_time?: string
@@ -27,6 +28,9 @@ type Task = {
   project_name?: string
   assigned_user_name?: string
   materials_count?: number
+  // Información adicional del contrato (cuando se carga con join)
+  contract_number?: string
+  contract_type?: string
 }
 
 type TaskInsert = {
@@ -37,9 +41,11 @@ type TaskInsert = {
   status?: string
   priority?: string
   assigned_to?: number
+  contract_id?: number  // ← Nuevo: ID del contrato (se valida automáticamente con trigger)
   start_date?: string
   end_date?: string
   worker_payment?: number
+  completed_at?: string
 }
 
 type TaskUpdate = {
@@ -49,9 +55,11 @@ type TaskUpdate = {
   status?: string
   priority?: string
   assigned_to?: number
+  contract_id?: number  // ← Nuevo: Permite actualizar el contrato
   start_date?: string
   end_date?: string
   worker_payment?: number
+  completed_at?: string
 }
 
 export function useTasks(apartmentId?: number) {
@@ -89,7 +97,7 @@ export function useTasks(apartmentId?: number) {
     try {
       const { data, error } = await supabase
         .from('workers')
-        .select('id, full_name, rut')
+        .select('id, full_name, rut, contract_type')
         .eq('is_active', true)
         .order('full_name', { ascending: true })
 
@@ -132,48 +140,51 @@ export function useTasks(apartmentId?: number) {
     try {
       console.log('📊 fetchTaskStats called with projectId:', projectId)
       
-      // Consulta simple sin JOINs para evitar problemas
-      let query = supabase
-        .from('apartment_tasks')
-        .select('status, is_delayed')
-
-      const { data, error } = await query
-
-      if (error) throw error
-
-      // Si hay filtro de proyecto, filtrar después
-      let filteredData = data || []
-      if (projectId && typeof projectId === 'number') {
-        console.log('🔍 Filtering by project:', projectId)
-        // Necesitamos hacer una consulta separada para obtener las tareas del proyecto
-        const { data: projectTasks } = await supabase
-          .from('apartment_tasks')
-          .select('status, is_delayed, apartments!inner(floors!inner(project_id))')
-          .eq('apartments.floors.project_id', projectId)
-        
-        filteredData = projectTasks || []
-      }
-
-      // Contar por estado
-      const stats = {
-        total: filteredData.length,
-        pending: filteredData.filter(t => t.status === 'pending').length,
-        inProgress: filteredData.filter(t => t.status === 'in-progress').length,
-        completed: filteredData.filter(t => t.status === 'completed').length,
-        blocked: filteredData.filter(t => t.status === 'blocked').length,
-        delayed: filteredData.filter(t => t.is_delayed === true).length
-      }
-
-      console.log('📊 Task Stats Debug:', {
-        projectId,
-        dataLength: filteredData.length,
-        allStatuses: filteredData.map(t => t.status),
-        stats
+      // Usar función RPC optimizada que hace todo el conteo en la BD
+      // Esto es mucho más eficiente que traer todas las tareas y filtrar en JavaScript
+      const { data, error } = await supabase.rpc('get_task_stats', {
+        project_id_param: projectId || null
       })
 
-      setTaskStats(stats)
+      if (error) {
+        console.error('Error calling get_task_stats RPC:', error)
+        throw error
+      }
+
+      // La función RPC retorna un JSON con las estadísticas
+      if (data) {
+        setTaskStats({
+          total: data.total || 0,
+          pending: data.pending || 0,
+          inProgress: data.inProgress || 0,
+          completed: data.completed || 0,
+          blocked: data.blocked || 0,
+          delayed: data.delayed || 0
+        })
+      } else {
+        // Si no hay datos, inicializar con ceros
+        setTaskStats({
+          total: 0,
+          pending: 0,
+          inProgress: 0,
+          completed: 0,
+          blocked: 0,
+          delayed: 0
+        })
+      }
+
+      console.log('📊 Task Stats (from RPC):', data)
     } catch (err) {
       console.error('Error fetching task stats:', err)
+      // En caso de error, mantener las estadísticas actuales o poner ceros
+      setTaskStats({
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        blocked: 0,
+        delayed: 0
+      })
     }
   }
 
@@ -420,6 +431,8 @@ export function useTasks(apartmentId?: number) {
 
   const updateApartmentStatusFromTasks = async (apartmentId: number) => {
     try {
+      console.log(`🔄 Actualizando estado del apartamento ${apartmentId}`)
+      
       // Obtener todas las tareas del apartamento
       const { data: tasks, error: tasksError } = await supabase
         .from('apartment_tasks')
@@ -430,30 +443,72 @@ export function useTasks(apartmentId?: number) {
 
       const totalTasks = tasks?.length || 0
       const completedTasks = tasks?.filter(t => t.status === 'completed').length || 0
-      const inProgressTasks = tasks?.filter(t => t.status === 'in-progress').length || 0
+      const inProgressTasks = tasks?.filter(t => t.status === 'in_progress').length || 0
 
-      // Determinar el nuevo status
+      console.log(`📊 Apartamento ${apartmentId} - Tareas:`, {
+        total: totalTasks,
+        completed: completedTasks,
+        inProgress: inProgressTasks,
+        tasks: tasks
+      })
+
+      // Determinar el nuevo status (usar 'in-progress' para apartamentos según la BD)
       let newStatus: string
       if (totalTasks === 0) {
         newStatus = 'pending'
       } else if (completedTasks === totalTasks) {
         newStatus = 'completed'
       } else if (inProgressTasks > 0) {
-        newStatus = 'in-progress'
+        newStatus = 'in-progress'  // Usar 'in-progress' (con guión) como espera la BD
       } else {
         newStatus = 'pending'
       }
 
-      // Actualizar el status del apartamento
+      console.log(`✅ Apartamento ${apartmentId} - Nuevo estado: ${newStatus}`)
+
+      // Actualizar el status del apartamento en la BD
       const { error: updateError } = await supabase
         .from('apartments')
         .update({ status: newStatus })
         .eq('id', apartmentId)
 
       if (updateError) throw updateError
+      
+      console.log(`✅ Estado del apartamento ${apartmentId} actualizado a: ${newStatus}`)
+      
+      // Actualizar el estado local del apartamento
+      setApartments(prev => prev.map(apartment => 
+        apartment.id === apartmentId 
+          ? { ...apartment, status: newStatus }
+          : apartment
+      ))
+      
+      console.log(`✅ Estado local del apartamento ${apartmentId} actualizado a: ${newStatus}`)
     } catch (err: any) {
       console.error('Error updating apartment status from tasks:', err)
       throw err
+    }
+  }
+
+  // =====================================================
+  // NUEVO: Obtener trabajadores con contrato activo en un proyecto
+  // =====================================================
+  const getAvailableWorkersForProject = async (projectId: number) => {
+    try {
+      const { data, error } = await supabase.rpc(
+        'get_available_workers_for_project',
+        { p_project_id: projectId }
+      )
+
+      if (error) {
+        console.error('Error fetching available workers:', error)
+        throw error
+      }
+
+      return data || []
+    } catch (err: any) {
+      console.error('Error in getAvailableWorkersForProject:', err)
+      return []
     }
   }
 
@@ -481,6 +536,7 @@ export function useTasks(apartmentId?: number) {
     createTask,
     updateTask,
     deleteTask,
-    updateApartmentStatusFromTasks
+    updateApartmentStatusFromTasks,
+    getAvailableWorkersForProject  // ← Nueva función exportada
   }
 }

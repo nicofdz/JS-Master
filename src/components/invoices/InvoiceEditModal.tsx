@@ -144,16 +144,6 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    RUT
-                  </label>
-                  <Input
-                    value={formData.client_rut || ''}
-                    onChange={(e) => handleInputChange('client_rut', e.target.value)}
-                    placeholder="12.345.678-9"
-                  />
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">

@@ -17,8 +17,6 @@ interface ProjectProgress {
   id: number
   name: string
   address: string | null
-  total_floors: number | null
-  units_per_floor: number | null
   status: string
   progress_percentage: number | null
   floors_created: number
@@ -76,7 +74,7 @@ export function useDashboard() {
         supabase.from('projects').select('*'),
         supabase.from('floors').select('*'),
         supabase.from('apartments').select('*'),
-        supabase.from('apartment_tasks').select('status')
+        supabase.from('tasks').select('status').neq('status', 'cancelled').eq('is_deleted', false)
       ])
 
       if (projectsResponse.error) throw projectsResponse.error
@@ -116,7 +114,7 @@ export function useDashboard() {
               apartments!inner(
                 id,
                 status,
-                apartment_tasks(status, is_delayed, delay_reason)
+                tasks(status, is_delayed, delay_reason)
               )
             `)
             .eq('project_id', project.id)
@@ -138,14 +136,18 @@ export function useDashboard() {
             if (floor.apartments) {
               floor.apartments.forEach(apartment => {
                 totalApartments++
-                if (apartment.apartment_tasks) {
-                  apartment.apartment_tasks.forEach(task => {
+                if (apartment.tasks) {
+                  apartment.tasks.forEach((task: any) => {
+                    // Excluir tareas canceladas y eliminadas de las estadísticas
+                    if (task.status === 'cancelled' || task.is_deleted === true) {
+                      return
+                    }
                     totalTasks++
                     if (task.status === 'completed') {
                       completedTasks++
                     }
-                    // Contar tareas atrasadas (EXCLUIR tareas bloqueadas)
-                    if (task.is_delayed === true && task.status !== 'blocked') {
+                    // Contar tareas atrasadas (EXCLUIR tareas bloqueadas y canceladas)
+                    if (task.is_delayed === true && task.status !== 'blocked' && task.status !== 'cancelled') {
                       delayedTasks++
                       console.log('🔴 Tarea retrasada encontrada:', {
                         task_name: (task as any).task_name,
@@ -181,8 +183,6 @@ export function useDashboard() {
             id: project.id,
             name: project.name,
             address: project.address,
-            total_floors: project.total_floors,
-            units_per_floor: project.units_per_floor,
             status: project.status,
             progress_percentage: progressPercentage,
             floors_created: floors.length,
@@ -222,7 +222,7 @@ export function useDashboard() {
           apartments(
             id,
             status,
-            apartment_tasks(status)
+            tasks(status, is_deleted)
           )
         `)
         .order('floor_number', { ascending: true })
@@ -242,8 +242,8 @@ export function useDashboard() {
         
         // Calcular tareas solo de apartamentos no bloqueados
         const nonBlockedApartments = apartments.filter(apt => apt.status !== 'blocked')
-        const allTasks = nonBlockedApartments.flatMap(apt => apt.apartment_tasks || [])
-        const completedTasks = allTasks.filter(task => task.status === 'completed').length
+        const allTasks = nonBlockedApartments.flatMap((apt: any) => (apt.tasks || []).filter((task: any) => !task.is_deleted))
+        const completedTasks = allTasks.filter((task: any) => task.status === 'completed').length
         const totalTasks = allTasks.length
         
         // Determinar el estado del piso basado en sus apartamentos

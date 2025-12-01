@@ -17,6 +17,7 @@ export interface Worker {
   prevision?: string
   salud?: string
   cargo?: string
+  is_deleted?: boolean
   created_at: string
   updated_at: string
 }
@@ -36,6 +37,7 @@ export interface WorkerFormData {
   prevision?: string
   salud?: string
   cargo?: string
+  cargo_personalizado?: string
 }
 
 export function useWorkers() {
@@ -43,16 +45,23 @@ export function useWorkers() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Cargar trabajadores
-  const fetchWorkers = async () => {
+  // Cargar trabajadores con filtro opcional
+  const fetchWorkers = async (includeDeleted: boolean = false) => {
     try {
       setLoading(true)
       setError(null)
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('workers')
         .select('*')
+        .order('is_active', { ascending: false }) // Activos primero
         .order('created_at', { ascending: false })
+
+      if (!includeDeleted) {
+        query = query.eq('is_deleted', false) // Solo trabajadores no eliminados por defecto
+      }
+
+      const { data, error } = await query
 
       if (error) {
         throw error
@@ -143,12 +152,15 @@ export function useWorkers() {
     }
   }
 
-  // Eliminar trabajador
+  // Soft delete trabajador
   const deleteWorker = async (id: number) => {
     try {
       const { error } = await supabase
         .from('workers')
-        .delete()
+        .update({ 
+          is_deleted: true,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
 
       if (error) {
@@ -162,9 +174,66 @@ export function useWorkers() {
     }
   }
 
+  // Restaurar trabajador eliminado
+  const restoreWorker = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('workers')
+        .update({ 
+          is_deleted: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+
+      setWorkers(prev => prev.map(worker => 
+        worker.id === id 
+          ? { ...worker, is_deleted: false, updated_at: new Date().toISOString() }
+          : worker
+      ))
+    } catch (err: any) {
+      console.error('Error restoring worker:', err)
+      throw new Error(err.message || 'Error al restaurar trabajador')
+    }
+  }
+
+  // Activar/Desactivar trabajador
+  const toggleWorkerStatus = async (id: number, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('workers')
+        .update({ 
+          is_active: isActive,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+
+      setWorkers(prev => prev.map(worker => 
+        worker.id === id 
+          ? { ...worker, is_active: isActive, updated_at: new Date().toISOString() }
+          : worker
+      ))
+    } catch (err: any) {
+      console.error('Error toggling worker status:', err)
+      throw new Error(err.message || 'Error al cambiar estado del trabajador')
+    }
+  }
+
   // Refrescar datos
   const refresh = () => {
     fetchWorkers()
+  }
+
+  // Refrescar datos incluyendo eliminados
+  const refreshAll = () => {
+    fetchWorkers(true)
   }
 
   // Cargar datos al montar el componente
@@ -179,6 +248,9 @@ export function useWorkers() {
     createWorker,
     updateWorker,
     deleteWorker,
-    refresh
+    restoreWorker,
+    toggleWorkerStatus,
+    refresh,
+    refreshAll
   }
 }

@@ -88,25 +88,46 @@ export function useInvoices() {
       formData.append('file', file)
       formData.append('projectId', projectId.toString())
 
-      const response = await fetch('/api/invoices/process-extract', {
+      console.log('🔄 Enviando factura para procesamiento...', {
+        fileName: file.name,
+        fileSize: file.size,
+        projectId: projectId
+      })
+
+      const response = await fetch('/api/invoices/process-robust', {
         method: 'POST',
         body: formData
       })
 
+      console.log('📡 Respuesta recibida:', {
+        status: response.status,
+        ok: response.ok
+      })
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Error al procesar factura')
+        let errorMessage = 'Error al procesar factura'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorMessage
+          console.error('❌ Error de API:', errorData)
+        } catch (parseError) {
+          console.error('❌ Error parseando respuesta de error:', parseError)
+          errorMessage = `Error HTTP ${response.status}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
 
       const result = await response.json()
+      console.log('✅ Factura procesada exitosamente:', result)
       
       // Recargar la lista de facturas
       await fetchInvoices()
       
       return result
     } catch (err) {
-      console.error('Error processing invoice:', err)
-      setError(err instanceof Error ? err.message : 'Error al procesar factura')
+      console.error('❌ Error processing invoice:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Error al procesar factura'
+      setError(errorMessage)
       throw err
     } finally {
       setLoading(false)
