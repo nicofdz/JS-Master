@@ -13,6 +13,8 @@ import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTempla
 import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock, Layers, Eye, Circle, CheckCircle2, AlertTriangle, XCircle, FileText } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { formatDate, getStatusColor, getStatusEmoji, getStatusText, formatApartmentNumber } from '@/lib/utils'
+import { APARTMENT_STATUSES } from '@/lib/constants'
+import toast from 'react-hot-toast'
 
 // Función para obtener icono de estado en lugar de emoji
 const getStatusIcon = (status: string | null | undefined) => {
@@ -32,8 +34,6 @@ const getStatusIcon = (status: string | null | undefined) => {
     default: return <Circle className="w-3 h-3" />
   }
 }
-import { APARTMENT_STATUSES } from '@/lib/constants'
-import toast from 'react-hot-toast'
 
 export default function ApartamentosPage() {
   const { apartments, floors, projects, loading, error, createApartment, updateApartment, deleteApartment } = useApartments()
