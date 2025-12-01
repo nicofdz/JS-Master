@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useWorkers } from '@/hooks/useWorkers'
+import { useContracts } from '@/hooks/useContracts'
 import { useAttendance } from '@/hooks/useAttendance'
 import { useInvoices } from '@/hooks/useInvoices'
 import { useIncomeTracking } from '@/hooks/useIncomeTracking'
@@ -29,6 +30,7 @@ interface DailyPaymentSummaryProps {
 
 export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummaryProps) {
   const { workers } = useWorkers()
+  const { contracts } = useContracts()
   const { getWorkerAttendanceStats } = useAttendance()
   const { incomeData, loading: incomeLoading, refreshIncomeTracking } = useIncomeTracking()
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
@@ -40,11 +42,16 @@ export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummary
   const [setupError, setSetupError] = useState<string | null>(null)
 
   // Filtrar solo trabajadores con contrato "por día" y activos (excluir al jefe)
-  const dailyWorkers = workers.filter(w => 
-    w.is_active && 
-    (w as any).contract_type === 'por_dia' && 
-    w.rut !== '13.161.546-9'
-  )
+  const dailyWorkers = workers.filter(w => {
+    if (!w.is_active || w.rut === '13.161.546-9') return false
+    // Buscar contrato activo del trabajador
+    const activeContract = contracts.find(c => 
+      c.worker_id === w.id && 
+      c.status === 'activo' && 
+      c.is_active
+    )
+    return activeContract?.contract_type === 'por_dia'
+  })
 
   useEffect(() => {
     loadWorkerPayments()
