@@ -41,3 +41,7 @@ $$;
 -- Agregar comentario
 COMMENT ON FUNCTION update_income_tracking_payment(DECIMAL) IS 'Actualiza el income_tracking sumando el monto de un pago realizado';
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

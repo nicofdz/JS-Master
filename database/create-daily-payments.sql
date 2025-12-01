@@ -28,3 +28,7 @@ COMMENT ON COLUMN public.daily_worker_payments.days_worked IS 'Cantidad de días
 COMMENT ON COLUMN public.daily_worker_payments.daily_rate IS 'Tarifa diaria al momento del pago';
 COMMENT ON COLUMN public.daily_worker_payments.total_amount IS 'Monto total pagado (days_worked * daily_rate)';
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

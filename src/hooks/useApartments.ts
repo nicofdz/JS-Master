@@ -229,7 +229,7 @@ export function useApartments(floorId?: number) {
       if (updates.status && data.floor_id && updates.status !== 'blocked') {
         // Solo actualizar si no estamos bloqueando (el desbloqueo también salta esto 
         // porque previous_status estará presente en updates)
-        if (!updates.previous_status) {
+        if (!(updates as any).previous_status) {
           await updateFloorStatusFromApartments(data.floor_id)
         }
       }

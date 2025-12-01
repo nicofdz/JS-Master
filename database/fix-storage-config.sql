@@ -80,3 +80,7 @@ SELECT 'Configuración completada. Los buckets están listos para usar.' as stat
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
 export async function POST(request: NextRequest) {
@@ -310,3 +310,7 @@ TOTAL$${Math.abs(fileHash) * 1240}
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

@@ -62,3 +62,7 @@ COMMENT ON COLUMN public.worker_attendance.check_in_time IS 'Hora de registro de
 COMMENT ON COLUMN public.worker_attendance.notes IS 'Notas o justificaciones (ej: llegó tarde, permiso médico)';
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

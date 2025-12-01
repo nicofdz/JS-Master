@@ -120,6 +120,9 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
       }
 
       // Llamar a la API para generar el contrato
+      console.log('Enviando petición a /api/contracts/generate con método POST')
+      console.log('Datos del contrato:', contractData)
+      
       const response = await fetch('/api/contracts/generate', {
         method: 'POST',
         headers: {
@@ -128,8 +131,17 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
         body: JSON.stringify(contractData),
       })
 
+      console.log('Respuesta recibida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      })
+
       if (!response.ok) {
-        throw new Error('Error al generar el contrato')
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        throw new Error(`Error al generar el contrato: ${errorText}`)
       }
 
       // Descargar el archivo ZIP

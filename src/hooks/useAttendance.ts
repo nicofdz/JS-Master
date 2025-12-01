@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 'use client'
 
+=======
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -34,6 +37,7 @@ export interface WorkerAttendance {
   id: number
   worker_id: number
   project_id: number | null
+<<<<<<< HEAD
   contract_id: number | null
   attendance_date: string
   is_present: boolean
@@ -44,6 +48,11 @@ export interface WorkerAttendance {
   is_overtime?: boolean
   overtime_hours?: number | null
   early_departure?: boolean
+=======
+  attendance_date: string
+  is_present: boolean
+  check_in_time: string
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
   notes: string | null
   created_at: string
   updated_at: string
@@ -52,12 +61,16 @@ export interface WorkerAttendance {
   worker_name?: string
   worker_rut?: string
   project_name?: string
+<<<<<<< HEAD
   contract_number?: string
+=======
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 }
 
 export interface AttendanceFormData {
   worker_id: number
   project_id?: number | null
+<<<<<<< HEAD
   contract_id: number
   attendance_date: string
   is_present: boolean
@@ -70,13 +83,21 @@ export interface AttendanceFormData {
   early_departure?: boolean
   departure_reason?: string | null
   created_by?: string | null
+=======
+  attendance_date: string
+  is_present: boolean
+  notes?: string | null
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 }
 
 export function useAttendance() {
   const [attendances, setAttendances] = useState<WorkerAttendance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+<<<<<<< HEAD
   const [refreshingStats, setRefreshingStats] = useState(false)
+=======
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 
   // Cargar asistencias
   const fetchAttendances = async (date?: string, projectId?: number | null) => {
@@ -89,6 +110,7 @@ export function useAttendance() {
         .select(`
           *,
           workers!inner(full_name, rut),
+<<<<<<< HEAD
           projects(name),
           contract_history(contract_number)
         `)
@@ -100,6 +122,15 @@ export function useAttendance() {
         // Si no hay fecha, usar fecha actual por defecto
         const today = new Date().toISOString().split('T')[0]
         query = query.eq('attendance_date', today)
+=======
+          projects(name)
+        `)
+        .order('check_in_time', { ascending: false })
+
+      // Filtrar por fecha si se proporciona
+      if (date) {
+        query = query.eq('attendance_date', date)
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
       }
 
       // Filtrar por proyecto si se proporciona
@@ -107,9 +138,12 @@ export function useAttendance() {
         query = query.eq('project_id', projectId)
       }
 
+<<<<<<< HEAD
       // Ordenar DESPUÉS de los filtros
       query = query.order('check_in_time', { ascending: false })
 
+=======
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
       const { data, error } = await query
 
       if (error) throw error
@@ -119,8 +153,12 @@ export function useAttendance() {
         ...item,
         worker_name: item.workers?.full_name || 'Sin nombre',
         worker_rut: item.workers?.rut || '',
+<<<<<<< HEAD
         project_name: item.projects?.name || 'General',
         contract_number: item.contract_history?.contract_number || 'N/A'
+=======
+        project_name: item.projects?.name || 'General'
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
       }))
 
       setAttendances(transformedData)
@@ -136,6 +174,7 @@ export function useAttendance() {
   // Crear o actualizar asistencia
   const markAttendance = async (data: AttendanceFormData) => {
     try {
+<<<<<<< HEAD
       // Buscar registro existente por contract_id y fecha
       const { data: existingAttendance } = await supabase
         .from('worker_attendance')
@@ -146,11 +185,32 @@ export function useAttendance() {
 
       if (existingAttendance) {
         // Actualizar asistencia existente (no cambiamos created_by en actualización)
+=======
+      // Buscar registro existente (manejando NULL correctamente)
+      let query = supabase
+        .from('worker_attendance')
+        .select('id')
+        .eq('worker_id', data.worker_id)
+        .eq('attendance_date', data.attendance_date)
+      
+      // En SQL, NULL se compara con IS NULL, no con = NULL
+      if (data.project_id === null || data.project_id === undefined) {
+        query = query.is('project_id', null)
+      } else {
+        query = query.eq('project_id', data.project_id)
+      }
+      
+      const { data: existingAttendance } = await query.single()
+
+      if (existingAttendance) {
+        // Actualizar asistencia existente
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         const { data: updated, error } = await supabase
           .from('worker_attendance')
           .update({
             is_present: data.is_present,
             notes: data.notes || null,
+<<<<<<< HEAD
             check_in_time: data.check_in_time || getChileDateTime(),
             check_out_time: data.check_out_time || null,
             hours_worked: data.hours_worked || null,
@@ -158,14 +218,21 @@ export function useAttendance() {
             overtime_hours: data.overtime_hours || null,
             early_departure: data.early_departure || false,
             departure_reason: data.departure_reason || null,
+=======
+            check_in_time: getChileDateTime(),
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
             updated_at: getChileDateTime()
           })
           .eq('id', existingAttendance.id)
           .select(`
             *,
             workers!inner(full_name, rut),
+<<<<<<< HEAD
             projects(name),
             contract_history!inner(contract_number)
+=======
+            projects(name)
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
           `)
           .single()
 
@@ -175,8 +242,12 @@ export function useAttendance() {
           ...updated,
           worker_name: (updated as any).workers?.full_name || 'Sin nombre',
           worker_rut: (updated as any).workers?.rut || '',
+<<<<<<< HEAD
           project_name: (updated as any).projects?.name || 'General',
           contract_number: (updated as any).contract_history?.contract_number || 'N/A'
+=======
+          project_name: (updated as any).projects?.name || 'General'
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         }
 
         setAttendances(prev => 
@@ -184,12 +255,17 @@ export function useAttendance() {
         )
         toast.success('Asistencia actualizada')
       } else {
+<<<<<<< HEAD
         // Crear nueva asistencia (guardamos created_by)
+=======
+        // Crear nueva asistencia
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         const { data: created, error } = await supabase
           .from('worker_attendance')
           .insert([{
             worker_id: data.worker_id,
             project_id: data.project_id || null,
+<<<<<<< HEAD
             contract_id: data.contract_id,
             attendance_date: data.attendance_date,
             is_present: data.is_present,
@@ -202,12 +278,22 @@ export function useAttendance() {
             early_departure: data.early_departure || false,
             departure_reason: data.departure_reason || null,
             created_by: data.created_by || null
+=======
+            attendance_date: data.attendance_date,
+            is_present: data.is_present,
+            notes: data.notes || null,
+            check_in_time: getChileDateTime()
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
           }])
           .select(`
             *,
             workers!inner(full_name, rut),
+<<<<<<< HEAD
             projects(name),
             contract_history!inner(contract_number)
+=======
+            projects(name)
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
           `)
           .single()
 
@@ -217,8 +303,12 @@ export function useAttendance() {
           ...created,
           worker_name: (created as any).workers?.full_name || 'Sin nombre',
           worker_rut: (created as any).workers?.rut || '',
+<<<<<<< HEAD
           project_name: (created as any).projects?.name || 'General',
           contract_number: (created as any).contract_history?.contract_number || 'N/A'
+=======
+          project_name: (created as any).projects?.name || 'General'
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         }
 
         setAttendances(prev => [transformed, ...prev])
@@ -250,6 +340,7 @@ export function useAttendance() {
     }
   }
 
+<<<<<<< HEAD
   // Registrar checkout/salida de trabajador
   const checkoutWorker = async (attendanceId: number, checkoutTime: string, departureReason?: string) => {
     try {
@@ -326,6 +417,8 @@ export function useAttendance() {
     }
   }
 
+=======
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
   // Obtener estadísticas de asistencia de un trabajador
   const getWorkerAttendanceStats = async (workerId: number, month: number, year: number) => {
     try {
@@ -352,6 +445,7 @@ export function useAttendance() {
     }
   }
 
+<<<<<<< HEAD
   // Refrescar estadísticas de asistencia (vista materializada)
   const refreshAttendanceStats = async () => {
     try {
@@ -377,11 +471,17 @@ export function useAttendance() {
   // useEffect(() => {
   //   fetchAttendances()
   // }, [])
+=======
+  useEffect(() => {
+    fetchAttendances()
+  }, [])
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 
   return {
     attendances,
     loading,
     error,
+<<<<<<< HEAD
     refreshingStats,
     fetchAttendances,
     markAttendance,
@@ -389,6 +489,12 @@ export function useAttendance() {
     checkoutWorker,
     getWorkerAttendanceStats,
     refreshAttendanceStats
+=======
+    fetchAttendances,
+    markAttendance,
+    deleteAttendance,
+    getWorkerAttendanceStats
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
   }
 }
 

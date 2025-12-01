@@ -206,3 +206,7 @@ COMMENT ON VIEW public.worker_payment_summary IS 'Vista que calcula POR PAGAR ba
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

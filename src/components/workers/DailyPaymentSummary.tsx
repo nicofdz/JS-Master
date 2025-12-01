@@ -42,7 +42,11 @@ export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummary
   // Filtrar solo trabajadores con contrato "por día" y activos (excluir al jefe)
   const dailyWorkers = workers.filter(w => 
     w.is_active && 
+<<<<<<< HEAD
     (w as any).contract_type === 'por_dia' && 
+=======
+    w.contract_type === 'por_dia' && 
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
     w.rut !== '13.161.546-9'
   )
 
@@ -110,7 +114,11 @@ export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummary
       
       for (const worker of dailyWorkers) {
         const stats = await getWorkerAttendanceStats(worker.id, selectedMonth, selectedYear)
+<<<<<<< HEAD
         const dailyRate = (worker as any).daily_rate || 0
+=======
+        const dailyRate = worker.daily_rate || 0
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         const totalGeneral = stats.totalDays * dailyRate
         
         // Buscar si ya hay un pago registrado para este trabajador en este período
@@ -167,7 +175,11 @@ export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummary
           payment_month: selectedMonth,
           payment_year: selectedYear,
           days_worked: payment.days_worked,
+<<<<<<< HEAD
           daily_rate: (payment as any).daily_rate,
+=======
+          daily_rate: payment.daily_rate,
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
           total_amount: payment.total_amount,
           payment_date: new Date().toISOString()
         })
@@ -427,7 +439,11 @@ export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummary
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-emerald-400 font-semibold">
+<<<<<<< HEAD
                           ${(payment.daily_rate as any).toLocaleString('es-CL')}
+=======
+                          ${payment.daily_rate.toLocaleString('es-CL')}
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

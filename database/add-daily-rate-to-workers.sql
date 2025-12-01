@@ -9,3 +9,7 @@ UPDATE public.workers
 SET daily_rate = 0 
 WHERE contract_type = 'por_dia' AND daily_rate IS NULL;
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

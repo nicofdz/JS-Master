@@ -220,3 +220,7 @@ COMMENT ON FUNCTION public.get_available_tasks_for_payment IS 'Obtiene tareas di
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620

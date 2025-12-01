@@ -50,10 +50,13 @@ export default function ApartamentosPage() {
   const [selectedFloorForApartment, setSelectedFloorForApartment] = useState<{ floorId: number; towerId: number; projectId: number } | null>(null)
   const [expandedApartments, setExpandedApartments] = useState<Set<number>>(new Set())
   const [selectedApartmentForTasks, setSelectedApartmentForTasks] = useState<any>(null)
+<<<<<<< HEAD
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set())
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
   const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false)
+=======
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 
   // Resetear filtro de torre cuando cambie el proyecto
   useEffect(() => {
@@ -534,6 +537,7 @@ export default function ApartamentosPage() {
         ]}
       />
 
+<<<<<<< HEAD
 
       {/* Vista Jerárquica de Departamentos */}
       {filteredApartments.length === 0 ? (
@@ -543,10 +547,21 @@ export default function ApartamentosPage() {
           {(towerFilter !== 'all' || projectFilter !== 'all' || statusFilter !== 'all') && (
             <p className="text-slate-500 text-sm mt-2">
               Intenta seleccionar otro filtro o proyecto
+=======
+      {/* Grilla de Apartamentos */}
+      {filteredApartments.length === 0 ? (
+        <div className="text-center py-12">
+          <Home className="w-16 h-16 mx-auto text-slate-400 mb-4" />
+          <p className="text-slate-400 text-lg">No se encontraron apartamentos.</p>
+          {floorFilter !== 'all' && (
+            <p className="text-slate-500 text-sm mt-2">
+              Intenta seleccionar otro piso o proyecto
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
             </p>
           )}
         </div>
       ) : (
+<<<<<<< HEAD
         <div id="apartments-list" className="space-y-6">
           {(() => {
             // Agrupar departamentos por proyecto > torre > piso
@@ -889,10 +904,62 @@ export default function ApartamentosPage() {
                                                               <p className="text-xs text-slate-400">
                                                                 {apartment.apartment_type || 'Sin tipo'} {apartment.area ? `• ${apartment.area} m²` : ''}
                                                               </p>
+=======
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredApartments.map((apartment) => {
+            const apartmentTasks = getTasksForApartment(apartment.id)
+            
+            return (
+              <Card 
+                key={apartment.id}
+                className="bg-slate-700/30 border-slate-600 hover:bg-slate-700/50 hover:shadow-xl transition-all cursor-pointer"
+                onClick={() => setSelectedApartmentForTasks(apartment)}
+              >
+                <CardContent className="p-4">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Home className="w-5 h-5 text-blue-400" />
+                      <h3 className="text-lg font-bold text-slate-100">
+                        {apartment.apartment_number}
+                      </h3>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-slate-400" />
+                  </div>
+
+                  {/* Proyecto y Piso */}
+                  {projectFilter === 'all' && (
+                    <div className="mb-3 space-y-1">
+                      <p className="text-xs text-slate-400">
+                        <Building2 className="w-3 h-3 inline mr-1" />
+                        {apartment.project_name}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        <Building className="w-3 h-3 inline mr-1" />
+                        Piso {apartment.floor_number}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-400">Tipo:</span>
+                      <span className="text-slate-200 font-medium">
+                        {apartment.apartment_type || '-'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-400">Área:</span>
+                      <span className="text-slate-200 font-medium">
+                        {apartment.area ? `${apartment.area} m²` : '-'}
+                      </span>
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                     </div>
                   </div>
 
                   {/* Estado */}
+<<<<<<< HEAD
                                                           <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${
                       getStatusColor(apartment.status)
                     }`}>
@@ -903,11 +970,31 @@ export default function ApartamentosPage() {
                   {/* Progreso */}
                                                           <div className="flex items-center gap-2 flex-1 max-w-xs">
                                                             <div className="flex-1 bg-slate-700 rounded-full h-2">
+=======
+                  <div className="mb-3">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      getStatusColor(apartment.status)
+                    }`}>
+                      {getStatusEmoji(apartment.status)} {getStatusText(apartment.status)}
+                    </span>
+                  </div>
+
+                  {/* Progreso */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                      <span>Progreso</span>
+                      <span className="font-semibold text-slate-200">
+                        {apartment.progress_percentage || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-600 rounded-full h-2">
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       <div
                         className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${apartment.progress_percentage || 0}%` }}
                       ></div>
                     </div>
+<<<<<<< HEAD
                                                             <span className="text-xs text-slate-300 font-medium w-10 text-right">
                                                               {apartment.progress_percentage || 0}%
                                                             </span>
@@ -954,11 +1041,29 @@ export default function ApartamentosPage() {
                       size="sm"
                       onClick={() => setEditingApartment(apartment)}
                                                             className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+=======
+                  </div>
+
+                  {/* Contador de Tareas */}
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-4 pb-4 border-b border-slate-600">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>{apartmentTasks.length} tarea(s)</span>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingApartment(apartment)}
+                      className="flex-1 text-blue-400 border-blue-600 hover:bg-blue-900/30"
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       title="Editar"
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button
+<<<<<<< HEAD
                                                             variant="ghost"
                       size="sm"
                       onClick={() => handleBlockApartment(apartment.id, apartment.status)}
@@ -966,6 +1071,15 @@ export default function ApartamentosPage() {
                         apartment.status === 'blocked' 
                                                                 ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30' 
                                                                 : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
+=======
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleBlockApartment(apartment.id, apartment.status)}
+                      className={`flex-1 ${
+                        apartment.status === 'blocked' 
+                          ? 'text-emerald-400 border-emerald-600 hover:bg-emerald-900/30' 
+                          : 'text-orange-400 border-orange-600 hover:bg-orange-900/30'
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       }`}
                       title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
                     >
@@ -976,14 +1090,22 @@ export default function ApartamentosPage() {
                       )}
                     </Button>
                     <Button
+<<<<<<< HEAD
                                                             variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(apartment.id)}
                                                             className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
+=======
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(apartment.id)}
+                      className="flex-1 text-red-400 border-red-600 hover:bg-red-900/30"
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
+<<<<<<< HEAD
                                                           <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -1018,6 +1140,13 @@ export default function ApartamentosPage() {
               )
             })
           })()}
+=======
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         </div>
       )}
 
@@ -1039,6 +1168,7 @@ export default function ApartamentosPage() {
         initialProjectId={selectedFloorForApartment?.projectId}
       />
 
+<<<<<<< HEAD
       {/* Modal de Tareas del Apartamento */}
       {selectedApartmentForTasks && (
         <ApartmentTasksModal
@@ -1054,6 +1184,79 @@ export default function ApartamentosPage() {
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}
       />
+=======
+      {/* Modal de Edición */}
+      <Modal
+        isOpen={!!editingApartment}
+        onClose={() => setEditingApartment(null)}
+        title="Editar Apartamento"
+        size="md"
+      >
+        {editingApartment && (
+          <ApartmentForm
+            apartment={editingApartment}
+            floors={floors}
+            projects={projects}
+            onSubmit={handleUpdateApartment}
+            onCancel={() => setEditingApartment(null)}
+          />
+        )}
+      </Modal>
+
+      {/* Modal de Tareas del Apartamento */}
+      <Modal
+        isOpen={!!selectedApartmentForTasks}
+        onClose={() => setSelectedApartmentForTasks(null)}
+        title={`Tareas del Apartamento ${selectedApartmentForTasks?.apartment_number || ''}`}
+        size="xl"
+      >
+        {selectedApartmentForTasks && (
+          <div className="space-y-4">
+            {/* Info del Apartamento */}
+            <div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-slate-400 block mb-1">Proyecto</span>
+                  <span className="text-slate-100 font-medium">{selectedApartmentForTasks.project_name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-1">Piso</span>
+                  <span className="text-slate-100 font-medium">Piso {selectedApartmentForTasks.floor_number}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-1">Tipo</span>
+                  <span className="text-slate-100 font-medium">{selectedApartmentForTasks.apartment_type || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block mb-1">Estado</span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                    getStatusColor(selectedApartmentForTasks.status)
+                  }`}>
+                    {getStatusEmoji(selectedApartmentForTasks.status)} {getStatusText(selectedApartmentForTasks.status)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Tareas */}
+            <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-4">
+              <TaskRow
+                tasks={getTasksForApartment(selectedApartmentForTasks.id)}
+                apartmentId={selectedApartmentForTasks.id}
+                apartmentNumber={selectedApartmentForTasks.apartment_number}
+                apartments={apartments}
+                users={users}
+                floors={floors}
+                projects={projects}
+                onCreateTask={handleCreateTask}
+                onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
     </div>
   )
 }

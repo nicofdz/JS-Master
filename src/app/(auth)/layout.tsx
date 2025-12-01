@@ -22,6 +22,7 @@ import {
   SquareStack, // Icono para Apartamentos
   CheckSquare, // Icono para Tareas
   DollarSign, // Icono para Pagos
+<<<<<<< HEAD
   ClipboardCheck, // Icono para Asistencia
   Wrench, // Icono para Herramientas
   Boxes, // Icono para Materiales
@@ -31,6 +32,9 @@ import {
   Package, // Icono para sección Inventario
   CreditCard, // Icono para sección Finanzas
   PieChart // Icono para sección Reportes
+=======
+  ClipboardCheck // Icono para Asistencia
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -74,6 +78,7 @@ export default function AuthLayout({
     setSidebarOpen(false)
   }
 
+<<<<<<< HEAD
   const navigationSections = [
     {
       title: 'PROYECTOS',
@@ -118,6 +123,19 @@ export default function AuthLayout({
         { name: 'Reportes', href: '/reportes', icon: TrendingUp },
       ]
     },
+=======
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
+    { name: 'Proyectos', href: '/proyectos', icon: Building2 },
+    { name: 'Trabajadores', href: '/equipos', icon: Users },
+    { name: 'Asistencia', href: '/asistencia', icon: ClipboardCheck },
+    { name: 'Pisos', href: '/pisos', icon: Home },
+    { name: 'Apartamentos', href: '/apartamentos', icon: SquareStack },
+    { name: 'Tareas', href: '/tareas', icon: CheckSquare, badge: delayedCount > 0 ? delayedCount : null },
+    { name: 'Facturas', href: '/facturas', icon: DollarSign },
+    { name: 'Pagos', href: '/pagos', icon: DollarSign },
+    { name: 'Reportes', href: '/reportes', icon: TrendingUp },
+>>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
   ]
 
   if (loading) {
