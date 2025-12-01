@@ -122,13 +122,13 @@ export function PaymentDaysModal({
 
             if (attendanceError) throw attendanceError
 
-            const daysData: AttendanceDay[] = (attendanceData || []).map(att => ({
+            const daysData: AttendanceDay[] = (attendanceData || []).map((att: any) => ({
                 id: att.id,
                 attendance_date: att.attendance_date,
-                project_name: (att.projects as any)?.name || 'N/A',
+                project_name: att.projects?.name || 'N/A',
                 is_present: att.is_present,
                 hours_worked: att.hours_worked,
-                payment_percentage: (att as any).payment_percentage || 100
+                payment_percentage: att.payment_percentage || 100
             }))
 
             setDays(daysData)
@@ -330,8 +330,8 @@ export function PaymentDaysModal({
                                     onClick={handlePrevMonth}
                                     disabled={!canGoPrev}
                                     className={`p-1.5 rounded-lg transition-colors ${canGoPrev
-                                            ? 'hover:bg-slate-600 text-slate-300'
-                                            : 'text-slate-600 cursor-not-allowed'
+                                        ? 'hover:bg-slate-600 text-slate-300'
+                                        : 'text-slate-600 cursor-not-allowed'
                                         }`}
                                     title="Mes anterior"
                                 >
@@ -346,8 +346,8 @@ export function PaymentDaysModal({
                                     onClick={handleNextMonth}
                                     disabled={!canGoNext}
                                     className={`p-1.5 rounded-lg transition-colors ${canGoNext
-                                            ? 'hover:bg-slate-600 text-slate-300'
-                                            : 'text-slate-600 cursor-not-allowed'
+                                        ? 'hover:bg-slate-600 text-slate-300'
+                                        : 'text-slate-600 cursor-not-allowed'
                                         }`}
                                     title="Mes siguiente"
                                 >
@@ -409,8 +409,8 @@ export function PaymentDaysModal({
                                             >
                                                 <div className="flex flex-col items-center gap-0">
                                                     <span className={`text-xs font-medium ${isWorked
-                                                            ? isPartialDay ? 'text-yellow-300' : 'text-green-300'
-                                                            : 'text-slate-500'
+                                                        ? isPartialDay ? 'text-yellow-300' : 'text-green-300'
+                                                        : 'text-slate-500'
                                                         }`}>
                                                         {day}
                                                     </span>
