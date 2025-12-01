@@ -79,7 +79,6 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         ...prev,
         [name]: value.toLowerCase()
       }))
-<<<<<<< HEAD
     }
     // Manejar cargo personalizado
     else if (name === 'cargo_personalizado') {
@@ -97,9 +96,6 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         cargo_personalizado: value === 'Otro' ? prev.cargo_personalizado : '' // Limpiar si no es "Otro"
       }))
     }
-=======
-    } 
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
     else {
       setFormData(prev => ({
         ...prev,
@@ -239,53 +235,6 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
             )}
           </div>
 
-<<<<<<< HEAD
-=======
-          {/* Tipo de Contrato */}
-          <div className="mb-4">
-            <label htmlFor="contract_type" className="block text-sm font-medium text-slate-300 mb-2">
-              Tipo de Contrato *
-            </label>
-            <Select
-              id="contract_type"
-              name="contract_type"
-              value={formData.contract_type}
-              onChange={handleChange}
-            >
-              <option value="por_dia">Por Día</option>
-              <option value="a_trato">A Trato</option>
-            </Select>
-            <p className="text-xs text-slate-400 mt-1">
-              Define si el trabajador cobra por día trabajado o por tarea completada
-            </p>
-          </div>
-
-          {/* Tarifa Diaria - Solo visible si es "por día" */}
-          {formData.contract_type === 'por_dia' && (
-            <div className="mb-4">
-              <label htmlFor="daily_rate" className="block text-sm font-medium text-slate-300 mb-2">
-                Tarifa Diaria *
-              </label>
-              <Input
-                id="daily_rate"
-                name="daily_rate"
-                type="number"
-                min="0"
-                step="1000"
-                value={formData.daily_rate || ''}
-                onChange={handleChange}
-                placeholder="Ej: 35000"
-                className={errors.daily_rate ? 'border-red-500' : ''}
-              />
-              {errors.daily_rate && (
-                <p className="mt-1 text-sm text-red-600">{errors.daily_rate}</p>
-              )}
-              <p className="text-xs text-slate-400 mt-1">
-                Monto que se paga por cada día trabajado
-              </p>
-            </div>
-          )}
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
         </div>
 
         {/* Información Personal */}
