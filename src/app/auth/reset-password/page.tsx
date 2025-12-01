@@ -18,7 +18,6 @@ export default function ResetPasswordPage() {
 
     useEffect(() => {
         // Verificar si hay un hash en la URL (indicativo de flujo de recuperación)
-        // Supabase pone el token en el hash
         const hasHash = typeof window !== 'undefined' && window.location.hash.length > 0
 
         // Si no hay usuario, no está cargando y NO hay hash, entonces sí redirigir
@@ -50,8 +49,9 @@ export default function ResetPasswordPage() {
                 return
             }
 
-            toast.success('Contraseña actualizada exitosamente')
-            router.push('/dashboard')
+            toast.success('Contraseña actualizada exitosamente. Por favor inicia sesión.')
+            await authService.signOut()
+            router.push('/login')
         } catch (error) {
             toast.error('Error inesperado')
         } finally {
