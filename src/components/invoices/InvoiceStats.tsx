@@ -35,11 +35,11 @@ interface InvoiceStatsProps {
   onStatusFilterChange?: (filter: 'all' | 'processed' | 'pending') => void
 }
 
-export function InvoiceStats({ 
-  stats, 
-  incomeData: propIncomeData, 
-  incomeLoading: propIncomeLoading, 
-  selectedMonth, 
+export function InvoiceStats({
+  stats,
+  incomeData: propIncomeData,
+  incomeLoading: propIncomeLoading,
+  selectedMonth,
   selectedYear,
   totalRealIncome,
   showAllMonths = false,
@@ -76,11 +76,11 @@ export function InvoiceStats({
       if (year !== 0) {
         const startDate = new Date(year, 0, 1).toISOString()
         const endDate = new Date(year, 11, 31, 23, 59, 59).toISOString()
-        
+
         invoicesQuery = invoicesQuery
           .gte('created_at', startDate)
           .lte('created_at', endDate)
-        
+
         paymentsQuery = paymentsQuery
           .gte('created_at', startDate)
           .lte('created_at', endDate)
@@ -142,19 +142,19 @@ export function InvoiceStats({
   // Obtener el mes y año seleccionado o actual
   const displayMonth = selectedMonth === 'all' ? null : (selectedMonth || new Date().getMonth() + 1)
   const displayYear = selectedYear !== undefined && selectedYear !== 0 ? selectedYear : new Date().getFullYear()
-  
+
   // Generar el nombre del mes/año solo si no es "todos los meses"
-  const monthName = displayMonth 
+  const monthName = displayMonth
     ? (() => {
-        const monthNameOnly = new Date(2025, displayMonth - 1).toLocaleDateString('es-CL', { month: 'long' })
-        // Si el año es 0 (todos los años), mostrar "Mes de todos los años"
-        if (selectedYear === 0) {
-          return `${monthNameOnly.charAt(0).toUpperCase() + monthNameOnly.slice(1)} de todos los años`
-        }
-        // Si hay un año específico, mostrar mes y año
-        return new Date(displayYear, displayMonth - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
-      })()
-    : showAllMonths 
+      const monthNameOnly = new Date(2025, displayMonth - 1).toLocaleDateString('es-CL', { month: 'long' })
+      // Si el año es 0 (todos los años), mostrar "Mes de todos los años"
+      if (selectedYear === 0) {
+        return `${monthNameOnly.charAt(0).toUpperCase() + monthNameOnly.slice(1)} de todos los años`
+      }
+      // Si hay un año específico, mostrar mes y año
+      return new Date(displayYear, displayMonth - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })
+    })()
+    : showAllMonths
       ? (selectedYear !== undefined && selectedYear !== 0 ? `${selectedYear}` : 'Todos los años')
       : 'Todos los meses'
 
@@ -164,129 +164,113 @@ export function InvoiceStats({
   const availableMoney = totalAccumulatedRealIncome - totalSpentOnPayments
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Tarjetas de Dinero - Primera fila */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">
-              {showAllMonths || selectedMonth === 'all' 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-slate-400">
+              {showAllMonths || selectedMonth === 'all'
                 ? (selectedYear !== undefined && selectedYear !== 0 ? 'Ingresos del Año' : 'Ingresos Totales')
                 : 'Ingresos del Mes'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-400">
+          <CardContent className="pb-3 px-4">
+            <div className="text-xl font-bold text-emerald-400">
               {incomeLoading ? (
-                <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
+                <div className="animate-pulse bg-slate-700 h-7 w-24 rounded"></div>
               ) : (
                 formatCurrency((incomeData?.total_net || 0) + (incomeData?.total_iva || 0))
               )}
             </div>
-            <p className="text-xs text-slate-400 capitalize">
-              {showAllMonths || selectedMonth === 'all' 
+            <p className="text-[10px] text-slate-500 capitalize mt-1">
+              {showAllMonths || selectedMonth === 'all'
                 ? (selectedYear !== undefined && selectedYear !== 0 ? `${selectedYear}` : 'Todos los años')
                 : monthName}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">IVA</CardTitle>
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-slate-400">IVA</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-400">
+          <CardContent className="pb-3 px-4">
+            <div className="text-xl font-bold text-red-400">
               {incomeLoading ? (
-                <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
+                <div className="animate-pulse bg-slate-700 h-7 w-24 rounded"></div>
               ) : (
                 formatCurrency(incomeData?.total_iva || 0)
               )}
             </div>
-            <p className="text-xs text-slate-400">
-              {selectedMonth === 'all' 
-                ? (selectedYear !== undefined && selectedYear !== 0 ? 'Del año seleccionado' : 'De todos los años')
-                : 'Del mes seleccionado'}
+            <p className="text-[10px] text-slate-500">
+              {selectedMonth === 'all'
+                ? (selectedYear !== undefined && selectedYear !== 0 ? 'Del año' : 'Histórico')
+                : 'Del mes'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">PPM</CardTitle>
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-slate-400">PPM</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-400">
+          <CardContent className="pb-3 px-4">
+            <div className="text-xl font-bold text-blue-400">
               {incomeLoading ? (
-                <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
+                <div className="animate-pulse bg-slate-700 h-7 w-24 rounded"></div>
               ) : (
                 formatCurrency(((incomeData?.total_net || 0) + (incomeData?.total_iva || 0)) * 0.06)
               )}
             </div>
-            <p className="text-xs text-slate-400">
-              {selectedMonth === 'all' 
-                ? (selectedYear !== undefined && selectedYear !== 0 ? 'Del año seleccionado' : 'De todos los años')
-                : 'Del mes seleccionado'}
+            <p className="text-[10px] text-slate-500">
+              {selectedMonth === 'all'
+                ? (selectedYear !== undefined && selectedYear !== 0 ? 'Del año' : 'Histórico')
+                : 'Del mes'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-400">Total Dinero</CardTitle>
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className="text-xs font-medium text-slate-400">Total Dinero</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-3 px-4">
             {(() => {
               const netAmount = incomeData?.total_net || 0
               const ivaAmount = incomeData?.total_iva || 0
-              
-              // Total factura = Neto + IVA
               const totalFactura = netAmount + ivaAmount
-              
-              // PPM = Total factura * 0.06
               const ppm = totalFactura * 0.06
-              
-              // Total final = Neto - PPM
               const totalFinal = netAmount - ppm
-            
+
               return (
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-emerald-400">
+                <div className="space-y-1">
+                  <div className="text-xl font-bold text-emerald-400">
                     {incomeLoading ? (
-                      <div className="animate-pulse bg-slate-700 h-8 w-24 rounded"></div>
+                      <div className="animate-pulse bg-slate-700 h-7 w-24 rounded"></div>
                     ) : (
                       formatCurrency(totalFinal)
                     )}
                   </div>
-                  
-                  <div className="space-y-1 text-xs border-t border-slate-700 pt-2">
+
+                  <div className="space-y-0.5 text-[10px] border-t border-slate-700 pt-1 mt-1">
                     <div className="flex justify-between">
-                      <span className="text-slate-400">PPM:</span>
+                      <span className="text-slate-500">PPM:</span>
                       <span className="font-medium text-red-400">
                         {incomeLoading ? (
-                          <div className="animate-pulse bg-slate-700 h-3 w-16 rounded"></div>
+                          <div className="animate-pulse bg-slate-700 h-2 w-12 rounded"></div>
                         ) : (
                           `- ${formatCurrency(ppm)}`
                         )}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-400">IVA:</span>
+                      <span className="text-slate-500">IVA:</span>
                       <span className="font-medium text-red-400">
                         {incomeLoading ? (
-                          <div className="animate-pulse bg-slate-700 h-3 w-16 rounded"></div>
+                          <div className="animate-pulse bg-slate-700 h-2 w-12 rounded"></div>
                         ) : (
                           `- ${formatCurrency(ivaAmount)}`
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-slate-600 pt-1">
-                      <span className="text-slate-300 font-semibold">Total:</span>
-                      <span className="font-bold text-emerald-400">
-                        {incomeLoading ? (
-                          <div className="animate-pulse bg-slate-700 h-3 w-20 rounded"></div>
-                        ) : (
-                          formatCurrency(totalFinal)
                         )}
                       </span>
                     </div>
@@ -299,56 +283,50 @@ export function InvoiceStats({
       </div>
 
       {/* Tarjetas de Facturas - Segunda fila */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card 
-          className={`transition-all duration-200 border-2 ${
-            statusFilter === 'all'
-              ? 'bg-blue-900/30 border-blue-500 shadow-lg cursor-pointer'
-              : 'bg-slate-700/30 border-slate-600 hover:border-slate-500 cursor-pointer'
-          }`}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Card
+          className={`transition-all duration-200 border ${statusFilter === 'all'
+              ? 'bg-blue-900/20 border-blue-500/50 shadow-md cursor-pointer'
+              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600 cursor-pointer'
+            }`}
           onClick={() => onStatusFilterChange && onStatusFilterChange('all')}
         >
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium ${
-              statusFilter === 'all' ? 'text-blue-400' : 'text-slate-400'
-            }`}>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className={`text-xs font-medium ${statusFilter === 'all' ? 'text-blue-400' : 'text-slate-400'
+              }`}>
               Total Facturas
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${
-              statusFilter === 'all' ? 'text-blue-400' : 'text-slate-100'
-            }`}>
+          <CardContent className="pb-3 px-4">
+            <div className={`text-xl font-bold ${statusFilter === 'all' ? 'text-blue-400' : 'text-slate-100'
+              }`}>
               {stats.total}
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-[10px] text-slate-500">
               {stats.processed} procesadas ({processedPercentage}%)
             </p>
           </CardContent>
         </Card>
 
-        <Card 
-          className={`transition-all duration-200 border-2 ${
-            statusFilter === 'pending'
-              ? 'bg-yellow-900/30 border-yellow-500 shadow-lg cursor-pointer'
-              : 'bg-slate-700/30 border-slate-600 hover:border-slate-500 cursor-pointer'
-          }`}
+        <Card
+          className={`transition-all duration-200 border ${statusFilter === 'pending'
+              ? 'bg-yellow-900/20 border-yellow-500/50 shadow-md cursor-pointer'
+              : 'bg-slate-800/50 border-slate-700 hover:border-slate-600 cursor-pointer'
+            }`}
           onClick={() => onStatusFilterChange && onStatusFilterChange('pending')}
         >
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-sm font-medium ${
-              statusFilter === 'pending' ? 'text-yellow-400' : 'text-slate-400'
-            }`}>
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardTitle className={`text-xs font-medium ${statusFilter === 'pending' ? 'text-yellow-400' : 'text-slate-400'
+              }`}>
               Facturas Pendientes
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${
-              statusFilter === 'pending' ? 'text-yellow-400' : 'text-yellow-400'
-            }`}>
+          <CardContent className="pb-3 px-4">
+            <div className={`text-xl font-bold ${statusFilter === 'pending' ? 'text-yellow-400' : 'text-yellow-400'
+              }`}>
               {stats.pending}
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-[10px] text-slate-500">
               Requieren procesamiento
             </p>
           </CardContent>
