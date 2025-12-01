@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { WorkerContractData } from '@/types/contracts'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +11,7 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const data: WorkerContractData = body
+    const data: any = body
     const documentType = body.documentType || 'both' // 'both', 'contract', 'hours'
     
     // Validar datos requeridos
