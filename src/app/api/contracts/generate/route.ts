@@ -4,15 +4,6 @@ import type { WorkerContractData } from '@/types/contracts'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Configurar el tamaño máximo del body
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-}
-
 export async function POST(request: NextRequest) {
   console.log('=== API CONTRACTS GENERATE POST INICIADO ===')
   console.log('Request method:', request.method)
