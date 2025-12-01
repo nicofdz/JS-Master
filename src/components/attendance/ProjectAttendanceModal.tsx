@@ -253,7 +253,7 @@ export function ProjectAttendanceModal({
         try {
             setSaving(true)
 
-            const checkInTimestamp = state.isPresent ? `${today}T${state.checkInTime}:00` : null
+            const checkInTimestamp = state.isPresent ? `${today}T${state.checkInTime}:00` : undefined
             const checkOutTimestamp = state.isPresent ? `${today}T${state.checkOutTime}:00` : null
 
             let hoursWorked = null
@@ -374,7 +374,7 @@ export function ProjectAttendanceModal({
                 const hasChanged = hasChanges(contract.id)
 
                 if (!hasExisting || hasChanged) {
-                    const checkInTimestamp = state.isPresent ? `${today}T${state.checkInTime}:00` : null
+                    const checkInTimestamp = state.isPresent ? `${today}T${state.checkInTime}:00` : undefined
                     const checkOutTimestamp = state.isPresent ? `${today}T${state.checkOutTime}:00` : null
 
                     let hoursWorked = null
@@ -686,7 +686,7 @@ export function ProjectAttendanceModal({
                                             onClick={async () => {
                                                 try {
                                                     setSaving(true)
-                                                    const checkInTimestamp = null
+                                                    const checkInTimestamp = undefined
                                                     const checkOutTimestamp = null
 
                                                     await markAttendance({
