@@ -1,25 +1,10 @@
-'use client'
-
 import { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
-import { ChevronLeft, ChevronRight, Calendar, X, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import { AttendanceEditModal } from './AttendanceEditModal'
+import { DayAttendanceModal } from './DayAttendanceModal'
 
-interface WorkerAttendance {
-  id: number
-  worker_id: number
-  worker_name?: string
-  worker_rut?: string
-  project_name?: string
-  attendance_date: string
-  is_present: boolean
-  check_in_time: string
-  check_out_time?: string | null
-  hours_worked?: number | null
-  early_departure?: boolean
-  is_overtime?: boolean
-  overtime_hours?: number | null
-  notes: string | null
-}
+import { WorkerAttendance } from '@/hooks/useAttendance'
 
 interface Project {
   id: number
@@ -32,6 +17,7 @@ interface AttendanceHistoryByCalendarProps {
   selectedProjectId: number | null
   onProjectChange: (projectId: number | null) => void
   onMonthChange: (year: number, month: number) => void
+  onRefresh?: () => void
 }
 
 export function AttendanceHistoryByCalendar({
@@ -39,14 +25,41 @@ export function AttendanceHistoryByCalendar({
   projects,
   selectedProjectId,
   onProjectChange,
-  onMonthChange
+  onMonthChange,
+  onRefresh
 }: AttendanceHistoryByCalendarProps) {
   const currentDate = new Date()
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [showMonthPicker, setShowMonthPicker] = useState(false)
-  
+
+  // State for edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [selectedEditData, setSelectedEditData] = useState<{
+    attendance?: any
+    workerId: number
+    contractId: number
+    workerName: string
+    date: string
+  } | null>(null)
+
+  const handleEditClick = (attendance: WorkerAttendance) => {
+    setSelectedEditData({
+      attendance,
+      workerId: attendance.worker_id,
+      contractId: attendance.contract_id || 0,
+      workerName: attendance.worker_name || 'Desconocido',
+      date: attendance.attendance_date
+    })
+    setEditModalOpen(true)
+  }
+
+  const handleEditSave = () => {
+    if (onRefresh) onRefresh()
+    setEditModalOpen(false)
+  }
+
   // Filtrar asistencias por el mes seleccionado
   const monthAttendances = useMemo(() => {
     return attendances.filter(a => {
@@ -84,7 +97,7 @@ export function AttendanceHistoryByCalendar({
     month: 'long',
     year: 'numeric'
   })
-  
+
   // Generar opciones de años (últimos 3 años y próximos 1)
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 5 }, (_, i) => currentYear - 3 + i)
@@ -105,30 +118,97 @@ export function AttendanceHistoryByCalendar({
   // Agrupar asistencias por fecha (del mes seleccionado)
   const attendancesByDate = useMemo(() => {
     const grouped: Record<string, WorkerAttendance[]> = {}
-    
+
     monthAttendances.forEach(attendance => {
       if (!grouped[attendance.attendance_date]) {
         grouped[attendance.attendance_date] = []
       }
       grouped[attendance.attendance_date].push(attendance)
     })
-    
+
     return grouped
+  }, [monthAttendances])
+  // Calcular estadísticas mensuales
+  const monthlyStats = useMemo(() => {
+    const totalDays = monthAttendances.length
+    const presentDays = monthAttendances.filter(a => a.is_present).length
+    const absentDays = monthAttendances.filter(a => !a.is_present).length
+    const daysWithProblems = monthAttendances.filter(a =>
+      a.is_present && (a.early_departure || a.late_arrival)
+    ).length
+
+    // Calcular promedio de asistencia (porcentaje)
+    const uniqueDates = new Set(monthAttendances.map(a => a.attendance_date))
+    const totalPossibleDays = uniqueDates.size
+    const averageAttendance = totalPossibleDays > 0
+      ? ((presentDays / totalDays) * 100).toFixed(1)
+      : '0'
+
+    return {
+      totalDays,
+      presentDays,
+      absentDays,
+      daysWithProblems,
+      averageAttendance: parseFloat(averageAttendance),
+      totalPossibleDays
+    }
   }, [monthAttendances])
 
   // Obtener asistencias del día seleccionado
   const selectedDayAttendances = selectedDate ? (attendancesByDate[selectedDate] || []) : []
-  const presentCount = selectedDayAttendances.filter(a => a.is_present).length
-  const absentCount = selectedDayAttendances.filter(a => !a.is_present).length
-
-  // Formatear hora
-  const formatTime = (timestamp: string): string => {
-    const time = timestamp.split('T')[1]?.substring(0, 5) || '00:00'
-    return time
-  }
 
   return (
     <div className="space-y-6">
+      {/* Resumen Mensual */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <div className="p-4">
+          <h3 className="text-lg font-semibold text-slate-100 mb-4">
+            Resumen del Mes - {monthName}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Total de días trabajados */}
+            <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-5 h-5 text-blue-400" />
+                <span className="text-sm text-slate-400">Días Trabajados</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-400">{monthlyStats.presentDays}</p>
+              <p className="text-xs text-slate-500 mt-1">de {monthlyStats.totalPossibleDays} días posibles</p>
+            </div>
+
+            {/* Promedio de asistencia */}
+            <div className="bg-emerald-900/20 border border-emerald-600/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span className="text-sm text-slate-400">Promedio Asistencia</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-400">{monthlyStats.averageAttendance}%</p>
+              <p className="text-xs text-slate-500 mt-1">{monthlyStats.presentDays} presentes / {monthlyStats.totalDays} registros</p>
+            </div>
+
+            {/* Días con problemas */}
+            <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                <span className="text-sm text-slate-400">Días con Problemas</span>
+              </div>
+              <p className="text-2xl font-bold text-yellow-400">{monthlyStats.daysWithProblems}</p>
+              <p className="text-xs text-slate-500 mt-1">Llegadas tardías y salidas tempranas</p>
+            </div>
+
+            {/* Ausencias */}
+            <div className="bg-red-900/20 border border-red-600/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <XCircle className="w-5 h-5 text-red-400" />
+                <span className="text-sm text-slate-400">Ausencias</span>
+              </div>
+              <p className="text-2xl font-bold text-red-400">{monthlyStats.absentDays}</p>
+              <p className="text-xs text-slate-500 mt-1">Registros de ausencia</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
       {/* Filtros */}
       <Card className="bg-slate-800/50 border-slate-700">
         <div className="p-4">
@@ -160,14 +240,14 @@ export function AttendanceHistoryByCalendar({
               >
                 <ChevronLeft className="w-5 h-5 text-slate-300" />
               </button>
-              
+
               <button
                 onClick={() => setShowMonthPicker(!showMonthPicker)}
                 className="text-lg font-semibold text-slate-100 min-w-[200px] text-center capitalize hover:bg-slate-700/50 px-3 py-1 rounded transition-colors"
               >
                 {monthName}
               </button>
-              
+
               {/* Dropdown selector */}
               {showMonthPicker && (
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 p-4 min-w-[220px]">
@@ -188,7 +268,7 @@ export function AttendanceHistoryByCalendar({
                         ))}
                       </select>
                     </div>
-                    
+
                     {/* Selector de mes */}
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">Mes</label>
@@ -214,7 +294,7 @@ export function AttendanceHistoryByCalendar({
                         <option value={12}>Diciembre</option>
                       </select>
                     </div>
-                    
+
                     <button
                       onClick={() => setShowMonthPicker(false)}
                       className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
@@ -224,7 +304,7 @@ export function AttendanceHistoryByCalendar({
                   </div>
                 </div>
               )}
-              
+
               <button
                 onClick={handleNextMonth}
                 className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
@@ -281,21 +361,19 @@ export function AttendanceHistoryByCalendar({
                 <button
                   key={day}
                   onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                  className={`min-h-[100px] p-2 rounded-lg border transition-all ${
-                    isSelected
-                      ? 'ring-2 ring-blue-500 border-blue-500'
-                      : isToday
+                  className={`min-h-[100px] p-2 rounded-lg border transition-all ${isSelected
+                    ? 'ring-2 ring-blue-500 border-blue-500'
+                    : isToday
                       ? 'border-blue-400'
                       : isWeekend
-                      ? 'border-slate-700'
-                      : 'border-slate-700'
-                  } ${getColor()} hover:opacity-80`}
+                        ? 'border-slate-700'
+                        : 'border-slate-700'
+                    } ${getColor()} hover:opacity-80`}
                 >
                   <div className="flex flex-col h-full">
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`text-sm font-semibold ${
-                        isToday ? 'text-blue-400' : 'text-slate-300'
-                      }`}>
+                      <span className={`text-sm font-semibold ${isToday ? 'text-blue-400' : 'text-slate-300'
+                        }`}>
                         {day}
                       </span>
                       {isToday && (
@@ -304,7 +382,7 @@ export function AttendanceHistoryByCalendar({
                         </span>
                       )}
                     </div>
-                    
+
                     {total > 0 && (
                       <div className="mt-auto">
                         <div className="text-xs text-slate-400 mb-1">
@@ -343,128 +421,24 @@ export function AttendanceHistoryByCalendar({
         </div>
       </Card>
 
-      {/* Detalle del día seleccionado */}
-      {selectedDate && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-slate-100">
-                {new Date(selectedDate + 'T00:00:00').toLocaleDateString('es-CL', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </h3>
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="p-2 hover:bg-slate-700 rounded-md transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
+      <DayAttendanceModal
+        isOpen={!!selectedDate}
+        onClose={() => setSelectedDate(null)}
+        date={selectedDate}
+        attendances={selectedDayAttendances}
+        onEdit={handleEditClick}
+      />
 
-            {/* Estadísticas del día */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-emerald-900/20 border border-emerald-600 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                  <div>
-                    <p className="text-sm text-slate-400">Presentes</p>
-                    <p className="text-2xl font-bold text-emerald-400">{presentCount}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-red-900/20 border border-red-600 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-red-400" />
-                  <div>
-                    <p className="text-sm text-slate-400">Ausentes</p>
-                    <p className="text-2xl font-bold text-red-400">{absentCount}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Lista de trabajadores */}
-            <div className="space-y-2">
-              {selectedDayAttendances.map(attendance => (
-                <div
-                  key={attendance.id}
-                  className={`p-3 rounded-lg border ${
-                    attendance.is_present
-                      ? 'bg-emerald-900/10 border-emerald-600/30'
-                      : 'bg-red-900/10 border-red-600/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {attendance.is_present ? (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-400" />
-                      )}
-                      <div>
-                        <p className="font-medium text-slate-100">
-                          {attendance.worker_name}
-                        </p>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <span>{attendance.worker_rut}</span>
-                          <span>•</span>
-                          <span>📍 {attendance.project_name}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {attendance.is_present && (
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-xs text-slate-400">Horario</p>
-                          <p className="text-sm font-medium text-slate-200">
-                            {formatTime(attendance.check_in_time)} - {attendance.check_out_time ? formatTime(attendance.check_out_time) : '--:--'}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-slate-400">Horas</p>
-                          <p className="text-sm font-medium text-slate-200">
-                            {attendance.hours_worked?.toFixed(1) || '0'}h
-                          </p>
-                        </div>
-                        {attendance.early_departure && (
-                          <div className="flex items-center gap-1 px-2 py-1 bg-yellow-900/30 rounded text-xs text-yellow-400">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Temprano</span>
-                          </div>
-                        )}
-                        {attendance.is_overtime && (
-                          <div className="flex items-center gap-1 px-2 py-1 bg-blue-900/30 rounded text-xs text-blue-400">
-                            <Clock className="w-3 h-3" />
-                            <span>+{attendance.overtime_hours?.toFixed(1)}h</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {attendance.notes && (
-                    <div className="mt-2 text-xs text-slate-400 pl-8">
-                      📝 {attendance.notes}
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {selectedDayAttendances.length === 0 && (
-                <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400">No hay registros de asistencia para este día</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
+      <AttendanceEditModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        attendance={selectedEditData?.attendance}
+        workerId={selectedEditData?.workerId || 0}
+        contractId={selectedEditData?.contractId || 0}
+        workerName={selectedEditData?.workerName || ''}
+        date={selectedEditData?.date || ''}
+        onSave={handleEditSave}
+      />
     </div>
   )
 }
-

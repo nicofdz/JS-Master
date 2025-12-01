@@ -4,6 +4,8 @@
 -- =====================================================
 
 -- Actualizar process_worker_payment_v2 para validar que la tarea esté completada
+DROP FUNCTION IF EXISTS public.process_worker_payment_v2(integer, numeric, text, integer[]);
+
 CREATE OR REPLACE FUNCTION public.process_worker_payment_v2(
   p_worker_id integer, 
   p_payment_amount numeric, 
@@ -99,6 +101,7 @@ BEGIN
     tasks_count,
     payment_status,
     notes,
+    contract_type,
     created_by
   ) VALUES (
     p_worker_id,
@@ -107,6 +110,7 @@ BEGIN
     v_tasks_count,
     'completed',
     p_payment_notes,
+    'a_trato',
     auth.uid()
   ) RETURNING id INTO v_payment_id;
   

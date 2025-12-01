@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -17,7 +17,7 @@ const getChileDateTime = () => {
     second: '2-digit',
     hour12: false
   })
-  
+
   const parts = formatter.formatToParts(new Date())
   const date: Record<string, string> = {}
   parts.forEach(part => {
@@ -25,7 +25,7 @@ const getChileDateTime = () => {
       date[part.type] = part.value
     }
   })
-  
+
   // Construir el timestamp sin zona horaria (PostgreSQL lo tratará como local)
   return `${date.year}-${date.month}-${date.day}T${date.hour}:${date.minute}:${date.second}`
 }
@@ -44,7 +44,11 @@ export interface WorkerAttendance {
   is_overtime?: boolean
   overtime_hours?: number | null
   early_departure?: boolean
+  late_arrival?: boolean
+  arrival_reason?: string | null
   notes: string | null
+  payment_percentage?: number
+  is_paid?: boolean
   created_at: string
   updated_at: string
   created_by: string | null
@@ -53,6 +57,7 @@ export interface WorkerAttendance {
   worker_rut?: string
   project_name?: string
   contract_number?: string
+  contract_type?: string
 }
 
 export interface AttendanceFormData {
@@ -66,10 +71,13 @@ export interface AttendanceFormData {
   check_out_time?: string | null
   hours_worked?: number | null
   is_overtime?: boolean
+  late_arrival?: boolean
+  arrival_reason?: string | null
   overtime_hours?: number | null
   early_departure?: boolean
   departure_reason?: string | null
   created_by?: string | null
+  is_paid?: boolean
 }
 
 export function useAttendance() {
@@ -79,7 +87,7 @@ export function useAttendance() {
   const [refreshingStats, setRefreshingStats] = useState(false)
 
   // Cargar asistencias
-  const fetchAttendances = async (date?: string, projectId?: number | null) => {
+  const fetchAttendances = useCallback(async (date?: string, projectId?: number | null) => {
     try {
       setLoading(true)
       setError(null)
@@ -90,7 +98,7 @@ export function useAttendance() {
           *,
           workers!inner(full_name, rut),
           projects(name),
-          contract_history(contract_number)
+          contract_history(contract_number, contract_type)
         `)
 
       // IMPORTANTE: Filtrar por fecha SIEMPRE (obligatorio)
@@ -120,7 +128,8 @@ export function useAttendance() {
         worker_name: item.workers?.full_name || 'Sin nombre',
         worker_rut: item.workers?.rut || '',
         project_name: item.projects?.name || 'General',
-        contract_number: item.contract_history?.contract_number || 'N/A'
+        contract_number: item.contract_history?.contract_number || 'N/A',
+        contract_type: item.contract_history?.contract_type || 'por_dia'
       }))
 
       setAttendances(transformedData)
@@ -131,10 +140,10 @@ export function useAttendance() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Crear o actualizar asistencia
-  const markAttendance = async (data: AttendanceFormData) => {
+  const markAttendance = useCallback(async (data: AttendanceFormData) => {
     try {
       // Buscar registro existente por contract_id y fecha
       const { data: existingAttendance } = await supabase
@@ -146,26 +155,35 @@ export function useAttendance() {
 
       if (existingAttendance) {
         // Actualizar asistencia existente (no cambiamos created_by en actualización)
+        const updatePayload: any = {
+          is_present: data.is_present,
+          notes: data.notes || null,
+          check_in_time: data.check_in_time ?? null,
+          check_out_time: data.is_present ? (data.check_out_time || `${data.attendance_date} 18:00:00`) : null,
+          hours_worked: data.hours_worked || null,
+          is_overtime: data.is_overtime || false,
+          overtime_hours: data.overtime_hours || null,
+          early_departure: data.early_departure || false,
+          departure_reason: data.departure_reason || null,
+          late_arrival: data.late_arrival || false,
+          arrival_reason: data.arrival_reason || null,
+          updated_at: getChileDateTime()
+        }
+
+        // Only update is_paid if it is defined in the data
+        if (data.is_paid !== undefined) {
+          updatePayload.is_paid = data.is_paid
+        }
+
         const { data: updated, error } = await supabase
           .from('worker_attendance')
-          .update({
-            is_present: data.is_present,
-            notes: data.notes || null,
-            check_in_time: data.check_in_time || getChileDateTime(),
-            check_out_time: data.check_out_time || null,
-            hours_worked: data.hours_worked || null,
-            is_overtime: data.is_overtime || false,
-            overtime_hours: data.overtime_hours || null,
-            early_departure: data.early_departure || false,
-            departure_reason: data.departure_reason || null,
-            updated_at: getChileDateTime()
-          })
+          .update(updatePayload)
           .eq('id', existingAttendance.id)
           .select(`
             *,
             workers!inner(full_name, rut),
             projects(name),
-            contract_history!inner(contract_number)
+            contract_history!inner(contract_number, contract_type)
           `)
           .single()
 
@@ -176,38 +194,47 @@ export function useAttendance() {
           worker_name: (updated as any).workers?.full_name || 'Sin nombre',
           worker_rut: (updated as any).workers?.rut || '',
           project_name: (updated as any).projects?.name || 'General',
-          contract_number: (updated as any).contract_history?.contract_number || 'N/A'
+          contract_number: (updated as any).contract_history?.contract_number || 'N/A',
+          contract_type: (updated as any).contract_history?.contract_type || 'por_dia'
         }
 
-        setAttendances(prev => 
+        setAttendances(prev =>
           prev.map(a => a.id === existingAttendance.id ? transformed : a)
         )
         toast.success('Asistencia actualizada')
       } else {
         // Crear nueva asistencia (guardamos created_by)
+        const insertPayload: any = {
+          worker_id: data.worker_id,
+          project_id: data.project_id || null,
+          contract_id: data.contract_id,
+          attendance_date: data.attendance_date,
+          is_present: data.is_present,
+          notes: data.notes || null,
+          check_in_time: data.check_in_time ?? null,
+          check_out_time: data.is_present ? (data.check_out_time || `${data.attendance_date} 18:00:00`) : null,
+          hours_worked: data.hours_worked || null,
+          is_overtime: data.is_overtime || false,
+          overtime_hours: data.overtime_hours || null,
+          early_departure: data.early_departure || false,
+          departure_reason: data.departure_reason || null,
+          late_arrival: data.late_arrival || false,
+          arrival_reason: data.arrival_reason || null,
+          created_by: data.created_by || null
+        }
+
+        if (data.is_paid !== undefined) {
+          insertPayload.is_paid = data.is_paid
+        }
+
         const { data: created, error } = await supabase
           .from('worker_attendance')
-          .insert([{
-            worker_id: data.worker_id,
-            project_id: data.project_id || null,
-            contract_id: data.contract_id,
-            attendance_date: data.attendance_date,
-            is_present: data.is_present,
-            notes: data.notes || null,
-            check_in_time: data.check_in_time || getChileDateTime(),
-            check_out_time: data.check_out_time || null,
-            hours_worked: data.hours_worked || null,
-            is_overtime: data.is_overtime || false,
-            overtime_hours: data.overtime_hours || null,
-            early_departure: data.early_departure || false,
-            departure_reason: data.departure_reason || null,
-            created_by: data.created_by || null
-          }])
+          .insert([insertPayload])
           .select(`
             *,
             workers!inner(full_name, rut),
             projects(name),
-            contract_history!inner(contract_number)
+            contract_history!inner(contract_number, contract_type)
           `)
           .single()
 
@@ -218,7 +245,8 @@ export function useAttendance() {
           worker_name: (created as any).workers?.full_name || 'Sin nombre',
           worker_rut: (created as any).workers?.rut || '',
           project_name: (created as any).projects?.name || 'General',
-          contract_number: (created as any).contract_history?.contract_number || 'N/A'
+          contract_number: (created as any).contract_history?.contract_number || 'N/A',
+          contract_type: (created as any).contract_history?.contract_type || 'por_dia'
         }
 
         setAttendances(prev => [transformed, ...prev])
@@ -229,10 +257,10 @@ export function useAttendance() {
       toast.error(err.message || 'Error al registrar asistencia')
       throw err
     }
-  }
+  }, [])
 
   // Eliminar asistencia
-  const deleteAttendance = async (id: number) => {
+  const deleteAttendance = useCallback(async (id: number) => {
     try {
       const { error } = await supabase
         .from('worker_attendance')
@@ -248,10 +276,10 @@ export function useAttendance() {
       toast.error(err.message || 'Error al eliminar asistencia')
       throw err
     }
-  }
+  }, [])
 
   // Registrar checkout/salida de trabajador
-  const checkoutWorker = async (attendanceId: number, checkoutTime: string, departureReason?: string) => {
+  const checkoutWorker = useCallback(async (attendanceId: number, checkoutTime: string, departureReason?: string) => {
     try {
       // Parsear las horas para calcular horas trabajadas
       const { data: attendance, error: fetchError } = await supabase
@@ -264,19 +292,19 @@ export function useAttendance() {
 
       const checkInTime = new Date(attendance.check_in_time)
       const checkOutTimeDate = new Date(checkoutTime)
-      
+
       // Calcular horas trabajadas
       const diffMs = checkOutTimeDate.getTime() - checkInTime.getTime()
       const hoursWorked = diffMs / (1000 * 60 * 60)
-      
+
       // Hora de salida estándar: 18:00
       const standardCheckout = new Date(checkOutTimeDate)
       standardCheckout.setHours(18, 0, 0, 0)
-      
+
       // Determinar si es salida temprana o horas extras
       const isEarlyDeparture = checkOutTimeDate < standardCheckout
       const isOvertime = checkOutTimeDate > standardCheckout
-      
+
       // Calcular horas extras (después de las 18:00)
       let overtimeHours = 0
       if (isOvertime) {
@@ -314,20 +342,20 @@ export function useAttendance() {
         contract_number: (updated as any).contract_history?.contract_number || 'N/A'
       }
 
-      setAttendances(prev => 
+      setAttendances(prev =>
         prev.map(a => a.id === attendanceId ? transformed : a)
       )
-      
+
       toast.success(isEarlyDeparture ? 'Salida temprana registrada' : 'Salida registrada')
     } catch (err: any) {
       console.error('Error checking out worker:', err)
       toast.error(err.message || 'Error al registrar salida')
       throw err
     }
-  }
+  }, [])
 
   // Obtener estadísticas de asistencia de un trabajador
-  const getWorkerAttendanceStats = async (workerId: number, month: number, year: number) => {
+  const getWorkerAttendanceStats = useCallback(async (workerId: number, month: number, year: number) => {
     try {
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`
       const endDate = new Date(year, month, 0).toISOString().split('T')[0]
@@ -350,13 +378,13 @@ export function useAttendance() {
       console.error('Error fetching worker stats:', err)
       return { totalDays: 0, dates: [] }
     }
-  }
+  }, [])
 
   // Refrescar estadísticas de asistencia (vista materializada)
-  const refreshAttendanceStats = async () => {
+  const refreshAttendanceStats = useCallback(async () => {
     try {
       setRefreshingStats(true)
-      
+
       const { error } = await supabase
         .rpc('refresh_attendance_stats')
 
@@ -371,7 +399,7 @@ export function useAttendance() {
     } finally {
       setRefreshingStats(false)
     }
-  }
+  }, [])
 
   // NO cargar automáticamente - dejar que el componente controle la carga
   // useEffect(() => {
@@ -388,6 +416,7 @@ export function useAttendance() {
     deleteAttendance,
     checkoutWorker,
     getWorkerAttendanceStats,
-    refreshAttendanceStats
+    refreshAttendanceStats,
+    getChileDateTime
   }
 }
