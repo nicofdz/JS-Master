@@ -19,18 +19,14 @@ export default function PagosPage() {
       const netAmount = inv.net_amount || 0
       const ivaAmount = inv.iva_amount || 0
       
-<<<<<<< HEAD
-      // PPM (Neto con descuento del 6%)
-      const netAfterDiscount = netAmount * 0.94
+      // Total factura = Neto + IVA
+      const totalFactura = netAmount + ivaAmount
       
-      // Total real = PPM - IVA
-=======
-      // Neto con descuento del 6%
-      const netAfterDiscount = netAmount * 0.94
+      // PPM = Total factura * 0.06
+      const ppm = totalFactura * 0.06
       
-      // Total real = (Neto - 6%) - IVA
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
-      const realIncome = netAfterDiscount - ivaAmount
+      // Total real = Neto - PPM
+      const realIncome = netAmount - ppm
       
       totalRealIncome += realIncome
     })

@@ -50,13 +50,10 @@ export default function ApartamentosPage() {
   const [selectedFloorForApartment, setSelectedFloorForApartment] = useState<{ floorId: number; towerId: number; projectId: number } | null>(null)
   const [expandedApartments, setExpandedApartments] = useState<Set<number>>(new Set())
   const [selectedApartmentForTasks, setSelectedApartmentForTasks] = useState<any>(null)
-<<<<<<< HEAD
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set())
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
   const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false)
-=======
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 
   // Resetear filtro de torre cuando cambie el proyecto
   useEffect(() => {

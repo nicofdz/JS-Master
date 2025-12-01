@@ -22,7 +22,6 @@ import {
   SquareStack, // Icono para Apartamentos
   CheckSquare, // Icono para Tareas
   DollarSign, // Icono para Pagos
-<<<<<<< HEAD
   ClipboardCheck, // Icono para Asistencia
   Wrench, // Icono para Herramientas
   Boxes, // Icono para Materiales
@@ -32,9 +31,6 @@ import {
   Package, // Icono para sección Inventario
   CreditCard, // Icono para sección Finanzas
   PieChart // Icono para sección Reportes
-=======
-  ClipboardCheck // Icono para Asistencia
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 

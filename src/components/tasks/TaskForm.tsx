@@ -504,7 +504,6 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
         <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700 mb-2">
           Asignado a {selectedProjectId && getAvailableWorkersForProject && <span className="text-xs text-gray-500">(con contrato activo)</span>}
         </label>
-<<<<<<< HEAD
         {loadingWorkers ? (
           <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
             Cargando trabajadores...
@@ -587,29 +586,6 @@ export function TaskForm({ task, apartmentId, apartments = [], users = [], proje
             </div>
           </div>
         )}
-=======
-        <select
-          id="assigned_to"
-          {...register('assigned_to', { valueAsNumber: true })}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-        >
-          <option value="">Sin asignar</option>
-          {users.map((user) => {
-            // Manejo robusto del tipo de contrato
-            let contractType = 'A Trato' // Por defecto A Trato
-            if (user.contract_type === 'por_dia') {
-              contractType = 'Por Día'
-            } else if (user.contract_type === 'a_trato') {
-              contractType = 'A Trato'
-            }
-            return (
-              <option key={user.id} value={user.id}>
-                {user.full_name} - {contractType}
-              </option>
-            )
-          })}
-        </select>
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
       </div>
 
       {/* Fechas */}
