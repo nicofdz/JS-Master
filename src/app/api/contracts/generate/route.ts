@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
     const { createReport } = await import('docx-templates')
     console.log('Dependencias importadas exitosamente')
 
-    // Rutas a las plantillas (en src/templates - funciona en local y Vercel)
-    const contractTemplatePath = path.join(process.cwd(), 'src/templates/contracts/ContratoTemplate.docx')
-    const hoursTemplatePath = path.join(process.cwd(), 'src/templates/contracts/HorasTemplate .docx')
+    // Rutas a las plantillas (en public/templates - accesible en Vercel)
+    const contractTemplatePath = path.join(process.cwd(), 'public/templates/contracts/ContratoTemplate.docx')
+    const hoursTemplatePath = path.join(process.cwd(), 'public/templates/contracts/HorasTemplate .docx')
     
     console.log('Buscando plantillas en:', {
       contractTemplatePath,

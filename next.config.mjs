@@ -12,17 +12,6 @@ const nextConfig = {
       fs: false,
     };
     
-    // Incluir archivos .docx en el build
-    if (isServer) {
-      config.module.rules.push({
-        test: /\.docx$/,
-        type: 'asset/resource',
-        generator: {
-          filename: 'static/templates/[name][ext]'
-        }
-      });
-    }
-    
     return config;
   },
   // Configuración experimental para manejar workers
