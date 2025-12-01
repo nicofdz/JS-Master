@@ -427,11 +427,7 @@ export function DailyPaymentSummary({ totalRealIncome = 0 }: DailyPaymentSummary
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-emerald-400 font-semibold">
-<<<<<<< HEAD
-                          ${(payment.daily_rate as any).toLocaleString('es-CL')}
-=======
-                          ${payment.daily_rate.toLocaleString('es-CL')}
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
+                          ${(payment as any).daily_rate.toLocaleString('es-CL')}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

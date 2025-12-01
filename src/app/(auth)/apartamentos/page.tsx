@@ -534,8 +534,6 @@ export default function ApartamentosPage() {
         ]}
       />
 
-<<<<<<< HEAD
-
       {/* Vista Jerárquica de Departamentos */}
       {filteredApartments.length === 0 ? (
         <div className="text-center py-12">
@@ -558,7 +556,6 @@ export default function ApartamentosPage() {
           )}
         </div>
       ) : (
-<<<<<<< HEAD
         <div id="apartments-list" className="space-y-6">
           {(() => {
             // Agrupar departamentos por proyecto > torre > piso
@@ -956,8 +953,7 @@ export default function ApartamentosPage() {
                   </div>
 
                   {/* Estado */}
-<<<<<<< HEAD
-                                                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${
                       getStatusColor(apartment.status)
                     }`}>
                       {getStatusIcon(apartment.status)}
@@ -965,9 +961,8 @@ export default function ApartamentosPage() {
                     </span>
 
                   {/* Progreso */}
-                                                          <div className="flex items-center gap-2 flex-1 max-w-xs">
-                                                            <div className="flex-1 bg-slate-700 rounded-full h-2">
-=======
+                  <div className="flex items-center gap-2 flex-1 max-w-xs">
+                    <div className="flex-1 bg-slate-700 rounded-full h-2">
                   <div className="mb-3">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                       getStatusColor(apartment.status)
@@ -991,18 +986,17 @@ export default function ApartamentosPage() {
                         style={{ width: `${apartment.progress_percentage || 0}%` }}
                       ></div>
                     </div>
-<<<<<<< HEAD
-                                                            <span className="text-xs text-slate-300 font-medium w-10 text-right">
-                                                              {apartment.progress_percentage || 0}%
-                                                            </span>
+                    <span className="text-xs text-slate-300 font-medium w-10 text-right">
+                      {apartment.progress_percentage || 0}%
+                    </span>
                   </div>
 
-                                                          {/* Tareas */}
-                                                          <div className="flex items-center gap-2 text-sm">
-                                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                                            <span className="text-slate-300 font-medium">
-                                                              {completedTasks}/{apartmentTasks.length}
-                                                            </span>
+                  {/* Tareas */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                    <span className="text-slate-300 font-medium">
+                      {completedTasks}/{apartmentTasks.length}
+                    </span>
                                                           </div>
 
                                                           {/* Trabajadores */}
@@ -1060,18 +1054,13 @@ export default function ApartamentosPage() {
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button
-<<<<<<< HEAD
-                                                            variant="ghost"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleBlockApartment(apartment.id, apartment.status)}
-                                                            className={`${
+                      className={`${
                         apartment.status === 'blocked' 
-                                                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30' 
-                                                                : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
-=======
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleBlockApartment(apartment.id, apartment.status)}
+                          ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30' 
+                          : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
                       className={`flex-1 ${
                         apartment.status === 'blocked' 
                           ? 'text-emerald-400 border-emerald-600 hover:bg-emerald-900/30' 
@@ -1087,33 +1076,25 @@ export default function ApartamentosPage() {
                       )}
                     </Button>
                     <Button
-<<<<<<< HEAD
-                                                            variant="ghost"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(apartment.id)}
-                                                            className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
-=======
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(apartment.id)}
-                      className="flex-1 text-red-400 border-red-600 hover:bg-red-900/30"
->>>>>>> 5b12c23a03c59a530b62e17c08f8d6ba5d623620
+                      className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-<<<<<<< HEAD
-                                                          <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                              e.stopPropagation()
-                                                              setSelectedApartmentForTasks(apartment)
-                                                            }}
-                                                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-                                                            title="Ver detalles del departamento"
-                                                          >
-                                                            <Eye className="w-4 h-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedApartmentForTasks(apartment)
+                      }}
+                      className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                      title="Ver detalles del departamento"
+                    >
+                      <Eye className="w-4 h-4" />
                     </Button>
                   </div>
                                                       </div>
@@ -1165,7 +1146,6 @@ export default function ApartamentosPage() {
         initialProjectId={selectedFloorForApartment?.projectId}
       />
 
-<<<<<<< HEAD
       {/* Modal de Tareas del Apartamento */}
       {selectedApartmentForTasks && (
         <ApartmentTasksModal
@@ -1176,7 +1156,7 @@ export default function ApartamentosPage() {
         />
       )}
 
-      {/* Modal de Plantillas de Departamentos */}
+      {/* Modal de Plantillas de Departamentos */}}
       <ApartmentTemplatesModal
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}
