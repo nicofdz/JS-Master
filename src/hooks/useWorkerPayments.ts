@@ -42,21 +42,26 @@ export function useWorkerPayments() {
 
       if (viewError) throw viewError
 
-      // Obtener contract_type de cada trabajador
+      // Obtener contract_type del contrato activo de cada trabajador
       const workerIds = viewData?.map(w => w.worker_id) || []
-      const { data: workersData, error: workersError } = await supabase
-        .from('workers')
-        .select('id, contract_type')
-        .in('id', workerIds)
+      const { data: contractsData, error: contractsError } = await supabase
+        .from('contract_history')
+        .select('worker_id, contract_type')
+        .in('worker_id', workerIds)
+        .eq('status', 'activo')
+        .eq('is_active', true)
 
-      if (workersError) throw workersError
+      if (contractsError) {
+        console.warn('Error fetching contracts:', contractsError)
+        // Continuar sin contract_type si falla
+      }
 
       // Combinar los datos
       const data = viewData?.map(payment => {
-        const worker = workersData?.find(w => w.id === payment.worker_id)
+        const contract = contractsData?.find(c => c.worker_id === payment.worker_id)
         return {
           ...payment,
-          contract_type: worker?.contract_type || 'a_trato'
+          contract_type: contract?.contract_type || 'a_trato'
         }
       })
 
