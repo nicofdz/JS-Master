@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { InvoiceIncome } from '@/hooks/useInvoices'
+import toast from 'react-hot-toast'
 
 interface InvoiceStatusButtonsProps {
   invoice: InvoiceIncome
@@ -19,7 +20,7 @@ export function InvoiceStatusButtons({ invoice, onStatusChange }: InvoiceStatusB
       await onStatusChange(invoice.id, newStatus)
     } catch (error) {
       console.error('Error changing status:', error)
-      alert('Error al cambiar el estado')
+      toast.error('Error al cambiar el estado')
     } finally {
       setIsLoading(false)
     }
@@ -45,25 +46,25 @@ export function InvoiceStatusButtons({ invoice, onStatusChange }: InvoiceStatusB
 
   const getAvailableStatuses = (currentStatus: string, isProcessed: boolean) => {
     const statuses = []
-    
+
     if (currentStatus === 'pending') {
       statuses.push({ value: 'processed', label: 'Marcar como Procesada', color: 'bg-blue-50 hover:bg-blue-100 text-blue-700' })
       statuses.push({ value: 'cancelled', label: 'Cancelar', color: 'bg-red-50 hover:bg-red-100 text-red-700' })
     }
-    
+
     if (currentStatus === 'processed') {
       statuses.push({ value: 'paid', label: 'Marcar como Pagada', color: 'bg-green-50 hover:bg-green-100 text-green-700' })
       statuses.push({ value: 'pending', label: 'Volver a Pendiente', color: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700' })
     }
-    
+
     if (currentStatus === 'paid') {
       statuses.push({ value: 'processed', label: 'Volver a Procesada', color: 'bg-blue-50 hover:bg-blue-100 text-blue-700' })
     }
-    
+
     if (currentStatus === 'cancelled') {
       statuses.push({ value: 'pending', label: 'Reactivar', color: 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700' })
     }
-    
+
     return statuses
   }
 

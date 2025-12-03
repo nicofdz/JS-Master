@@ -16,15 +16,25 @@ interface LoanHistoryProps {
   workers: Array<{ id: number; full_name: string }>
   projects: Array<{ id: number; name: string }>
   onReturn: (loanId: number, returnDetails: string) => void | Promise<void>
+  statusFilter: string
+  monthFilter: string
+  yearFilter: string
+  workerFilter: string
+  projectFilter: string
 }
 
-export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryProps) {
+export function LoanHistory({
+  loans,
+  workers,
+  projects,
+  onReturn,
+  statusFilter,
+  monthFilter,
+  yearFilter,
+  workerFilter,
+  projectFilter
+}: LoanHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [monthFilter, setMonthFilter] = useState('all')
-  const [yearFilter, setYearFilter] = useState('all')
-  const [workerFilter, setWorkerFilter] = useState('all')
-  const [projectFilter, setProjectFilter] = useState('all')
   const [returnDetails, setReturnDetails] = useState('')
   const [selectedLoan, setSelectedLoan] = useState<number | null>(null)
 
@@ -54,42 +64,42 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
   ]
 
   const filteredLoans = loans.filter(loan => {
-    const matchesSearch = 
+    const matchesSearch =
       (loan.tool_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (loan.borrower_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (loan.lender_name || '').toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = 
+
+    const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && loan.return_date === null) ||
       (statusFilter === 'returned' && loan.return_date !== null)
-    
+
     // Filtro por mes
     let matchesMonth = true
     if (monthFilter !== 'all') {
       const loanMonth = new Date(loan.loan_date).getMonth() + 1
       matchesMonth = loanMonth.toString() === monthFilter
     }
-    
+
     // Filtro por año
     let matchesYear = true
     if (yearFilter !== 'all') {
       const loanYear = new Date(loan.loan_date).getFullYear()
       matchesYear = loanYear.toString() === yearFilter
     }
-    
+
     // Filtro por trabajador
     let matchesWorker = true
     if (workerFilter !== 'all') {
       matchesWorker = loan.borrower_id.toString() === workerFilter
     }
-    
+
     // Filtro por proyecto
     let matchesProject = true
     if (projectFilter !== 'all') {
       matchesProject = loan.project_id?.toString() === projectFilter
     }
-    
+
     return matchesSearch && matchesStatus && matchesMonth && matchesYear && matchesWorker && matchesProject
   })
 
@@ -190,68 +200,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
             />
           </div>
         </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-40"
-          >
-            <option value="all">Todos los estados</option>
-            <option value="active">Activos</option>
-            <option value="returned">Devueltos</option>
-          </Select>
-          
-          <Select
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            className="w-36"
-          >
-            {months.map(month => (
-              <option key={month.value} value={month.value}>
-                {month.label}
-              </option>
-            ))}
-          </Select>
-          
-          <Select
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
-            className="w-32"
-          >
-            {years.map(year => (
-              <option key={year.value} value={year.value}>
-                {year.label}
-              </option>
-            ))}
-          </Select>
-          
-          <Select
-            value={workerFilter}
-            onChange={(e) => setWorkerFilter(e.target.value)}
-            className="w-48"
-          >
-            <option value="all">Todos los trabajadores</option>
-            {workers.map(worker => (
-              <option key={worker.id} value={worker.id.toString()}>
-                {worker.full_name}
-              </option>
-            ))}
-          </Select>
-          
-          <Select
-            value={projectFilter}
-            onChange={(e) => setProjectFilter(e.target.value)}
-            className="w-48"
-          >
-            <option value="all">Todos los proyectos</option>
-            {projects.map(project => (
-              <option key={project.id} value={project.id.toString()}>
-                {project.name}
-              </option>
-            ))}
-          </Select>
-        </div>
+
       </div>
 
       {/* Loans List */}
@@ -261,13 +210,13 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {loan.tool_name}
-                  </h3>
-                  {getStatusBadge(loan)}
-                </div>
-                  
+                  <div className="flex items-center space-x-3 mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {loan.tool_name}
+                    </h3>
+                    {getStatusBadge(loan)}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                     <div className="flex items-center">
                       <User className="w-4 h-4 text-gray-400 mr-2" />
@@ -276,7 +225,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
                         <p className="text-sm text-gray-900">{loan.borrower_name}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <User className="w-4 h-4 text-gray-400 mr-2" />
                       <div>
@@ -284,7 +233,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
                         <p className="text-sm text-gray-900">{loan.lender_name}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 text-gray-400 mr-2" />
                       <div>
@@ -292,7 +241,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
                         <p className="text-sm text-gray-900">{formatDate(loan.loan_date)}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <ArrowLeft className="w-4 h-4 text-gray-400 mr-2" />
                       <div>
@@ -300,7 +249,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
                         <p className="text-sm text-gray-900">{formatDate(loan.return_date)}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center">
                       <Wrench className="w-4 h-4 text-gray-400 mr-2" />
                       <div>
@@ -309,7 +258,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
                       </div>
                     </div>
                   </div>
-                  
+
                   {loan.return_details && (
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-1">Detalles de Devolución</p>
@@ -319,7 +268,7 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
                     </div>
                   )}
                 </div>
-                
+
                 {loan.return_date === null && (
                   <div className="ml-4">
                     {selectedLoan === loan.id ? (
@@ -373,11 +322,13 @@ export function LoanHistory({ loans, workers, projects, onReturn }: LoanHistoryP
         ))}
       </div>
 
-      {filteredLoans.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No se encontraron préstamos con los filtros aplicados.</p>
-        </div>
-      )}
-    </div>
+      {
+        filteredLoans.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No se encontraron préstamos con los filtros aplicados.</p>
+          </div>
+        )
+      }
+    </div >
   )
 }

@@ -9,21 +9,22 @@ import { TaskHierarchyV2 } from '@/components/tasks-v2/TaskHierarchyV2'
 import { TaskFormModalV2 } from '@/components/tasks-v2/TaskFormModalV2'
 import { DeletedTasksList } from '@/components/tasks-v2/DeletedTasksList'
 import { TaskTemplatesModal } from '@/components/tasks-v2/TaskTemplatesModal'
-import { Clock, Play, CheckCircle, Lock, AlertCircle, Layers, Trash2, CheckSquare, FileText } from 'lucide-react'
+import { Clock, Play, CheckCircle, Lock, AlertCircle, Layers, Trash2, CheckSquare, FileText, Filter, XCircle } from 'lucide-react'
+import { TaskFiltersSidebar } from '@/components/tasks-v2/TaskFiltersSidebar'
 import { useTasksV2 } from '@/hooks'
 import { useProjectFilter } from '@/hooks/useProjectFilter'
 import { formatApartmentNumber } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function TareasPage() {
-  const { 
-    tasks, 
+  const {
+    tasks,
     projects,
-    users, 
-    floors, 
-    loading, 
-    error, 
-    taskStats, 
+    users,
+    floors,
+    loading,
+    error,
+    taskStats,
     refreshStats,
     getWorkersForProject,
     refreshTasks,
@@ -31,9 +32,9 @@ export default function TareasPage() {
     getDeletedTasksCount,
     restoreTask
   } = useTasksV2()
-  
+
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
-  
+
   const [activeTab, setActiveTab] = useState<'active' | 'trash'>('active')
   const [searchTerm, setSearchTerm] = useState('')
   const [workerFilter, setWorkerFilter] = useState<string>('all')
@@ -48,6 +49,7 @@ export default function TareasPage() {
   const [deletedTasks, setDeletedTasks] = useState<any[]>([])
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [deletedTasksCount, setDeletedTasksCount] = useState(0)
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
 
   // Cargar conteo de tareas eliminadas al iniciar
   useEffect(() => {
@@ -167,7 +169,7 @@ export default function TareasPage() {
 
       try {
         const workers = await getWorkersForProject(Number(selectedProjectId))
-        
+
         // Solo actualizar si este proyecto sigue siendo el seleccionado
         if (!isCancelled && currentProjectId === selectedProjectId) {
           setProjectWorkers(workers || [])
@@ -212,11 +214,11 @@ export default function TareasPage() {
   // Obtener torres únicas del proyecto seleccionado (desde las tareas que ya tienen tower_id y tower_number)
   const availableTowers = useMemo(() => {
     if (!selectedProjectId || selectedProjectId === 'all') return []
-    
+
     // Obtener torres únicas desde las tareas del proyecto
     const projectTasks = tasks.filter(t => t.project_id?.toString() === selectedProjectId)
     const uniqueTowersMap = new Map<number, { id: number; number: number }>()
-    
+
     projectTasks.forEach(task => {
       if (task.tower_id && task.tower_number) {
         if (!uniqueTowersMap.has(task.tower_id)) {
@@ -227,7 +229,7 @@ export default function TareasPage() {
         }
       }
     })
-    
+
     return Array.from(uniqueTowersMap.values()).sort((a, b) => a.number - b.number)
   }, [tasks, selectedProjectId])
 
@@ -235,8 +237,8 @@ export default function TareasPage() {
   const availableFloors = useMemo(() => {
     if (!selectedProjectId || selectedProjectId === 'all') return []
     if (towerFilter === 'all') return []
-    
-    return floors.filter(f => 
+
+    return floors.filter(f =>
       f.project_id?.toString() === selectedProjectId &&
       f.tower_id?.toString() === towerFilter
     ).sort((a, b) => a.floor_number - b.floor_number)
@@ -252,16 +254,16 @@ export default function TareasPage() {
   // Obtener apartamentos del piso seleccionado
   const availableApartments = useMemo(() => {
     if (floorFilter === 'all') return []
-    
+
     return tasks
       .filter(t => t.floor_id?.toString() === floorFilter)
-      .map(t => ({ 
-        id: t.apartment_id, 
+      .map(t => ({
+        id: t.apartment_id,
         number: formatApartmentNumber(t.apartment_code, t.apartment_number || ''),
         code: t.apartment_code,
         num: t.apartment_number
       }))
-      .filter((apt, index, self) => 
+      .filter((apt, index, self) =>
         index === self.findIndex(a => a.id === apt.id)
       )
       .sort((a, b) => {
@@ -276,12 +278,12 @@ export default function TareasPage() {
     if (!selectedProjectId || selectedProjectId === 'all') {
       return users
     }
-    
+
     // Si está cargando, retornar array vacío para evitar mostrar trabajadores viejos
     if (loadingWorkers) {
       return []
     }
-    
+
     // Usar trabajadores cargados con contratos activos
     return projectWorkers
   }, [projectWorkers, users, selectedProjectId, loadingWorkers])
@@ -290,30 +292,30 @@ export default function TareasPage() {
   const filteredTasks = tasks.filter(task => {
     const fullApartmentNumber = formatApartmentNumber(task.apartment_code, task.apartment_number || '')
     const matchesSearch = task.task_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         fullApartmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (task.apartment_code?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         (task.apartment_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         (task.project_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    
-    const matchesProject = !selectedProjectId || selectedProjectId === 'all' || 
-                          task.project_id?.toString() === selectedProjectId
-    
-    const matchesTower = towerFilter === 'all' || 
-                        task.tower_id?.toString() === towerFilter
-    
+      fullApartmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (task.apartment_code?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (task.apartment_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (task.project_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+
+    const matchesProject = !selectedProjectId || selectedProjectId === 'all' ||
+      task.project_id?.toString() === selectedProjectId
+
+    const matchesTower = towerFilter === 'all' ||
+      task.tower_id?.toString() === towerFilter
+
     const matchesFloor = floorFilter === 'all' || task.floor_id?.toString() === floorFilter
-    
+
     const matchesApartment = apartmentFilter === 'all' || task.apartment_id?.toString() === apartmentFilter
-    
-    const matchesWorker = workerFilter === 'all' || 
-                         task.workers.some(w => w.id.toString() === workerFilter)
-    
-    const matchesStatus = statusFilter === 'all' 
-      ? true 
+
+    const matchesWorker = workerFilter === 'all' ||
+      task.workers.some(w => w.id.toString() === workerFilter)
+
+    const matchesStatus = statusFilter === 'all'
+      ? true
       : statusFilter === 'delayed'
-      ? task.is_delayed === true
-      : task.status === statusFilter.replace('-', '_')
-    
+        ? task.is_delayed === true
+        : task.status === statusFilter.replace('-', '_')
+
     return matchesSearch && matchesProject && matchesTower && matchesFloor && matchesApartment && matchesWorker && matchesStatus
   })
 
@@ -340,7 +342,7 @@ export default function TareasPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full px-4 py-8">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Tareas</h1>
@@ -352,14 +354,14 @@ export default function TareasPage() {
         <h2 className="text-2xl font-semibold text-gray-800">Listado de Tareas</h2>
         {activeTab === 'active' && (
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center"
             >
               <Plus className="w-5 h-5 mr-2" />
               Nueva Tarea
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowTemplatesModal(true)}
               variant="outline"
               className="flex items-center"
@@ -373,125 +375,78 @@ export default function TareasPage() {
 
       {/* Filtros - Solo mostrar en tab activo */}
       {activeTab === 'active' && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Filtros y Búsqueda</CardTitle>
-          </CardHeader>
-          <CardContent>
-          {/* Primera fila */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
             {/* Búsqueda */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar por nombre, apartamento..."
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg w-full text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-
-            {/* Filtro por proyecto */}
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900"
-                value={selectedProjectId || 'all'}
-                onChange={(e) => setSelectedProjectId(e.target.value === 'all' ? null : e.target.value)}
-              >
-                <option value="all">Todos los proyectos</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id.toString()}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtro por trabajador */}
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900"
-                value={workerFilter}
-                onChange={(e) => setWorkerFilter(e.target.value)}
-              >
-                <option value="all">Todos los trabajadores</option>
-                {availableWorkers.map(worker => (
-                  <option key={worker.id} value={worker.id.toString()}>
-                    {worker.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
-          
-          {/* Segunda fila - Filtros de estructura */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Filtro por torre */}
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                value={towerFilter}
-                onChange={(e) => setTowerFilter(e.target.value)}
-                disabled={!selectedProjectId || selectedProjectId === 'all'}
-              >
-                <option value="all">
-                  {!selectedProjectId || selectedProjectId === 'all' ? 'Selecciona un proyecto primero' : 'Todas las torres'}
-                </option>
-                {availableTowers.map(tower => (
-                  <option key={tower.id} value={tower.id.toString()}>
-                    Torre {tower.number} {(tower as any).name ? `- ${(tower as any).name}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            {/* Filtro por piso */}
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                value={floorFilter}
-                onChange={(e) => setFloorFilter(e.target.value)}
-                disabled={towerFilter === 'all'}
-              >
-                <option value="all">
-                  {towerFilter === 'all' ? 'Selecciona una torre primero' : 'Todos los pisos'}
-                </option>
-                {availableFloors.map(floor => (
-                  <option key={floor.id} value={floor.id.toString()}>
-                    Piso {floor.floor_number}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsFilterSidebarOpen(true)}
+              className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <Filter className="w-5 h-5" />
+              Filtros
+              {(selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' ? (
+                <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                  !
+                </span>
+              ) : null}
+            </Button>
 
-            {/* Filtro por apartamento */}
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                value={apartmentFilter}
-                onChange={(e) => setApartmentFilter(e.target.value)}
-                disabled={floorFilter === 'all'}
+            {((selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all') && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSelectedProjectId(null)
+                  setWorkerFilter('all')
+                  setTowerFilter('all')
+                  setFloorFilter('all')
+                  setApartmentFilter('all')
+                  setStatusFilter('all')
+                }}
+                className="text-slate-400 hover:text-white hover:bg-slate-800"
+                title="Limpiar filtros"
               >
-                <option value="all">
-                  {floorFilter === 'all' ? 'Selecciona un piso primero' : 'Todos los apartamentos'}
-                </option>
-                {availableApartments.map(apt => (
-                  <option key={apt.id} value={apt.id.toString()}>
-                    Depto {apt.number}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <XCircle className="w-5 h-5" />
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
       )}
+
+      <TaskFiltersSidebar
+        isOpen={isFilterSidebarOpen}
+        onClose={() => setIsFilterSidebarOpen(false)}
+        currentProjectFilter={selectedProjectId || 'all'}
+        onProjectFilterChange={(val) => setSelectedProjectId(val === 'all' ? null : val)}
+        currentWorkerFilter={workerFilter}
+        onWorkerFilterChange={setWorkerFilter}
+        currentTowerFilter={towerFilter}
+        onTowerFilterChange={setTowerFilter}
+        currentFloorFilter={floorFilter}
+        onFloorFilterChange={setFloorFilter}
+        currentApartmentFilter={apartmentFilter}
+        onApartmentFilterChange={setApartmentFilter}
+
+        projects={projects}
+        workers={availableWorkers}
+        towers={availableTowers}
+        floors={availableFloors}
+        apartments={availableApartments}
+
+      />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
@@ -502,11 +457,10 @@ export default function TareasPage() {
               const savedFilters = JSON.parse(localStorage.getItem('tareas-filters') || '{}')
               localStorage.setItem('tareas-filters', JSON.stringify({ ...savedFilters, activeTab: 'active' }))
             }}
-            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === 'active'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'active'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <CheckSquare className="w-4 h-4" />
             Tareas Activas
@@ -517,11 +471,10 @@ export default function TareasPage() {
               const savedFilters = JSON.parse(localStorage.getItem('tareas-filters') || '{}')
               localStorage.setItem('tareas-filters', JSON.stringify({ ...savedFilters, activeTab: 'trash' }))
             }}
-            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-              activeTab === 'trash'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'trash'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <Trash2 className="w-4 h-4" />
             Papelera ({activeTab === 'trash' ? deletedTasks.length : deletedTasksCount})
@@ -597,25 +550,25 @@ export default function TareasPage() {
 
           {/* Jerarquía de tareas */}
           <div id="tasks-list">
-            <TaskHierarchyV2 
-              tasks={filteredTasks} 
+            <TaskHierarchyV2
+              tasks={filteredTasks}
               floors={floors}
               onTaskUpdate={async () => {
-              if (refreshTasks) {
-                refreshTasks()
-              }
-              if (refreshStats) {
-                const projectId = selectedProjectId && selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
-                refreshStats(projectId)
-              }
-              // Actualizar conteo de tareas eliminadas
-              await handleTaskDeleted()
-            }}
+                if (refreshTasks) {
+                  refreshTasks()
+                }
+                if (refreshStats) {
+                  const projectId = selectedProjectId && selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined
+                  refreshStats(projectId)
+                }
+                // Actualizar conteo de tareas eliminadas
+                await handleTaskDeleted()
+              }}
             />
           </div>
         </>
       ) : (
-        <DeletedTasksList 
+        <DeletedTasksList
           deletedTasks={deletedTasks}
           loading={loadingDeleted}
           onRestore={handleRestoreTask}

@@ -8,6 +8,9 @@ import { InvoiceList } from '@/components/invoices/InvoiceList'
 import { InvoiceStats } from '@/components/invoices/InvoiceStats'
 import { InvoiceChart } from '@/components/invoices/InvoiceChart'
 import { InvoiceEditModal } from '@/components/invoices/InvoiceEditModal'
+import { InvoiceFiltersSidebar } from '@/components/invoices/InvoiceFiltersSidebar'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Filter, X, XCircle } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
 import { useInvoices } from '@/hooks/useInvoices'
 import { InvoiceIncome } from '@/hooks/useInvoices'
@@ -23,6 +26,8 @@ export default function FacturasPage() {
   const [projectFilter, setProjectFilter] = useState('all')
   const [chartYear, setChartYear] = useState(0)
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'all' | 'processed' | 'pending'>('all')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [invoiceToDelete, setInvoiceToDelete] = useState<number | null>(null)
 
   const {
     invoices,
@@ -164,6 +169,9 @@ export default function FacturasPage() {
       const projectId = projectFilter !== 'all' ? parseInt(projectFilter) : null
       if (projectId && inv.project_id !== projectId) return false
 
+      // Filtro por estado
+      if (invoiceStatusFilter !== 'all' && inv.status !== invoiceStatusFilter) return false
+
       const invoiceDate = new Date(inv.issue_date)
 
       // Si se selecciona "all" en meses, mostrar todos los meses del año
@@ -276,15 +284,27 @@ export default function FacturasPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta factura?')) {
+    setInvoiceToDelete(id)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (invoiceToDelete) {
       try {
-        await deleteInvoice(id)
+        await deleteInvoice(invoiceToDelete)
         await refreshIncomeTracking()
         toast.success('Factura eliminada exitosamente')
       } catch (error) {
         toast.error('Error al eliminar la factura')
       }
     }
+    setShowDeleteConfirm(false)
+    setInvoiceToDelete(null)
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false)
+    setInvoiceToDelete(null)
   }
 
   const handleViewPDF = (url: string) => {
@@ -312,7 +332,7 @@ export default function FacturasPage() {
   }
 
 
-  const [showFilters, setShowFilters] = useState(true)
+  const [showFilters, setShowFilters] = useState(false)
   const [showChart, setShowChart] = useState(true)
 
   if (loading) {
@@ -348,94 +368,56 @@ export default function FacturasPage() {
     <div className="p-4 w-full h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center mb-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-slate-100">
-            Gestión de Facturas
-          </h1>
-          <div className="flex gap-2">
+        <h1 className="text-2xl font-bold text-slate-100">
+          Gestión de Facturas
+        </h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(true)}
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+            {(projectFilter !== 'all' || selectedMonth !== 'all' || selectedYear !== 0 || invoiceStatusFilter !== 'all') && (
+              <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                !
+              </span>
+            )}
+          </Button>
+          {(projectFilter !== 'all' || selectedMonth !== 'all' || selectedYear !== 0 || invoiceStatusFilter !== 'all') && (
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`text-xs ${showFilters ? 'bg-slate-700' : ''}`}
+              variant="ghost"
+              onClick={() => {
+                setProjectFilter('all')
+                setSelectedMonth('all')
+                setSelectedYear(0)
+                setInvoiceStatusFilter('all')
+              }}
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
+              title="Limpiar filtros"
             >
-              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              <XCircle className="w-5 h-5" />
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowChart(!showChart)}
-              className={`text-xs ${showChart ? 'bg-slate-700' : ''}`}
-            >
-              {showChart ? 'Ocultar Gráfico' : 'Mostrar Gráfico'}
-            </Button>
-          </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowChart(!showChart)}
+            className={`text-xs ${showChart ? 'bg-slate-700' : ''}`}
+          >
+            {showChart ? 'Ocultar Gráfico' : 'Mostrar Gráfico'}
+          </Button>
+          <Button
+            onClick={() => setShowUpload(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            + Nueva Factura
+          </Button>
         </div>
-        <Button
-          onClick={() => setShowUpload(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          + Nueva Factura
-        </Button>
       </div>
 
       <div className="flex gap-4 h-full overflow-hidden">
-        {/* Sidebar de Filtros */}
-        <div className={`transition-all duration-300 ease-in-out ${showFilters ? 'w-64 opacity-100' : 'w-0 opacity-0 overflow-hidden'
-          } shrink-0 flex flex-col gap-4`}>
-
-          {/* Filtro de Proyecto */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
-            <label className="text-slate-400 text-xs font-medium mb-2 block">Proyecto</label>
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 text-slate-100 text-sm rounded focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="all">Todos los proyectos</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id.toString()}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro de Período */}
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3">
-            <label className="text-slate-400 text-xs font-medium mb-2 block">Período</label>
-            <div className="space-y-2">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 text-slate-100 text-sm rounded focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="all">Todos los meses</option>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                  <option key={month} value={month}>
-                    {new Date(2000, month - 1).toLocaleDateString('es-CL', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                className="w-full px-3 py-1.5 bg-slate-700 border border-slate-600 text-slate-100 text-sm rounded focus:ring-1 focus:ring-blue-500"
-              >
-                <option value={0}>Todos los años</option>
-                {Array.from({ length: 4 }, (_, i) => 2023 + i).map(year => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Estadísticas Compactas Lateral (Opcional, si se quiere mover algo aquí) */}
-        </div>
-
         {/* Contenido Principal */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-2">
 
@@ -479,26 +461,42 @@ export default function FacturasPage() {
         </div>
       </div>
 
+      <InvoiceFiltersSidebar
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        projectFilter={projectFilter}
+        onProjectChange={setProjectFilter}
+        monthFilter={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        yearFilter={selectedYear}
+        onYearChange={setSelectedYear}
+        statusFilter={invoiceStatusFilter}
+        onStatusChange={setInvoiceStatusFilter}
+        projects={projects}
+      />
+
       {/* Upload Modal */}
-      {showUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-slate-100">Subir Nueva Factura</h2>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowUpload(false)}
-                  className="text-slate-300 hover:text-slate-100"
-                >
-                  ✕
-                </Button>
+      {
+        showUpload && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+            <div className="bg-slate-800 border border-slate-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-slate-100">Subir Nueva Factura</h2>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowUpload(false)}
+                    className="text-slate-300 hover:text-slate-100"
+                  >
+                    ✕
+                  </Button>
+                </div>
+                <InvoiceUpload onUploadSuccess={handleUploadSuccess} />
               </div>
-              <InvoiceUpload onUploadSuccess={handleUploadSuccess} />
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Modal de Edición */}
       <InvoiceEditModal
@@ -510,6 +508,18 @@ export default function FacturasPage() {
         }}
         onSave={handleSaveEdit}
       />
-    </div>
+
+      {/* Diálogo de Confirmación de Eliminación */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Eliminar Factura"
+        message="¿Estás seguro de que quieres eliminar esta factura? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        variant="danger"
+      />
+    </div >
   )
 }

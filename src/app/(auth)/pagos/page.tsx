@@ -25,7 +25,9 @@ import {
   Building2,
   Eye,
   Info,
-  AlertCircle
+  AlertCircle,
+  XCircle,
+  Download
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { WorkerTasksModal } from '@/components/payments/WorkerTasksModal'
@@ -34,6 +36,7 @@ import { PaymentTasksModal } from '@/components/payments/PaymentTasksModal'
 import { PaymentDaysModal } from '@/components/payments/PaymentDaysModal'
 import { ProcessTaskPaymentModal } from '@/components/payments/ProcessTaskPaymentModal'
 import { ProcessDaysPaymentModal } from '@/components/payments/ProcessDaysPaymentModal'
+import { PaymentFiltersSidebar } from '@/components/payments/PaymentFiltersSidebar'
 
 // Datos mockup (se usarán solo si loading es true o hay error)
 const mockMetrics = {
@@ -203,7 +206,8 @@ export default function PagosPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [workerFilter, setWorkerFilter] = useState<string>('all')
   const [searchWorker, setSearchWorker] = useState<string>('')
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
 
   // Filtros historial
   const [historyPeriod, setHistoryPeriod] = useState<string>('all')
@@ -971,40 +975,242 @@ export default function PagosPage() {
     return projectWorkers.length > 0
   })
 
+  // Función para exportar pagos pendientes a PDF
+  const handleExportPendingPayments = () => {
+    try {
+      toast.loading('Generando PDF...', { id: 'export-pending' })
+
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 15
+      let yPos = margin
+      const lineHeight = 6
+
+      // Función para agregar nueva página si es necesario
+      const checkNewPage = (requiredSpace: number) => {
+        if (yPos + requiredSpace > pageHeight - margin) {
+          doc.addPage()
+          yPos = margin
+          return true
+        }
+        return false
+      }
+
+      // Título
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Resumen de Pagos Pendientes', margin, yPos)
+      yPos += lineHeight + 4
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, margin, yPos)
+      yPos += lineHeight + 8
+
+      // Resumen de totales
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Resumen General', margin, yPos)
+      yPos += lineHeight + 3
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Total a Pagar en Tareas: $${metrics.totalTasks.toLocaleString('es-CL')}`, margin, yPos)
+      yPos += lineHeight
+      doc.text(`Total a Pagar en Asistencia: $${metrics.totalDays.toLocaleString('es-CL')}`, margin, yPos)
+      yPos += lineHeight
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Total General: $${(metrics.totalTasks + metrics.totalDays).toLocaleString('es-CL')}`, margin, yPos)
+      yPos += lineHeight + 8
+
+      // Tabla de trabajadores
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Detalle por Trabajador', margin, yPos)
+      yPos += lineHeight + 5
+
+      // Encabezados de tabla
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      const colWidths = [70, 30, 30, 40]
+      const headers = ['Trabajador', 'Tipo', 'Proyecto', 'Monto']
+      let xPos = margin
+
+      headers.forEach((header, idx) => {
+        doc.text(header, xPos, yPos)
+        xPos += colWidths[idx]
+      })
+      yPos += lineHeight + 2
+
+      // Línea separadora
+      doc.setDrawColor(200, 200, 200)
+      doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2)
+      yPos += 3
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+
+      let totalGeneral = 0
+
+      // Iterar por proyectos y trabajadores
+      filteredProjects.forEach(project => {
+        const projectWorkers = project.workers.filter(worker => {
+          if (activeFilter === 'tasks' && worker.type !== 'a_trato') return false
+          if (activeFilter === 'days' && worker.type !== 'por_dia') return false
+          if (typeFilter !== 'all' && worker.type !== typeFilter) return false
+          if (workerFilter !== 'all' && worker.worker_id.toString() !== workerFilter) return false
+          if (searchWorker && !worker.name.toLowerCase().includes(searchWorker.toLowerCase()) &&
+            !worker.rut.toLowerCase().includes(searchWorker.toLowerCase())) return false
+          return true
+        })
+
+        projectWorkers.forEach(worker => {
+          checkNewPage(15)
+          xPos = margin
+
+          const workerName = worker.name.length > 30 ? worker.name.substring(0, 27) + '...' : worker.name
+          const workerType = worker.type === 'a_trato' ? 'A Trato' : 'Por Día'
+          const projectName = project.project_name.length > 20 ? project.project_name.substring(0, 17) + '...' : project.project_name
+          const amount = worker.totalPending
+          totalGeneral += amount
+
+          // Fila de datos
+          doc.text(workerName, xPos, yPos)
+          xPos += colWidths[0]
+
+          doc.text(workerType, xPos, yPos)
+          xPos += colWidths[1]
+
+          doc.text(projectName, xPos, yPos)
+          xPos += colWidths[2]
+
+          doc.text(`$${amount.toLocaleString('es-CL')}`, xPos, yPos)
+
+          yPos += lineHeight + 2
+        })
+      })
+
+      // Total
+      checkNewPage(15)
+      yPos += lineHeight
+      doc.setDrawColor(200, 200, 200)
+      doc.line(margin, yPos, pageWidth - margin, yPos)
+      yPos += lineHeight + 2
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text(`TOTAL A PAGAR: $${totalGeneral.toLocaleString('es-CL')}`, margin, yPos)
+
+      // Descargar PDF
+      const fileName = `pagos-pendientes-${new Date().toISOString().split('T')[0]}.pdf`
+      doc.save(fileName)
+
+      toast.success('PDF generado exitosamente', { id: 'export-pending' })
+    } catch (error: any) {
+      console.error('Error generando PDF:', error)
+      toast.error('Error al generar el PDF', { id: 'export-pending' })
+    }
+  }
+
   return (
     <div className="w-full p-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Resumen de Pagos</h1>
-        <p className="text-gray-600">Seguimiento de pagos pendientes y completados por trabajador</p>
-        {loading && (
-          <p className="text-sm text-blue-600 mt-2">Cargando datos...</p>
-        )}
-        {error && (
-          <p className="text-sm text-red-600 mt-2">Error: {error}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Resumen de Pagos</h1>
+          <p className="text-gray-600">Seguimiento de pagos pendientes y completados por trabajador</p>
+          {loading && (
+            <p className="text-sm text-blue-600 mt-2">Cargando datos...</p>
+          )}
+          {error && (
+            <p className="text-sm text-red-600 mt-2">Error: {error}</p>
+          )}
+        </div>
+
+        {currentView === 'pending' && (
+          <Button
+            onClick={handleExportPendingPayments}
+            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Exportar PDF
+          </Button>
         )}
       </div>
 
-      {/* Switch entre vistas */}
-      <div className="mb-6 flex gap-2 bg-gray-100 p-1 rounded-lg w-fit">
-        <button
-          onClick={() => setCurrentView('pending')}
-          className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${currentView === 'pending'
-            ? 'bg-blue-600 text-white shadow-md'
-            : 'text-gray-600 hover:text-gray-900'
-            }`}
-        >
-          Pagos Pendientes
-        </button>
-        <button
-          onClick={() => setCurrentView('history')}
-          className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${currentView === 'history'
-            ? 'bg-blue-600 text-white shadow-md'
-            : 'text-gray-600 hover:text-gray-900'
-            }`}
-        >
-          Historial
-        </button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        {/* Switch entre vistas */}
+        <div className="flex gap-2 bg-slate-800 p-1 rounded-lg w-fit border border-slate-700">
+          <button
+            onClick={() => setCurrentView('pending')}
+            className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${currentView === 'pending'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+              }`}
+          >
+            Pagos Pendientes
+          </button>
+          <button
+            onClick={() => setCurrentView('history')}
+            className={`px-6 py-3 rounded-md text-sm font-medium transition-colors ${currentView === 'history'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+              }`}
+          >
+            Historial
+          </button>
+        </div>
+
+        {/* Header Actions (Search & Filters) */}
+        <div className="flex items-center gap-3">
+          {currentView === 'pending' && (
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar trabajador..."
+                value={searchWorker}
+                onChange={(e) => setSearchWorker(e.target.value)}
+                className="pl-9 bg-slate-800 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:ring-blue-500"
+              />
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={() => setIsFilterSidebarOpen(true)}
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors bg-slate-800/50"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+            {(projectFilter !== 'all' || typeFilter !== 'all' || workerFilter !== 'all' || historyPeriod !== 'all' || historyWorker !== 'all' || historyProject !== 'all') && (
+              <span className="ml-1 bg-blue-100 text-blue-600 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-200">
+                !
+              </span>
+            )}
+          </Button>
+
+          {(projectFilter !== 'all' || typeFilter !== 'all' || workerFilter !== 'all' || searchWorker || historyPeriod !== 'all' || historyWorker !== 'all' || historyProject !== 'all') && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                // Clear all filters
+                setProjectFilter('all')
+                setTypeFilter('all')
+                setWorkerFilter('all')
+                setSearchWorker('')
+                setHistoryPeriod('all')
+                setHistoryWorker('all')
+                setHistoryProject('all')
+                setActiveFilter(null)
+              }}
+              className="text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              title="Limpiar filtros"
+            >
+              <XCircle className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {currentView === 'pending' ? (
@@ -1087,141 +1293,7 @@ export default function PagosPage() {
             </Card>
           </div>
 
-          {/* Filtros Collapsible */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                className="flex items-center gap-2 bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700 hover:text-white"
-              >
-                <Filter className="w-4 h-4" />
-                {isFiltersOpen ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-                {(activeFilter || typeFilter !== 'all' || projectFilter !== 'all' || workerFilter !== 'all' || searchWorker) && (
-                  <Badge variant="secondary" className="ml-1 bg-blue-600 text-white hover:bg-blue-700 border-none h-5 px-1.5">
-                    !
-                  </Badge>
-                )}
-              </Button>
 
-              {(activeFilter || typeFilter !== 'all' || projectFilter !== 'all' || workerFilter !== 'all' || searchWorker) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setActiveFilter(null)
-                    setTypeFilter('all')
-                    setProjectFilter('all')
-                    setWorkerFilter('all')
-                    setSearchWorker('')
-                  }}
-                  className="text-slate-400 hover:text-slate-200"
-                >
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-
-            {isFiltersOpen && (
-              <Card className="bg-slate-800/50 border-slate-700 animate-in slide-in-from-top-2 duration-200">
-                <CardContent className="p-4">
-                  <div className="flex flex-col lg:flex-row gap-4 items-end">
-                    {/* Tipo de Contrato */}
-                    <div className="w-full lg:w-auto">
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5">Tipo de Contrato</label>
-                      <div className="flex bg-slate-900/50 p-1 rounded-lg border border-slate-700">
-                        <button
-                          onClick={() => {
-                            setTypeFilter('all')
-                            setActiveFilter(null)
-                          }}
-                          className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${typeFilter === 'all'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                        >
-                          Todos
-                        </button>
-                        <button
-                          onClick={() => {
-                            setTypeFilter('a_trato')
-                            setActiveFilter(null)
-                          }}
-                          className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${typeFilter === 'a_trato'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                        >
-                          A Trato
-                        </button>
-                        <button
-                          onClick={() => {
-                            setTypeFilter('por_dia')
-                            setActiveFilter(null)
-                          }}
-                          className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${typeFilter === 'por_dia'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-400 hover:text-slate-200'
-                            }`}
-                        >
-                          Por Día
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Proyecto */}
-                    <div className="w-full lg:w-1/4">
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5">Proyecto</label>
-                      <Select
-                        value={projectFilter}
-                        onChange={(e) => setProjectFilter(e.target.value)}
-                        className="w-full bg-slate-900/50 border-slate-700 text-slate-200 focus:ring-blue-500"
-                      >
-                        <option value="all">Todos los proyectos</option>
-                        {dbProjects.map((project, idx) => (
-                          <option key={`project-filter-${project.project_id}-${idx}`} value={project.project_id.toString()}>
-                            {project.project_name}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    {/* Trabajador */}
-                    <div className="w-full lg:w-1/4">
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5">Trabajador</label>
-                      <Select
-                        value={workerFilter}
-                        onChange={(e) => setWorkerFilter(e.target.value)}
-                        className="w-full bg-slate-900/50 border-slate-700 text-slate-200 focus:ring-blue-500"
-                      >
-                        <option value="all">Todos los trabajadores</option>
-                        {allWorkers.map((worker, idx) => (
-                          <option key={`worker-filter-${worker.id}-${idx}`} value={worker.id.toString()}>
-                            {worker.name} {worker.rut ? `(${worker.rut})` : ''}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    {/* Buscar */}
-                    <div className="w-full lg:w-1/4">
-                      <label className="block text-xs font-medium text-slate-400 mb-1.5">Buscar</label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                        <Input
-                          type="text"
-                          placeholder="Nombre o RUT..."
-                          value={searchWorker}
-                          onChange={(e) => setSearchWorker(e.target.value)}
-                          className="pl-9 w-full bg-slate-900/50 border-slate-700 text-slate-200 focus:ring-blue-500 placeholder:text-slate-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
 
           {/* Lista de Trabajadores por Proyecto */}
           <div className="space-y-4">
@@ -1374,57 +1446,7 @@ export default function PagosPage() {
         </>
       ) : (
         <>
-          {/* Filtros Historial */}
-          <Card className="mb-6 bg-slate-700/30 border-slate-600">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-slate-100">
-                <Filter className="w-5 h-5" />
-                Filtros de Historial
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Período</label>
-                  <Select
-                    value={historyPeriod}
-                    onChange={(e) => setHistoryPeriod(e.target.value)}
-                    className="bg-slate-800 border-slate-600 text-slate-100"
-                  >
-                    <option value="all">Todos los tiempos</option>
-                    <option value="monthly">Mensual</option>
-                    <option value="yearly">Anual</option>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Trabajador</label>
-                  <Select
-                    value={historyWorker}
-                    onChange={(e) => setHistoryWorker(e.target.value)}
-                    className="bg-slate-800 border-slate-600 text-slate-100"
-                  >
-                    <option value="all">Todos los trabajadores</option>
-                    {Array.from(allHistoryWorkers.entries()).map(([id, name], idx) => (
-                      <option key={`history-worker-${id}-${idx}`} value={id.toString()}>{name}</option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Proyecto</label>
-                  <Select
-                    value={historyProject}
-                    onChange={(e) => setHistoryProject(e.target.value)}
-                    className="bg-slate-800 border-slate-600 text-slate-100"
-                  >
-                    <option value="all">Todos los proyectos</option>
-                    {Array.from(allHistoryProjects.entries()).map(([id, name], idx) => (
-                      <option key={`history-project-${id}-${idx}`} value={id.toString()}>{name}</option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
 
           {/* Gráfico */}
           <Card className="mb-6 bg-slate-700/30 border-slate-600">
@@ -1792,6 +1814,37 @@ export default function PagosPage() {
           />
         )
       })()}
+      <PaymentFiltersSidebar
+        isOpen={isFilterSidebarOpen}
+        onClose={() => setIsFilterSidebarOpen(false)}
+        currentView={currentView}
+        projectFilter={projectFilter}
+        setProjectFilter={setProjectFilter}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        workerFilter={workerFilter}
+        setWorkerFilter={setWorkerFilter}
+        projects={dbProjects}
+        allWorkers={allWorkers}
+        historyPeriod={historyPeriod}
+        setHistoryPeriod={setHistoryPeriod}
+        historyWorker={historyWorker}
+        setHistoryWorker={setHistoryWorker}
+        historyProject={historyProject}
+        setHistoryProject={setHistoryProject}
+        allHistoryWorkers={allHistoryWorkers}
+        allHistoryProjects={allHistoryProjects}
+        onClearFilters={() => {
+          setProjectFilter('all')
+          setTypeFilter('all')
+          setWorkerFilter('all')
+          setSearchWorker('')
+          setHistoryPeriod('all')
+          setHistoryWorker('all')
+          setHistoryProject('all')
+          setActiveFilter(null)
+        }}
+      />
     </div>
   )
 }

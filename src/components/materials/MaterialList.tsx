@@ -13,36 +13,34 @@ import { WarehouseFormModal } from "@/components/materials/WarehouseFormModal";
 import { Modal } from "@/components/ui/Modal";
 
 type MaterialListProps = {
-    onNewDelivery: (materialId?: number) => void;
-    onAdjustStock: (materialId?: number) => void;
-    onNewMaterial: () => void;
-    refreshToken?: number;
+	onNewDelivery: (materialId?: number) => void;
+	onAdjustStock: (materialId?: number) => void;
+	onNewMaterial: () => void;
+	refreshToken?: number;
+	search: string;
+	category: string;
+	lowStockOnly: boolean;
 };
 
-export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refreshToken }: MaterialListProps) {
+export function MaterialList({
+	onNewDelivery,
+	onAdjustStock,
+	onNewMaterial,
+	refreshToken,
+	search,
+	category,
+	lowStockOnly
+}: MaterialListProps) {
 	const { profile } = useAuth();
-    const { materials, stockData, loading, getTotalStock, getCategories, fetchMaterials, fetchStockForMaterials, deleteMaterial } = useMaterials();
-	const [search, setSearch] = useState("");
-	const [category, setCategory] = useState("");
-	const [lowStockOnly, setLowStockOnly] = useState(false);
-    const [categories, setCategories] = useState<string[]>([]);
-    const [editing, setEditing] = useState<any | null>(null);
-    const [deleting, setDeleting] = useState<any | null>(null);
-    const [viewingDetails, setViewingDetails] = useState<any | null>(null);
-    const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
+	const { materials, stockData, loading, getTotalStock, getCategories, fetchMaterials, fetchStockForMaterials, deleteMaterial } = useMaterials();
+	const [editing, setEditing] = useState<any | null>(null);
+	const [deleting, setDeleting] = useState<any | null>(null);
+	const [viewingDetails, setViewingDetails] = useState<any | null>(null);
+	const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
 
 	// Verificar permisos
 	const canAdjustStock = profile?.role === 'admin' || profile?.role === 'supervisor';
 	const canViewCosts = canAdjustStock;
-
-	// Cargar categorías al montar
-	useEffect(() => {
-		const loadCategories = async () => {
-			const cats = await getCategories();
-			setCategories(cats);
-		};
-		loadCategories();
-	}, []);
 
 	// Filtrar materiales cuando cambian los filtros
 	useEffect(() => {
@@ -58,23 +56,23 @@ export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refr
 		return () => clearTimeout(timeoutId);
 	}, [search, category, lowStockOnly]);
 
-    // Refrescar cuando cambie refreshToken (por ejemplo tras un ajuste/entrega)
-    useEffect(() => {
-        if (refreshToken !== undefined && refreshToken > 0) {
-            const refreshData = async () => {
-                // Recargar materiales - esto también disparará la recarga de stock
-                // cuando cambie materials.length
-                await fetchMaterials({
-                    search: search || undefined,
-                    category: category || undefined,
-                    lowStockOnly,
-                    activeOnly: true,
-                });
-            };
-            refreshData();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [refreshToken]);
+	// Refrescar cuando cambie refreshToken (por ejemplo tras un ajuste/entrega)
+	useEffect(() => {
+		if (refreshToken !== undefined && refreshToken > 0) {
+			const refreshData = async () => {
+				// Recargar materiales - esto también disparará la recarga de stock
+				// cuando cambie materials.length
+				await fetchMaterials({
+					search: search || undefined,
+					category: category || undefined,
+					lowStockOnly,
+					activeOnly: true,
+				});
+			};
+			refreshData();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [refreshToken]);
 
 	// Cargar stock cuando cambian los materiales
 	// Esto se ejecuta automáticamente cuando fetchMaterials actualiza el estado
@@ -109,45 +107,6 @@ export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refr
 
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-wrap items-end gap-3">
-				<div className="w-64">
-					<Input
-						placeholder="Buscar material..."
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-					/>
-				</div>
-				<div className="w-52">
-					<Select value={category} onChange={(e) => setCategory(e.target.value)}>
-						<option value="">Todas las categorías</option>
-						{categories.map(cat => (
-							<option key={cat} value={cat}>{cat}</option>
-						))}
-					</Select>
-				</div>
-				<label className="inline-flex items-center gap-2 cursor-pointer select-none">
-					<input
-						type="checkbox"
-						checked={lowStockOnly}
-						onChange={(e) => setLowStockOnly(e.target.checked)}
-					/>
-					<span className="text-sm text-slate-300">Solo bajo stock</span>
-				</label>
-				<div className="ml-auto flex items-center gap-2">
-					<Button onClick={() => onNewDelivery()}>Registrar entrega</Button>
-					{canAdjustStock && (
-						<Button variant="secondary" onClick={() => onAdjustStock()}>Ajustar stock</Button>
-					)}
-					{canAdjustStock && (
-						<>
-							<Button variant="secondary" onClick={() => setIsWarehouseModalOpen(true)}>
-								Bodegas
-							</Button>
-							<Button variant="secondary" onClick={onNewMaterial}>Nuevo material</Button>
-						</>
-					)}
-				</div>
-			</div>
 
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 				<div className="overflow-x-auto">
@@ -201,7 +160,7 @@ export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refr
 													${material.unit_cost.toLocaleString('es-CL')}
 												</td>
 											)}
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+											<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
 												<div className="flex gap-2">
 													<button
 														onClick={() => setViewingDetails(material)}
@@ -217,15 +176,15 @@ export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refr
 													>
 														<Truck className="h-4 w-4" />
 													</button>
-                                                    {canAdjustStock && (
-                                                        <button
-                                                            onClick={() => setEditing(material)}
-                                                            className="text-emerald-600 hover:text-emerald-800 transition-colors"
-                                                            title="Editar material"
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </button>
-                                                    )}
+													{canAdjustStock && (
+														<button
+															onClick={() => setEditing(material)}
+															className="text-emerald-600 hover:text-emerald-800 transition-colors"
+															title="Editar material"
+														>
+															<Pencil className="h-4 w-4" />
+														</button>
+													)}
 													{canAdjustStock && (
 														<button
 															onClick={() => onAdjustStock(material.id)}
@@ -235,15 +194,15 @@ export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refr
 															<Wrench className="h-4 w-4" />
 														</button>
 													)}
-                                                    {canAdjustStock && (
-                                                        <button
-                                                            onClick={() => setDeleting(material)}
-                                                            className="text-red-600 hover:text-red-800 transition-colors"
-                                                            title="Eliminar (soft delete)"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    )}
+													{canAdjustStock && (
+														<button
+															onClick={() => setDeleting(material)}
+															className="text-red-600 hover:text-red-800 transition-colors"
+															title="Eliminar (soft delete)"
+														>
+															<Trash2 className="h-4 w-4" />
+														</button>
+													)}
 												</div>
 											</td>
 										</tr>
@@ -253,75 +212,75 @@ export function MaterialList({ onNewDelivery, onAdjustStock, onNewMaterial, refr
 						</tbody>
 					</table>
 				</div>
-            </div>
+			</div>
 
-            {/* Modal editar material */}
-            {editing && (
-                <MaterialFormModal
-                    open={!!editing}
-                    onClose={() => setEditing(null)}
-                    initialData={editing}
-                    onSuccess={() => {
-                        // Recargar materiales después de editar
-                        // El useEffect (líneas 79-87) se encargará automáticamente de recargar el stock
-                        fetchMaterials({
-                            search: search || undefined,
-                            category: category || undefined,
-                            lowStockOnly,
-                            activeOnly: true,
-                        });
-                    }}
-                />
-            )}
+			{/* Modal editar material */}
+			{editing && (
+				<MaterialFormModal
+					open={!!editing}
+					onClose={() => setEditing(null)}
+					initialData={editing}
+					onSuccess={() => {
+						// Recargar materiales después de editar
+						// El useEffect (líneas 79-87) se encargará automáticamente de recargar el stock
+						fetchMaterials({
+							search: search || undefined,
+							category: category || undefined,
+							lowStockOnly,
+							activeOnly: true,
+						});
+					}}
+				/>
+			)}
 
-            {/* Modal nueva bodega */}
-            <WarehouseFormModal
-                open={isWarehouseModalOpen}
-                onClose={() => setIsWarehouseModalOpen(false)}
-                onSuccess={() => {
-                    // Recargar materiales para refrescar la lista (por si hay cambios en almacenes)
-                    fetchMaterials({
-                        search: search || undefined,
-                        category: category || undefined,
-                        lowStockOnly,
-                        activeOnly: true,
-                    });
-                }}
-            />
+			{/* Modal nueva bodega */}
+			<WarehouseFormModal
+				open={isWarehouseModalOpen}
+				onClose={() => setIsWarehouseModalOpen(false)}
+				onSuccess={() => {
+					// Recargar materiales para refrescar la lista (por si hay cambios en almacenes)
+					fetchMaterials({
+						search: search || undefined,
+						category: category || undefined,
+						lowStockOnly,
+						activeOnly: true,
+					});
+				}}
+			/>
 
-            {/* Modal detalles del material */}
-            {viewingDetails && (
-                <MaterialDetailModal
-                    open={!!viewingDetails}
-                    onClose={() => setViewingDetails(null)}
-                    material={viewingDetails}
-                />
-            )}
+			{/* Modal detalles del material */}
+			{viewingDetails && (
+				<MaterialDetailModal
+					open={!!viewingDetails}
+					onClose={() => setViewingDetails(null)}
+					material={viewingDetails}
+				/>
+			)}
 
-            {/* Modal confirmación eliminación */}
-            {deleting && (
-                <Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="Eliminar material">
-                    <div className="space-y-3">
-                        <p className="text-sm text-gray-700">¿Seguro que deseas eliminar &quot;{deleting.name}&quot;? Se desactivará (soft delete) y no aparecerá en la lista por defecto.</p>
-                        <div className="flex justify-end gap-2 pt-2">
-                            <button className="px-3 py-2 text-sm bg-gray-100 rounded-md" onClick={() => setDeleting(null)}>Cancelar</button>
-                            <button
-                                className="px-3 py-2 text-sm bg-red-600 text-white rounded-md"
-                                onClick={async () => {
-                                    await deleteMaterial(deleting.id);
-                                    setDeleting(null);
-                                    fetchMaterials({
-                                        search: search || undefined,
-                                        category: category || undefined,
-                                        lowStockOnly,
-                                        activeOnly: true,
-                                    });
-                                }}
-                            >Eliminar</button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
+			{/* Modal confirmación eliminación */}
+			{deleting && (
+				<Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="Eliminar material">
+					<div className="space-y-3">
+						<p className="text-sm text-gray-700">¿Seguro que deseas eliminar &quot;{deleting.name}&quot;? Se desactivará (soft delete) y no aparecerá en la lista por defecto.</p>
+						<div className="flex justify-end gap-2 pt-2">
+							<button className="px-3 py-2 text-sm bg-gray-100 rounded-md" onClick={() => setDeleting(null)}>Cancelar</button>
+							<button
+								className="px-3 py-2 text-sm bg-red-600 text-white rounded-md"
+								onClick={async () => {
+									await deleteMaterial(deleting.id);
+									setDeleting(null);
+									fetchMaterials({
+										search: search || undefined,
+										category: category || undefined,
+										lowStockOnly,
+										activeOnly: true,
+									});
+								}}
+							>Eliminar</button>
+						</div>
+					</div>
+				</Modal>
+			)}
 		</div>
 	);
 }

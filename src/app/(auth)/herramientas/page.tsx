@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Wrench, History, Search, Filter, Layers, CheckCircle, Clock } from 'lucide-react'
+import { Plus, Wrench, History, Search, Filter, Layers, CheckCircle, Clock, X, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -13,6 +13,8 @@ import { LoanModal } from '@/components/tools/LoanModal'
 import { useTools } from '@/hooks/useTools'
 import { useAuth } from '@/hooks/useAuth'
 import toast from 'react-hot-toast'
+import { ToolFiltersSidebar } from '@/components/tools/ToolFiltersSidebar'
+import { LoanHistoryFiltersSidebar } from '@/components/tools/LoanHistoryFiltersSidebar'
 
 export default function HerramientasPage() {
   const [activeTab, setActiveTab] = useState<'tools' | 'history'>('tools')
@@ -22,6 +24,18 @@ export default function HerramientasPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'disponible' | 'prestada'>('all')
   const [activeFilter, setActiveFilter] = useState('active')
+
+  // Sidebar filters
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+
+  // Loan History Filters
+  const [historyStatusFilter, setHistoryStatusFilter] = useState('all')
+  const [historyMonthFilter, setHistoryMonthFilter] = useState('all')
+  const [historyYearFilter, setHistoryYearFilter] = useState('all')
+  const [historyWorkerFilter, setHistoryWorkerFilter] = useState('all')
+  const [historyProjectFilter, setHistoryProjectFilter] = useState('all')
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
+  const [workerFilter, setWorkerFilter] = useState<string>('all')
 
   // Obtener usuario actual
   const { user } = useAuth()
@@ -128,12 +142,41 @@ export default function HerramientasPage() {
 
   const filteredTools = tools.filter(tool => {
     const matchesSearch = tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tool.brand.toLowerCase().includes(searchTerm.toLowerCase())
+      tool.brand.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || tool.status === statusFilter
-    const matchesActive = activeFilter === 'all' || 
-                         (activeFilter === 'active' && tool.is_active) ||
-                         (activeFilter === 'inactive' && !tool.is_active)
-    return matchesSearch && matchesStatus && matchesActive
+    const matchesActive = activeFilter === 'all' ||
+      (activeFilter === 'active' && tool.is_active) ||
+      (activeFilter === 'inactive' && !tool.is_active)
+
+    // Filtro por proyecto (sidebar)
+    let matchesProject = true
+    if (selectedProjectId) {
+      // Si filtramos por proyecto, buscamos si la herramienta está prestada a ese proyecto
+      // O si está disponible (opcional, pero asumimos que queremos ver lo que tiene el proyecto)
+      // Para herramientas prestadas:
+      if (tool.status === 'prestada') {
+        const activeLoan = loans.find(l => l.tool_id === tool.id && !l.return_date)
+        matchesProject = activeLoan?.project_id === selectedProjectId
+      } else {
+        // Herramientas disponibles no están en un proyecto específico (están en bodega)
+        // Si el usuario filtra por proyecto, ¿debería ver las disponibles?
+        // Por ahora, ocultamos las disponibles si se filtra por proyecto, para ver solo lo que tiene el proyecto.
+        matchesProject = false
+      }
+    }
+
+    // Filtro por trabajador (sidebar)
+    let matchesWorker = true
+    if (workerFilter !== 'all') {
+      if (tool.status === 'prestada') {
+        const activeLoan = loans.find(l => l.tool_id === tool.id && !l.return_date)
+        matchesWorker = activeLoan?.borrower_id.toString() === workerFilter
+      } else {
+        matchesWorker = false
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesActive && matchesProject && matchesWorker
   })
 
   const stats = {
@@ -176,108 +219,146 @@ export default function HerramientasPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Herramientas</h1>
           <p className="text-gray-600">Administra el inventario y préstamos de herramientas</p>
         </div>
-        <Button
-          onClick={() => setShowToolForm(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nueva Herramienta
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsFilterSidebarOpen(true)}
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+            {((activeTab === 'tools' && (statusFilter !== 'all' || activeFilter !== 'active')) ||
+              (activeTab === 'history' && (
+                historyStatusFilter !== 'all' ||
+                historyMonthFilter !== 'all' ||
+                historyYearFilter !== 'all' ||
+                historyWorkerFilter !== 'all' ||
+                historyProjectFilter !== 'all'
+              ))) && (
+                <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                  !
+                </span>
+              )}
+          </Button>
+          {((activeTab === 'tools' && (statusFilter !== 'all' || activeFilter !== 'active')) ||
+            (activeTab === 'history' && (
+              historyStatusFilter !== 'all' ||
+              historyMonthFilter !== 'all' ||
+              historyYearFilter !== 'all' ||
+              historyWorkerFilter !== 'all' ||
+              historyProjectFilter !== 'all'
+            ))) && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (activeTab === 'tools') {
+                    setStatusFilter('all')
+                    setActiveFilter('active')
+                  } else {
+                    setHistoryStatusFilter('all')
+                    setHistoryMonthFilter('all')
+                    setHistoryYearFilter('all')
+                    setHistoryWorkerFilter('all')
+                    setHistoryProjectFilter('all')
+                  }
+                }}
+                className="text-slate-400 hover:text-white hover:bg-slate-800"
+                title="Limpiar filtros"
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            )}
+          <Button
+            onClick={() => setShowToolForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nueva Herramienta
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {/* Tarjeta Total */}
-        <Card 
-          className={`cursor-pointer transition-all duration-200 border-2 ${
-            statusFilter === 'all'
-              ? 'bg-blue-900/30 border-blue-500 shadow-lg'
-              : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-          }`}
+        <Card
+          className={`cursor-pointer transition-all duration-200 border-2 ${statusFilter === 'all'
+            ? 'bg-blue-900/30 border-blue-500 shadow-lg'
+            : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+            }`}
           onClick={() => setStatusFilter('all')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <Layers className={`w-5 h-5 ${
-                statusFilter === 'all' ? 'text-blue-400' : 'text-slate-400'
-              }`} />
-              <span className={`font-semibold ${
-                statusFilter === 'all' ? 'text-blue-400' : 'text-slate-300'
-              }`}>
+              <Layers className={`w-5 h-5 ${statusFilter === 'all' ? 'text-blue-400' : 'text-slate-400'
+                }`} />
+              <span className={`font-semibold ${statusFilter === 'all' ? 'text-blue-400' : 'text-slate-300'
+                }`}>
                 Total
               </span>
             </div>
-            <div className={`text-2xl font-bold text-center ${
-              statusFilter === 'all' ? 'text-blue-400' : 'text-slate-400'
-            }`}>
+            <div className={`text-2xl font-bold text-center ${statusFilter === 'all' ? 'text-blue-400' : 'text-slate-400'
+              }`}>
               {stats.total}
             </div>
           </CardContent>
         </Card>
 
         {/* Tarjeta Disponibles */}
-        <Card 
-          className={`cursor-pointer transition-all duration-200 border-2 ${
-            statusFilter === 'disponible'
-              ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
-              : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-          }`}
+        <Card
+          className={`cursor-pointer transition-all duration-200 border-2 ${statusFilter === 'disponible'
+            ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
+            : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+            }`}
           onClick={() => setStatusFilter('disponible')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <CheckCircle className={`w-5 h-5 ${
-                statusFilter === 'disponible' ? 'text-emerald-400' : 'text-slate-400'
-              }`} />
-              <span className={`font-semibold ${
-                statusFilter === 'disponible' ? 'text-emerald-400' : 'text-slate-300'
-              }`}>
+              <CheckCircle className={`w-5 h-5 ${statusFilter === 'disponible' ? 'text-emerald-400' : 'text-slate-400'
+                }`} />
+              <span className={`font-semibold ${statusFilter === 'disponible' ? 'text-emerald-400' : 'text-slate-300'
+                }`}>
                 Disponibles
               </span>
             </div>
-            <div className={`text-2xl font-bold text-center ${
-              statusFilter === 'disponible' ? 'text-emerald-400' : 'text-slate-400'
-            }`}>
+            <div className={`text-2xl font-bold text-center ${statusFilter === 'disponible' ? 'text-emerald-400' : 'text-slate-400'
+              }`}>
               {stats.available}
             </div>
           </CardContent>
         </Card>
 
         {/* Tarjeta Prestadas */}
-        <Card 
-          className={`cursor-pointer transition-all duration-200 border-2 ${
-            statusFilter === 'prestada'
-              ? 'bg-orange-900/30 border-orange-500 shadow-lg'
-              : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-          }`}
+        <Card
+          className={`cursor-pointer transition-all duration-200 border-2 ${statusFilter === 'prestada'
+            ? 'bg-orange-900/30 border-orange-500 shadow-lg'
+            : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+            }`}
           onClick={() => setStatusFilter('prestada')}
         >
           <CardContent className="p-4">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <Clock className={`w-5 h-5 ${
-                statusFilter === 'prestada' ? 'text-orange-400' : 'text-slate-400'
-              }`} />
-              <span className={`font-semibold ${
-                statusFilter === 'prestada' ? 'text-orange-400' : 'text-slate-300'
-              }`}>
+              <Clock className={`w-5 h-5 ${statusFilter === 'prestada' ? 'text-orange-400' : 'text-slate-400'
+                }`} />
+              <span className={`font-semibold ${statusFilter === 'prestada' ? 'text-orange-400' : 'text-slate-300'
+                }`}>
                 Prestadas
               </span>
             </div>
-            <div className={`text-2xl font-bold text-center ${
-              statusFilter === 'prestada' ? 'text-orange-400' : 'text-slate-400'
-            }`}>
+            <div className={`text-2xl font-bold text-center ${statusFilter === 'prestada' ? 'text-orange-400' : 'text-slate-400'
+              }`}>
               {stats.loaned}
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Tarjeta de Valor Total (solo informativa, no es filtro) */}
         <Card className="bg-slate-700/30 border-2 border-slate-600">
           <CardContent className="p-4">
@@ -299,22 +380,20 @@ export default function HerramientasPage() {
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab('tools')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'tools'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'tools'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <Wrench className="w-4 h-4 inline mr-2" />
             Herramientas
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'history'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'history'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
             <History className="w-4 h-4 inline mr-2" />
             Historial de Préstamos
@@ -338,26 +417,6 @@ export default function HerramientasPage() {
                 />
               </div>
             </div>
-            <div className="w-full sm:w-48">
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as 'all' | 'disponible' | 'prestada')}
-              >
-                <option value="all">Todos los estados</option>
-                <option value="disponible">Disponible</option>
-                <option value="prestada">Prestada</option>
-              </Select>
-            </div>
-            <div className="w-full sm:w-48">
-              <Select
-                value={activeFilter}
-                onChange={(e) => setActiveFilter(e.target.value)}
-              >
-                <option value="active">Activas</option>
-                <option value="inactive">Inactivas</option>
-                <option value="all">Todas</option>
-              </Select>
-            </div>
           </div>
 
           {/* Tools List */}
@@ -380,6 +439,39 @@ export default function HerramientasPage() {
           workers={workers}
           projects={projects}
           onReturn={handleReturnToolForModal}
+          statusFilter={historyStatusFilter}
+          monthFilter={historyMonthFilter}
+          yearFilter={historyYearFilter}
+          workerFilter={historyWorkerFilter}
+          projectFilter={historyProjectFilter}
+        />
+      )}
+
+      {activeTab === 'tools' ? (
+        <ToolFiltersSidebar
+          isOpen={isFilterSidebarOpen}
+          onClose={() => setIsFilterSidebarOpen(false)}
+          currentStatusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          currentActiveFilter={activeFilter}
+          onActiveFilterChange={setActiveFilter}
+        />
+      ) : (
+        <LoanHistoryFiltersSidebar
+          isOpen={isFilterSidebarOpen}
+          onClose={() => setIsFilterSidebarOpen(false)}
+          currentStatusFilter={historyStatusFilter}
+          onStatusFilterChange={setHistoryStatusFilter}
+          currentMonthFilter={historyMonthFilter}
+          onMonthFilterChange={setHistoryMonthFilter}
+          currentYearFilter={historyYearFilter}
+          onYearFilterChange={setHistoryYearFilter}
+          currentWorkerFilter={historyWorkerFilter}
+          onWorkerFilterChange={setHistoryWorkerFilter}
+          currentProjectFilter={historyProjectFilter}
+          onProjectFilterChange={setHistoryProjectFilter}
+          workers={workers}
+          projects={projects}
         />
       )}
 

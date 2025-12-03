@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -11,6 +11,7 @@ import { ExpenseForm } from '@/components/expenses/ExpenseForm'
 import { ReceiptModal } from '@/components/expenses/ReceiptModal'
 import { ExpensePreviewModal } from '@/components/expenses/ExpensePreviewModal'
 import { ExpenseChart } from '@/components/expenses/ExpenseChart'
+import { ExpenseFiltersSidebar } from '@/components/expenses/ExpenseFiltersSidebar'
 import { useExpenses, Expense } from '@/hooks/useExpenses'
 import { useProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
@@ -63,7 +64,7 @@ export default function GastosPage() {
   const { user } = useAuth()
   const { createMaterial } = useMaterials()
   const { registerAdjustment } = useMaterialMovements()
-  
+
   const [searchTerm, setSearchTerm] = useState('')
   const [projectFilter, setProjectFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -71,23 +72,24 @@ export default function GastosPage() {
   const [yearFilter, setYearFilter] = useState('all')
   const [documentTypeFilter, setDocumentTypeFilter] = useState('all')
   const [refreshKey, setRefreshKey] = useState(0)
-  
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+
   // Convertir filtros de fecha a números para el hook
   const yearFilterNum = yearFilter !== 'all' ? parseInt(yearFilter) : undefined
   const monthFilterNum = monthFilter !== 'all' ? parseInt(monthFilter) : undefined
   const documentTypeFilterValue = documentTypeFilter !== 'all' ? documentTypeFilter as 'boleta' | 'factura' : undefined
   const projectFilterValue = projectFilter !== 'all' ? parseInt(projectFilter) : undefined
-  
-  const { 
-    expenses, 
-    stats, 
-    loading, 
-    error, 
-    addExpense, 
-    updateExpense, 
-    cancelExpense, 
-    uploadReceipt 
-  } = useExpenses(yearFilterNum, monthFilterNum, documentTypeFilterValue, projectFilterValue)
+
+  const {
+    expenses,
+    stats,
+    loading,
+    error,
+    addExpense,
+    updateExpense,
+    cancelExpense,
+    uploadReceipt
+  } = useExpenses() // Fetch all expenses initially
   const { projects } = useProjects()
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
@@ -97,6 +99,7 @@ export default function GastosPage() {
   const [previewData, setPreviewData] = useState<any>(null)
   const [previewReceiptFile, setPreviewReceiptFile] = useState<File | null>(null)
   const [ivaFilter, setIvaFilter] = useState(false)
+  const [showChart, setShowChart] = useState(true)
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -145,57 +148,114 @@ export default function GastosPage() {
     return new Date(dateString).toLocaleDateString('es-CL')
   }
 
-  const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = expense.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         expense.supplier.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    // Filtro por IVA recuperable
-    let matchesIva = true
-    if (ivaFilter) {
-      matchesIva = expense.document_type === 'factura' && expense.status === 'active'
-    }
-    
-    // Filtro por tipo
-    let matchesType = true
-    if (typeFilter === 'all') {
-      matchesType = expense.status === 'active'
-    } else if (typeFilter === 'cancelled') {
-      matchesType = expense.status === 'cancelled'
-    } else {
-      matchesType = expense.type === typeFilter && expense.status === 'active'
-    }
-    
-    // Filtro por fecha
-    let matchesDate = true
-    if (yearFilter === 'all') {
-      // Todos los años
-      if (monthFilter === 'all') {
-        // Todos los meses de todos los años
-        matchesDate = true
-      } else {
-        // Mes específico de cualquier año
-        const expenseMonth = expense.date.substring(5, 7)
-        matchesDate = expenseMonth === monthFilter
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(expense => {
+      const matchesSearch = expense.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        expense.supplier.toLowerCase().includes(searchTerm.toLowerCase())
+
+      // Filtro por IVA recuperable
+      let matchesIva = true
+      if (ivaFilter) {
+        matchesIva = expense.document_type === 'factura' && expense.status === 'active'
       }
-    } else {
-      // Año específico
-      if (monthFilter === 'all') {
-        // Todos los meses del año seleccionado
-        matchesDate = expense.date.startsWith(yearFilter)
+
+      // Filtro por tipo
+      let matchesType = true
+      if (typeFilter === 'all') {
+        matchesType = expense.status === 'active'
+      } else if (typeFilter === 'cancelled') {
+        matchesType = expense.status === 'cancelled'
       } else {
-        // Mes específico del año seleccionado
-        matchesDate = expense.date.startsWith(`${yearFilter}-${monthFilter}`)
+        matchesType = expense.type === typeFilter && expense.status === 'active'
       }
+
+      // Filtro por fecha
+      let matchesDate = true
+      if (yearFilter === 'all') {
+        // Todos los años
+        if (monthFilter === 'all') {
+          // Todos los meses de todos los años
+          matchesDate = true
+        } else {
+          // Mes específico de cualquier año
+          const expenseMonth = expense.date.substring(5, 7)
+          matchesDate = expenseMonth === monthFilter
+        }
+      } else {
+        // Año específico
+        if (monthFilter === 'all') {
+          // Todos los meses del año seleccionado
+          matchesDate = expense.date.startsWith(yearFilter)
+        } else {
+          // Mes específico del año seleccionado
+          matchesDate = expense.date.startsWith(`${yearFilter}-${monthFilter}`)
+        }
+      }
+
+      // Filtro por tipo de documento
+      let matchesDocumentType = true
+      if (documentTypeFilter !== 'all') {
+        matchesDocumentType = expense.document_type === documentTypeFilter
+      }
+
+      // Filtro por proyecto (Client-side)
+      let matchesProject = true
+      if (projectFilter !== 'all') {
+        matchesProject = expense.project_id === parseInt(projectFilter)
+      }
+
+      return matchesSearch && matchesType && matchesDate && matchesIva && matchesDocumentType && matchesProject
+    })
+  }, [expenses, searchTerm, ivaFilter, typeFilter, yearFilter, monthFilter, documentTypeFilter, projectFilter])
+
+  // Calcular estadísticas en el cliente basado en los gastos filtrados
+  const clientStats = useMemo(() => {
+    const initialStats = {
+      total_amount: 0,
+      recoverable_iva: 0,
+      materiales_amount: 0,
+      servicios_amount: 0,
+      epp_amount: 0,
+      combustible_amount: 0,
+      herramientas_amount: 0,
+      otros_amount: 0
     }
-    
-    // Filtro por tipo de documento
-    let matchesDocumentType = true
-    if (documentTypeFilter !== 'all') {
-      matchesDocumentType = expense.document_type === documentTypeFilter
-    }
-    
-    return matchesSearch && matchesType && matchesDate && matchesIva && matchesDocumentType
-  })
+
+    return filteredExpenses.reduce((acc, expense) => {
+      // Solo sumar montos de gastos activos (no anulados)
+      if (expense.status === 'active') {
+        acc.total_amount += expense.total_amount
+
+        // Sumar IVA recuperable si es factura
+        if (expense.document_type === 'factura') {
+          acc.recoverable_iva += expense.iva_amount
+        }
+
+        // Sumar por categoría
+        switch (expense.type) {
+          case 'materiales':
+            acc.materiales_amount += expense.total_amount
+            break
+          case 'servicios':
+            acc.servicios_amount += expense.total_amount
+            break
+          case 'epp':
+            acc.epp_amount += expense.total_amount
+            break
+          case 'combustible':
+            acc.combustible_amount += expense.total_amount
+            break
+          case 'herramientas':
+            acc.herramientas_amount += expense.total_amount
+            break
+          case 'otros':
+            acc.otros_amount += expense.total_amount
+            break
+        }
+      }
+      return acc
+    }, initialStats)
+  }, [filteredExpenses])
 
   const handlePreviewExpense = (expenseData: any, receiptFile?: File) => {
     setPreviewData(expenseData)
@@ -207,22 +267,22 @@ export default function GastosPage() {
     try {
       // Filtrar campos que no pertenecen a la tabla expenses
       const { addToMaterials, materialCategory, materialUnit, materialStockMin, materialWarehouseId, materials, ...expenseData } = previewData
-      
+
       // Si es tipo materiales y tiene array de materiales (van al catálogo), quantity debe ser null
       // Si es tipo materiales pero NO tiene array (no va al catálogo), mantener quantity
       const finalExpenseData = {
         ...expenseData,
         created_by: user?.id || null,
         // Si hay materiales en el array, quantity es null (las cantidades están en cada material)
-        quantity: (previewData.type === 'materiales' && previewData.materials && previewData.materials.length > 0) 
-          ? null 
+        quantity: (previewData.type === 'materiales' && previewData.materials && previewData.materials.length > 0)
+          ? null
           : expenseData.quantity
       }
-      
+
       const newExpense = finalExpenseData
-      
+
       const createdExpense = await addExpense(newExpense)
-      
+
       // Subir comprobante si existe
       if (receiptFile) {
         await uploadReceipt(receiptFile, createdExpense.id)
@@ -238,7 +298,7 @@ export default function GastosPage() {
           if (material.existingMaterialId) {
             if (material.quantity && material.quantity > 0) {
               const warehouseId = material.warehouse_id
-              
+
               if (warehouseId) {
                 try {
                   await registerAdjustment({
@@ -260,7 +320,7 @@ export default function GastosPage() {
                 toast(`No se registró el ingreso de "${material.name}" (no se seleccionó almacén)`, { icon: '⚠️' })
               }
             }
-          } 
+          }
           // Si es nuevo material y está marcado para agregar a catálogo
           else if (material.addToCatalog) {
             try {
@@ -280,7 +340,7 @@ export default function GastosPage() {
               // Registrar el ingreso de stock si hay cantidad y almacén
               if (material.quantity && material.quantity > 0) {
                 const warehouseId = material.warehouse_id || newMaterial.default_warehouse_id
-                
+
                 if (warehouseId) {
                   try {
                     await registerAdjustment({
@@ -343,7 +403,7 @@ export default function GastosPage() {
 
           if (previewData.quantity && previewData.quantity > 0) {
             const warehouseId = previewData.materialWarehouseId || newMaterial.default_warehouse_id
-            
+
             if (warehouseId) {
               try {
                 await registerAdjustment({
@@ -362,7 +422,7 @@ export default function GastosPage() {
               toast.success('Material creado, pero no se registró el stock (no se seleccionó almacén)')
             }
           }
-          
+
           toast.success('Gasto agregado y material creado exitosamente')
         } catch (materialError: any) {
           console.error('Error creating material:', materialError)
@@ -371,7 +431,7 @@ export default function GastosPage() {
       } else {
         toast.success('Gasto agregado exitosamente')
       }
-      
+
       setShowPreviewModal(false)
       setShowExpenseForm(false)
       setPreviewData(null)
@@ -388,7 +448,7 @@ export default function GastosPage() {
     try {
       if (editingExpense) {
         await updateExpense(editingExpense.id, expenseData)
-        
+
         // Si hay un archivo de comprobante, subirlo
         if (receiptFile) {
           const receiptUrl = await uploadReceipt(receiptFile, editingExpense.id)
@@ -400,7 +460,7 @@ export default function GastosPage() {
             })
           }
         }
-        
+
         toast.success('Gasto actualizado exitosamente')
         setShowExpenseForm(false)
         setEditingExpense(null)
@@ -465,12 +525,12 @@ export default function GastosPage() {
     // Resetear filtro de categoría al filtrar por mes
     setTypeFilter('all')
     setIvaFilter(false)
-    
+
     // Scroll suave hacia los filtros
     setTimeout(() => {
       const filtersElement = document.querySelector('[data-filters-section]')
       if (filtersElement) {
-        filtersElement.scrollIntoView({ 
+        filtersElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
         })
@@ -505,12 +565,12 @@ export default function GastosPage() {
     setDocumentTypeFilter('all')
     // Resetear filtro de mes al filtrar por categoría
     setMonthFilter('all')
-    
+
     // Scroll suave hacia los filtros
     setTimeout(() => {
       const filtersElement = document.querySelector('[data-filters-section]')
       if (filtersElement) {
-        filtersElement.scrollIntoView({ 
+        filtersElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
         })
@@ -525,12 +585,12 @@ export default function GastosPage() {
     setTypeFilter(category)
     setIvaFilter(false)
     setDocumentTypeFilter('all')
-    
+
     // Scroll suave hacia los filtros
     setTimeout(() => {
       const filtersElement = document.querySelector('[data-filters-section]')
       if (filtersElement) {
-        filtersElement.scrollIntoView({ 
+        filtersElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
         })
@@ -555,7 +615,7 @@ export default function GastosPage() {
     setTimeout(() => {
       const filtersElement = document.querySelector('[data-filters-section]')
       if (filtersElement) {
-        filtersElement.scrollIntoView({ 
+        filtersElement.scrollIntoView({
           behavior: 'smooth',
           block: 'start'
         })
@@ -589,292 +649,288 @@ export default function GastosPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Gestión de Gastos</h1>
             <p className="text-slate-400">Administra los gastos de la empresa por categorías</p>
           </div>
-          <Button
-            onClick={() => setShowExpenseForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Agregar Gasto
-          </Button>
-        </div>
+          <div className="flex items-center gap-3">
 
-        {/* Project Filter */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4">
-            <label className="text-white font-medium">Proyecto:</label>
-            <Select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white w-64"
+
+            <Button
+              variant="outline"
+              onClick={() => setIsFilterSidebarOpen(true)}
+              className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
             >
-              <option value="all">Todos los proyectos</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.id.toString()}>
-                  {project.name}
-                </option>
-              ))}
-            </Select>
+              <Filter className="w-5 h-5" />
+              Filtros
+              {(projectFilter !== 'all' || monthFilter !== 'all' || yearFilter !== 'all' || typeFilter !== 'all' || documentTypeFilter !== 'all' || ivaFilter) && (
+                <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                  !
+                </span>
+              )}
+            </Button>
+
+            {(projectFilter !== 'all' || monthFilter !== 'all' || yearFilter !== 'all' || typeFilter !== 'all' || documentTypeFilter !== 'all' || ivaFilter) && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setProjectFilter('all')
+                  setMonthFilter('all')
+                  setYearFilter('all')
+                  setTypeFilter('all')
+                  setDocumentTypeFilter('all')
+                  setIvaFilter(false)
+                }}
+                className="text-slate-400 hover:text-white hover:bg-slate-800"
+                title="Limpiar filtros"
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowChart(!showChart)}
+              className={`text-xs ${showChart ? 'bg-slate-700' : ''}`}
+            >
+              {showChart ? 'Ocultar Gráfico' : 'Mostrar Gráfico'}
+            </Button>
+
+            <Button
+              onClick={() => setShowExpenseForm(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Gasto
+            </Button>
           </div>
         </div>
 
         {/* Chart */}
-        <ExpenseChart 
-          year={yearFilter === 'all' ? 0 : parseInt(yearFilter)} 
-          projectId={projectFilterValue}
-          refreshToken={refreshKey}
-          onMonthClick={handleMonthClick} 
-          onYearChange={handleYearChangeWithReset}
-          onCategoryClick={handleCategoryClick}
-          onMonthAndCategoryClick={handleMonthAndCategoryClick}
-          onDocumentTypeClick={handleDocumentTypeClick}
-          onMonthAndDocumentTypeClick={handleMonthAndDocumentTypeClick}
-          onViewModeChange={handleViewModeChange}
-        />
+        {showChart && (
+          <ExpenseChart
+            year={yearFilter === 'all' ? 0 : parseInt(yearFilter)}
+            projectId={projectFilterValue}
+            refreshToken={refreshKey}
+            onMonthClick={handleMonthClick}
+            onYearChange={handleYearChangeWithReset}
+            onCategoryClick={handleCategoryClick}
+            onMonthAndCategoryClick={handleMonthAndCategoryClick}
+            onDocumentTypeClick={handleDocumentTypeClick}
+            onMonthAndDocumentTypeClick={handleMonthAndDocumentTypeClick}
+            onViewModeChange={handleViewModeChange}
+          />
+        )}
 
         {/* Stats */}
         <div className="space-y-4 mb-6">
           {/* Total Gastos dividido en dos mitades */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Mitad izquierda - Total Gastos */}
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'all' && !ivaFilter
-                  ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'all' && !ivaFilter
+                ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('all')}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'all' && !ivaFilter ? 'text-emerald-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'all' && !ivaFilter ? 'text-emerald-400' : 'text-slate-300'
+                      }`}>
                       Total Gastos
                     </p>
-                    <p className={`text-2xl font-bold ${
-                      typeFilter === 'all' && !ivaFilter ? 'text-emerald-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.total_amount) : '$0'}
+                    <p className={`text-2xl font-bold ${typeFilter === 'all' && !ivaFilter ? 'text-emerald-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.total_amount)}
                     </p>
                   </div>
-                  <DollarSign className={`w-12 h-12 ${
-                    typeFilter === 'all' && !ivaFilter ? 'text-emerald-400' : 'text-slate-400'
-                  }`} />
+                  <DollarSign className={`w-12 h-12 ${typeFilter === 'all' && !ivaFilter ? 'text-emerald-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Mitad derecha - IVA Recuperable */}
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                ivaFilter
-                  ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${ivaFilter
+                ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={handleIvaCardClick}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      ivaFilter ? 'text-emerald-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${ivaFilter ? 'text-emerald-400' : 'text-slate-300'
+                      }`}>
                       IVA Recuperable
                     </p>
-                    <p className={`text-2xl font-bold ${
-                      ivaFilter ? 'text-emerald-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.recoverable_iva || 0) : '$0'}
+                    <p className={`text-2xl font-bold ${ivaFilter ? 'text-emerald-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.recoverable_iva)}
                     </p>
                   </div>
-                  <Calculator className={`w-12 h-12 ${
-                    ivaFilter ? 'text-emerald-400' : 'text-slate-400'
-                  }`} />
+                  <Calculator className={`w-12 h-12 ${ivaFilter ? 'text-emerald-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Categorías - Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'materiales'
-                  ? 'bg-blue-900/30 border-blue-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'materiales'
+                ? 'bg-blue-900/30 border-blue-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('materiales')}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'materiales' ? 'text-blue-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'materiales' ? 'text-blue-400' : 'text-slate-300'
+                      }`}>
                       Materiales
                     </p>
-                    <p className={`${(stats?.materiales_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${
-                      typeFilter === 'materiales' ? 'text-blue-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.materiales_amount) : '$0'}
+                    <p className={`${(stats?.materiales_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${typeFilter === 'materiales' ? 'text-blue-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.materiales_amount)}
                     </p>
                   </div>
-                  <Package className={`w-8 h-8 ${
-                    typeFilter === 'materiales' ? 'text-blue-400' : 'text-slate-400'
-                  }`} />
+                  <Package className={`w-8 h-8 ${typeFilter === 'materiales' ? 'text-blue-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
-            
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'servicios'
-                  ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'servicios'
+                ? 'bg-emerald-900/30 border-emerald-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('servicios')}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'servicios' ? 'text-emerald-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'servicios' ? 'text-emerald-400' : 'text-slate-300'
+                      }`}>
                       Servicios
                     </p>
-                    <p className={`${(stats?.servicios_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${
-                      typeFilter === 'servicios' ? 'text-emerald-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.servicios_amount) : '$0'}
+                    <p className={`${(stats?.servicios_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${typeFilter === 'servicios' ? 'text-emerald-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.servicios_amount)}
                     </p>
                   </div>
-                  <Wrench className={`w-8 h-8 ${
-                    typeFilter === 'servicios' ? 'text-emerald-400' : 'text-slate-400'
-                  }`} />
+                  <Wrench className={`w-8 h-8 ${typeFilter === 'servicios' ? 'text-emerald-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
-            
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'epp'
-                  ? 'bg-yellow-900/30 border-yellow-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'epp'
+                ? 'bg-yellow-900/30 border-yellow-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('epp')}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'epp' ? 'text-yellow-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'epp' ? 'text-yellow-400' : 'text-slate-300'
+                      }`}>
                       EPP
                     </p>
-                    <p className={`${(stats?.epp_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${
-                      typeFilter === 'epp' ? 'text-yellow-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.epp_amount) : '$0'}
+                    <p className={`${(stats?.epp_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${typeFilter === 'epp' ? 'text-yellow-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.epp_amount)}
                     </p>
                   </div>
-                  <Shield className={`w-8 h-8 ${
-                    typeFilter === 'epp' ? 'text-yellow-400' : 'text-slate-400'
-                  }`} />
+                  <Shield className={`w-8 h-8 ${typeFilter === 'epp' ? 'text-yellow-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
-            
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'combustible'
-                  ? 'bg-orange-900/30 border-orange-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'combustible'
+                ? 'bg-orange-900/30 border-orange-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('combustible')}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'combustible' ? 'text-orange-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'combustible' ? 'text-orange-400' : 'text-slate-300'
+                      }`}>
                       Combustible
                     </p>
-                    <p className={`${(stats?.combustible_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${
-                      typeFilter === 'combustible' ? 'text-orange-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.combustible_amount) : '$0'}
+                    <p className={`${(stats?.combustible_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${typeFilter === 'combustible' ? 'text-orange-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.combustible_amount)}
                     </p>
                   </div>
-                  <Fuel className={`w-8 h-8 ${
-                    typeFilter === 'combustible' ? 'text-orange-400' : 'text-slate-400'
-                  }`} />
+                  <Fuel className={`w-8 h-8 ${typeFilter === 'combustible' ? 'text-orange-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
-            
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'herramientas'
-                  ? 'bg-purple-900/30 border-purple-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'herramientas'
+                ? 'bg-purple-900/30 border-purple-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('herramientas')}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'herramientas' ? 'text-purple-400' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'herramientas' ? 'text-purple-400' : 'text-slate-300'
+                      }`}>
                       Herramientas
                     </p>
-                    <p className={`${(stats?.herramientas_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${
-                      typeFilter === 'herramientas' ? 'text-purple-400' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.herramientas_amount) : '$0'}
+                    <p className={`${(stats?.herramientas_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${typeFilter === 'herramientas' ? 'text-purple-400' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.herramientas_amount)}
                     </p>
                   </div>
-                  <Wrench className={`w-8 h-8 ${
-                    typeFilter === 'herramientas' ? 'text-purple-400' : 'text-slate-400'
-                  }`} />
+                  <Wrench className={`w-8 h-8 ${typeFilter === 'herramientas' ? 'text-purple-400' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
-            
-            <Card 
-              className={`transition-all duration-200 border-2 cursor-pointer ${
-                typeFilter === 'otros'
-                  ? 'bg-slate-600/30 border-slate-500 shadow-lg'
-                  : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
-              }`}
+
+            <Card
+              className={`transition-all duration-200 border-2 cursor-pointer ${typeFilter === 'otros'
+                ? 'bg-slate-600/30 border-slate-500 shadow-lg'
+                : 'bg-slate-700/30 border-slate-600 hover:border-slate-500'
+                }`}
               onClick={() => handleCardClick('otros')}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${
-                      typeFilter === 'otros' ? 'text-slate-300' : 'text-slate-300'
-                    }`}>
+                    <p className={`text-sm font-medium ${typeFilter === 'otros' ? 'text-slate-300' : 'text-slate-300'
+                      }`}>
                       Otros
                     </p>
-                    <p className={`${(stats?.otros_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${
-                      typeFilter === 'otros' ? 'text-slate-300' : 'text-slate-100'
-                    }`}>
-                      {stats ? formatPrice(stats.otros_amount) : '$0'}
+                    <p className={`${(stats?.otros_amount || 0) >= 1000000 ? 'text-lg' : 'text-xl'} font-bold ${typeFilter === 'otros' ? 'text-slate-300' : 'text-slate-100'
+                      }`}>
+                      {formatPrice(clientStats.otros_amount)}
                     </p>
                   </div>
-                  <FileText className={`w-8 h-8 ${
-                    typeFilter === 'otros' ? 'text-slate-300' : 'text-slate-400'
-                  }`} />
+                  <FileText className={`w-8 h-8 ${typeFilter === 'otros' ? 'text-slate-300' : 'text-slate-400'
+                    }`} />
                 </div>
               </CardContent>
             </Card>
@@ -894,56 +950,8 @@ export default function GastosPage() {
               />
             </div>
           </div>
-          
-          <div className="flex flex-wrap xl:flex-nowrap gap-3 xl:ml-4">
-            <Select
-              value={documentTypeFilter}
-              onChange={(e) => setDocumentTypeFilter(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white w-44"
-            >
-              {documentTypes.map(docType => (
-                <option key={docType.value} value={docType.value}>
-                  {docType.label}
-                </option>
-              ))}
-            </Select>
-            
-            <Select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white w-40"
-            >
-              {expenseTypes.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </Select>
-            
-            <Select
-              value={monthFilter}
-              onChange={(e) => setMonthFilter(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white w-44"
-            >
-              {months.map(month => (
-                <option key={month.value} value={month.value}>
-                  {month.label}
-                </option>
-              ))}
-            </Select>
-            
-            <Select
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              className="bg-slate-800 border-slate-600 text-white w-32"
-            >
-              {years.map(year => (
-                <option key={year.value} value={year.value}>
-                  {year.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+
+
         </div>
 
         {/* Expenses List */}
@@ -977,17 +985,16 @@ export default function GastosPage() {
                             <span>{getTypeLabel(expense.type)}</span>
                           </span>
                         </Badge>
-                        <Badge 
-                          className={`text-white capitalize ${
-                            expense.document_type === 'factura' 
-                              ? 'bg-blue-500 text-white border-blue-500' 
-                              : 'bg-gray-500 text-white border-gray-500'
-                          }`}
+                        <Badge
+                          className={`text-white capitalize ${expense.document_type === 'factura'
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-gray-500 text-white border-gray-500'
+                            }`}
                         >
                           {expense.document_type}
                         </Badge>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 text-slate-400 mr-2" />
@@ -996,7 +1003,7 @@ export default function GastosPage() {
                             <p className="text-sm text-white">{formatDate(expense.date)}</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center">
                           <DollarSign className="w-4 h-4 text-slate-400 mr-2" />
                           <div>
@@ -1004,21 +1011,21 @@ export default function GastosPage() {
                             <p className="text-sm text-white font-semibold">{formatPrice(expense.total_amount)}</p>
                           </div>
                         </div>
-                        
+
                         {(expense.quantity || (expense.type === 'materiales' && expense.quantity === null)) && (
                           <div className="flex items-center">
                             <Package className="w-4 h-4 text-slate-400 mr-2" />
                             <div>
                               <p className="text-sm font-medium text-slate-400">Cantidad</p>
                               <p className="text-sm text-white">
-                                {expense.type === 'materiales' && expense.quantity === null 
-                                  ? 'revisar catálogo de materiales' 
+                                {expense.type === 'materiales' && expense.quantity === null
+                                  ? 'revisar catálogo de materiales'
                                   : `${expense.quantity} unidades`}
                               </p>
                             </div>
                           </div>
                         )}
-                        
+
                         <div className="flex items-center">
                           <FileText className="w-4 h-4 text-slate-400 mr-2" />
                           <div>
@@ -1027,7 +1034,7 @@ export default function GastosPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {expense.description && (
                         <div className="mb-4">
                           <p className="text-sm font-medium text-slate-400 mb-1">Descripción</p>
@@ -1035,7 +1042,7 @@ export default function GastosPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="flex space-x-2 ml-4">
                       {expense.receipt_url && (
                         <Button
@@ -1106,6 +1113,24 @@ export default function GastosPage() {
           }}
         />
       )}
+
+      <ExpenseFiltersSidebar
+        isOpen={isFilterSidebarOpen}
+        onClose={() => setIsFilterSidebarOpen(false)}
+        projectFilter={projectFilter}
+        onProjectChange={setProjectFilter}
+        monthFilter={monthFilter}
+        onMonthChange={setMonthFilter}
+        yearFilter={yearFilter}
+        onYearChange={setYearFilter}
+        typeFilter={typeFilter}
+        onTypeChange={setTypeFilter}
+        documentTypeFilter={documentTypeFilter}
+        onDocumentTypeChange={setDocumentTypeFilter}
+        ivaFilter={ivaFilter}
+        onIvaChange={setIvaFilter}
+        projects={projects}
+      />
     </div>
   )
 }

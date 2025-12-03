@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { WorkerForm } from '@/components/workers/WorkerForm'
-import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
+import { ContractFiltersSidebar } from '@/components/workers/ContractFiltersSidebar'
 import { formatDateToChilean } from '@/lib/contracts'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -23,17 +24,18 @@ export default function TrabajadoresPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [contractTypeFilter, setContractTypeFilter] = useState<string>('all')
   const [cardFilter, setCardFilter] = useState<'all' | 'active' | 'inactive'>('active') // Por defecto 'active'
-  
+
   // Estados para filtros de contratos
   const [contractCardFilter, setContractCardFilter] = useState<'all' | 'active' | 'finalized'>('active') // Por defecto 'active'
   const [contractTypeButtonFilter, setContractTypeButtonFilter] = useState<string>('all') // 'all', 'por_dia', 'a_trato'
   const [contractSearchTerm, setContractSearchTerm] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null)
-  
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+
   // Toggle entre vista de trabajadores y contratos
   const [currentView, setCurrentView] = useState<'workers' | 'contracts'>('workers')
-  
+
   // Estados para la vista de contratos
   const [contractProjectFilter, setContractProjectFilter] = useState<string>('all')
   const [contractWorkerFilter, setContractWorkerFilter] = useState<string>('all')
@@ -55,12 +57,12 @@ export default function TrabajadoresPage() {
   })
   const [isIndefiniteContract, setIsIndefiniteContract] = useState(false)
   const [fechaEntradaEmpresa, setFechaEntradaEmpresa] = useState('')
-  
+
   // Estados para el modal de historial de contratos
   const [showContractHistoryModal, setShowContractHistoryModal] = useState(false)
   const [selectedWorkerForHistory, setSelectedWorkerForHistory] = useState<Worker | null>(null)
   const [contractHistoryFilter, setContractHistoryFilter] = useState<string>('all')
-  
+
   // Estados para el modal de generación de pacto de horas
   const [showHoursModal, setShowHoursModal] = useState(false)
   const [selectedContractForHours, setSelectedContractForHours] = useState<Contract | null>(null)
@@ -68,7 +70,7 @@ export default function TrabajadoresPage() {
     fecha_inicio: '',
     fecha_termino: ''
   })
-  
+
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(50)
@@ -121,7 +123,7 @@ export default function TrabajadoresPage() {
         const contract = overlappingContracts[0]
         const workerName = workers.find(w => w.id === workerId)?.full_name || 'Desconocido'
         const projectName = projects.find(p => p.id === projectId)?.name || 'Desconocido'
-        
+
         toast.error(
           `Ya existe un contrato activo para ${workerName} en el proyecto ${projectName} con fechas solapadas (${contract.fecha_inicio} - ${contract.fecha_termino || 'Indefinido'})`,
           { duration: 6000 }
@@ -139,26 +141,26 @@ export default function TrabajadoresPage() {
   // Filtrar trabajadores con useMemo para performance
   const filteredWorkers = useMemo(() => workers.filter(worker => {
     const matchesSearch = worker.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          worker.rut?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          worker.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          worker.phone?.includes(searchTerm)
+      worker.rut?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      worker.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      worker.phone?.includes(searchTerm)
     // Verificar si tiene al menos un contrato activo
-    const hasActiveContract = contracts.some(contract => 
+    const hasActiveContract = contracts.some(contract =>
       contract.worker_id === worker.id && contract.status === 'activo'
     )
-    
-    const matchesStatus = statusFilter === 'all' || 
-                          (statusFilter === 'active' && worker.is_active && !worker.is_deleted && hasActiveContract) ||
-                          (statusFilter === 'inactive' && worker.is_active && !worker.is_deleted && !hasActiveContract) ||
-                          (statusFilter === 'deleted' && worker.is_deleted)
+
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && worker.is_active && !worker.is_deleted && hasActiveContract) ||
+      (statusFilter === 'inactive' && worker.is_active && !worker.is_deleted && !hasActiveContract) ||
+      (statusFilter === 'deleted' && worker.is_deleted)
     const matchesContractType = contractTypeFilter === 'all' ||
-                                (worker as any).contract_type === contractTypeFilter
-    
+      (worker as any).contract_type === contractTypeFilter
+
     // Filtro de tarjetas
     const matchesCardFilter = cardFilter === 'all' ||
-                             (cardFilter === 'active' && worker.is_active && !worker.is_deleted) ||
-                             (cardFilter === 'inactive' && !worker.is_active && !worker.is_deleted)
-    
+      (cardFilter === 'active' && worker.is_active && !worker.is_deleted) ||
+      (cardFilter === 'inactive' && !worker.is_active && !worker.is_deleted)
+
     return matchesSearch && matchesStatus && matchesContractType && matchesCardFilter
   }), [workers, searchTerm, statusFilter, contractTypeFilter, cardFilter, contracts])
 
@@ -166,25 +168,25 @@ export default function TrabajadoresPage() {
   const filteredContracts = useMemo(() => contracts.filter(contract => {
     const matchesProject = contractProjectFilter === 'all' || contract.project_id === parseInt(contractProjectFilter)
     const matchesWorker = contractWorkerFilter === 'all' || contract.worker_id === parseInt(contractWorkerFilter)
-    const matchesStatus = contractStatusFilter === 'all' || 
+    const matchesStatus = contractStatusFilter === 'all' ||
       (contractStatusFilter === 'indefinite' ? !contract.fecha_termino : contract.status === contractStatusFilter)
     const matchesType = contractTypeFilterContracts === 'all' || contract.contract_type === contractTypeFilterContracts
-    
+
     // Filtro de búsqueda
-    const matchesSearch = contractSearchTerm === '' || 
+    const matchesSearch = contractSearchTerm === '' ||
       contract.worker_name?.toLowerCase().includes(contractSearchTerm.toLowerCase()) ||
       contract.project_name?.toLowerCase().includes(contractSearchTerm.toLowerCase()) ||
       contract.contract_number?.toLowerCase().includes(contractSearchTerm.toLowerCase()) ||
       contract.notes?.toLowerCase().includes(contractSearchTerm.toLowerCase())
-    
+
     // Filtros de tarjetas de contratos
     const matchesContractCardFilter = contractCardFilter === 'all' ||
-                                    (contractCardFilter === 'active' && contract.status === 'activo' && contract.is_active) ||
-                                    (contractCardFilter === 'finalized' && contract.status === 'finalizado' && contract.is_active)
-    
+      (contractCardFilter === 'active' && contract.status === 'activo' && contract.is_active) ||
+      (contractCardFilter === 'finalized' && contract.status === 'finalizado' && contract.is_active)
+
     // Filtros de botones de tipo de contrato
     const matchesContractTypeButtonFilter = contractTypeButtonFilter === 'all' || contract.contract_type === contractTypeButtonFilter
-    
+
     return matchesProject && matchesWorker && matchesStatus && matchesType && matchesSearch && matchesContractCardFilter && matchesContractTypeButtonFilter
   }).sort((a, b) => {
     // Ordenar: activos primero, inactivos al final
@@ -287,7 +289,7 @@ export default function TrabajadoresPage() {
           .select('name')
           .eq('id', projectId)
           .single()
-        
+
         if (project?.name) {
           prefix = project.name
             .split(' ')
@@ -310,7 +312,7 @@ export default function TrabajadoresPage() {
       // Buscar los datos del trabajador y proyecto
       const worker = workers.find(w => w.id === contract.worker_id)
       const project = projects.find(p => p.id === contract.project_id)
-      
+
       if (!worker || !project) {
         toast.error('No se encontraron los datos del trabajador o proyecto')
         return
@@ -321,12 +323,12 @@ export default function TrabajadoresPage() {
       if (contract.is_renovacion) {
         // Si es renovación, buscar el primer contrato del trabajador en este proyecto
         const workerContracts = contracts
-          .filter(c => 
-            c.worker_id === contract.worker_id && 
+          .filter(c =>
+            c.worker_id === contract.worker_id &&
             c.project_id === contract.project_id
           )
           .sort((a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime())
-        
+
         if (workerContracts.length > 0) {
           fechaEntradaEmpresa = workerContracts[0].fecha_inicio
         }
@@ -344,12 +346,12 @@ export default function TrabajadoresPage() {
         ciudad_obra: project.city || 'No especificado', // Ciudad de la obra
         nacionalidad: worker.nacionalidad || 'Chilena',
         estado: worker.estado_civil || 'No especificado',
-        fecha_nacimiento: worker.fecha_nacimiento 
+        fecha_nacimiento: worker.fecha_nacimiento
           ? formatDateToChilean(worker.fecha_nacimiento)
           : 'No especificado',
         prevision: worker.prevision || 'No especificado',
         salud: worker.salud || 'No especificado',
-        
+
         // Datos del trabajo
         cargo: worker.cargo || 'Trabajador',
         nombre_obra: project.name,
@@ -393,7 +395,7 @@ export default function TrabajadoresPage() {
   const handleGenerateHoursOnly = (contract: Contract) => {
     // Abrir modal para seleccionar fechas del pacto de horas
     setSelectedContractForHours(contract)
-    
+
     // Función para obtener fecha local en formato YYYY-MM-DD (zona horaria de Chile)
     const getLocalDateString = (date: Date) => {
       const year = date.getFullYear()
@@ -401,12 +403,12 @@ export default function TrabajadoresPage() {
       const day = String(date.getDate()).padStart(2, '0')
       return `${year}-${month}-${day}`
     }
-    
+
     // Inicializar con fecha actual y +3 meses en zona local
     const today = new Date()
     const threeMonthsLater = new Date()
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3)
-    
+
     setHoursFormData({
       fecha_inicio: getLocalDateString(today),
       fecha_termino: getLocalDateString(threeMonthsLater)
@@ -424,7 +426,7 @@ export default function TrabajadoresPage() {
       // Buscar los datos del trabajador y proyecto
       const worker = workers.find(w => w.id === selectedContractForHours.worker_id)
       const project = projects.find(p => p.id === selectedContractForHours.project_id)
-      
+
       if (!worker || !project) {
         toast.error('No se encontraron los datos del trabajador o proyecto')
         return
@@ -442,12 +444,12 @@ export default function TrabajadoresPage() {
         ciudad_obra: project.city || 'No especificado',
         nacionalidad: worker.nacionalidad || 'Chilena',
         estado: worker.estado_civil || 'No especificado',
-        fecha_nacimiento: worker.fecha_nacimiento 
+        fecha_nacimiento: worker.fecha_nacimiento
           ? formatDateToChilean(worker.fecha_nacimiento)
           : 'No especificado',
         prevision: worker.prevision || 'No especificado',
         salud: worker.salud || 'No especificado',
-        
+
         // Datos del trabajo
         cargo: worker.cargo || 'Trabajador',
         nombre_obra: project.name,
@@ -455,7 +457,7 @@ export default function TrabajadoresPage() {
         // Usar las fechas seleccionadas en el modal
         fecha_inicio: formatDateToChilean(hoursFormData.fecha_inicio),
         fecha_termino: `HASTA ${formatDateToChilean(hoursFormData.fecha_termino)}`,
-        
+
         // Indicar que solo queremos el pacto de horas
         documentType: 'hours'
       }
@@ -485,7 +487,7 @@ export default function TrabajadoresPage() {
       window.URL.revokeObjectURL(url)
 
       toast.success('Pacto de horas generado y descargado correctamente')
-      
+
       // Cerrar modal y limpiar
       setShowHoursModal(false)
       setSelectedContractForHours(null)
@@ -523,7 +525,7 @@ export default function TrabajadoresPage() {
 
   const handleContractFormChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
-    
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked
       if (name === 'isIndefiniteContract') {
@@ -539,16 +541,16 @@ export default function TrabajadoresPage() {
           ...prev,
           is_renovacion: checked
         }))
-        
+
         // Si marca renovación, buscar el primer contrato del trabajador en este proyecto
         if (checked && contractFormData.worker_id && contractFormData.project_id) {
           const workerContracts = contracts
-            .filter(c => 
-              c.worker_id === parseInt(contractFormData.worker_id) && 
+            .filter(c =>
+              c.worker_id === parseInt(contractFormData.worker_id) &&
               c.project_id === parseInt(contractFormData.project_id)
             )
             .sort((a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime())
-          
+
           if (workerContracts.length > 0) {
             // Usar la fecha del primer contrato
             setFechaEntradaEmpresa(workerContracts[0].fecha_inicio)
@@ -639,10 +641,10 @@ export default function TrabajadoresPage() {
       setContractCardFilter('all')
       setContractStatusFilter('all')
     }
-    
+
     // Resetear paginación
     setCurrentPage(1)
-    
+
     // Scroll automático a la tabla de contratos
     setTimeout(() => {
       const contractsTable = document.getElementById('contracts-table')
@@ -655,7 +657,7 @@ export default function TrabajadoresPage() {
   // Función para manejar cambio en el select de estado (sincronización bidireccional)
   const handleContractStatusSelectChange = (newStatus: string) => {
     setContractStatusFilter(newStatus)
-    
+
     // Sincronizar con las tarjetas
     if (newStatus === 'activo') {
       setContractCardFilter('active')
@@ -668,7 +670,7 @@ export default function TrabajadoresPage() {
       // Para indefinite o all, mostrar todos
       setContractCardFilter('all')
     }
-    
+
     // Resetear paginación
     setCurrentPage(1)
   }
@@ -676,13 +678,13 @@ export default function TrabajadoresPage() {
   // Función para manejar cambio en el select de trabajador
   const handleContractWorkerFilterChange = (workerId: string) => {
     setContractWorkerFilter(workerId)
-    
+
     // Si se selecciona un trabajador específico, mostrar todos sus contratos
     if (workerId !== 'all') {
       setContractCardFilter('all')
       setContractStatusFilter('all')
     }
-    
+
     // Resetear paginación
     setCurrentPage(1)
   }
@@ -702,7 +704,7 @@ export default function TrabajadoresPage() {
   const handleShowContractHistory = async (worker: Worker) => {
     setSelectedWorkerForHistory(worker)
     setShowContractHistoryModal(true)
-    
+
     // Asegurar que los contratos estén cargados
     if (contracts.length === 0) {
       await fetchContracts()
@@ -718,7 +720,7 @@ export default function TrabajadoresPage() {
   // Filtrar contratos del trabajador seleccionado
   const getWorkerContracts = () => {
     if (!selectedWorkerForHistory) return []
-    
+
     return contracts.filter(contract => {
       const matchesWorker = contract.worker_id === selectedWorkerForHistory.id
       const matchesStatus = contractHistoryFilter === 'all' || contract.status === contractHistoryFilter
@@ -734,7 +736,7 @@ export default function TrabajadoresPage() {
       const today = new Date()
       const diffTime = Math.abs(today.getTime() - start.getTime())
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      
+
       if (diffDays < 30) {
         return `${diffDays} día${diffDays !== 1 ? 's' : ''} (En curso)`
       } else if (diffDays < 365) {
@@ -746,13 +748,13 @@ export default function TrabajadoresPage() {
         return `${years} año${years !== 1 ? 's' : ''} ${months > 0 ? `${months} mes${months !== 1 ? 'es' : ''}` : ''} (En curso)`
       }
     }
-    
+
     // Contrato con fecha de término
     const start = new Date(startDate)
     const end = new Date(endDate)
     const diffTime = Math.abs(end.getTime() - start.getTime())
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays < 30) {
       return `${diffDays} día${diffDays !== 1 ? 's' : ''}`
     } else if (diffDays < 365) {
@@ -847,47 +849,45 @@ export default function TrabajadoresPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="space-y-6">
+    <div className="w-full h-[calc(100vh-120px)] px-4 sm:px-6 lg:px-8 flex flex-col pb-4">
+      <div className="space-y-6 flex flex-col h-full">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-shrink-0">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               {currentView === 'workers' ? 'Gestión de Trabajadores' : 'Gestión de Contratos'}
             </h1>
             <p className="text-gray-600">
-              {currentView === 'workers' 
-                ? 'Administra todos los trabajadores del sistema' 
+              {currentView === 'workers'
+                ? 'Administra todos los trabajadores del sistema'
                 : 'Administra todos los contratos del sistema'
               }
             </p>
           </div>
-          
+
           {/* Toggle entre vistas */}
           <div className="flex items-center gap-4">
             <div className="flex bg-slate-700/30 p-1 rounded-lg">
               <button
                 onClick={() => setCurrentView('workers')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentView === 'workers'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-300'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'workers'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-300'
+                  }`}
               >
                 Trabajadores
               </button>
               <button
                 onClick={() => setCurrentView('contracts')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentView === 'contracts'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-slate-300'
-                }`}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${currentView === 'contracts'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-300'
+                  }`}
               >
                 Contratos
               </button>
             </div>
-            
+
             <div className="flex gap-3">
               {currentView === 'workers' ? (
                 <Button onClick={handleCreate} className="flex items-center gap-2 h-10">
@@ -908,202 +908,203 @@ export default function TrabajadoresPage() {
         {currentView === 'workers' && (
           <>
             {/* Estadísticas */}
-            <StatusFilterCards
-              selectedValue={cardFilter}
-              onSelect={(value) => {
-                setCardFilter(value as 'all' | 'active' | 'inactive')
-                // Scroll automático a la tabla de trabajadores
-                setTimeout(() => {
-                  const workersTable = document.getElementById('workers-table')
-                  if (workersTable) {
-                    workersTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            <div className="flex-shrink-0">
+              <StatusFilterCards
+                selectedValue={cardFilter}
+                onSelect={(value) => {
+                  setCardFilter(value as 'all' | 'active' | 'inactive')
+                  // Scroll automático a la tabla de trabajadores
+                  setTimeout(() => {
+                    const workersTable = document.getElementById('workers-table')
+                    if (workersTable) {
+                      workersTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }, 100)
+                }}
+                defaultOption={{
+                  value: 'active',
+                  label: 'Activos',
+                  icon: UserCheck,
+                  count: activeWorkers,
+                  activeColor: 'emerald-400',
+                  activeBg: 'emerald-900/30',
+                  activeBorder: 'emerald-500'
+                }}
+                options={[
+                  {
+                    value: 'all',
+                    label: 'Todos',
+                    icon: Layers,
+                    count: totalWorkers,
+                    activeColor: 'blue-400',
+                    activeBg: 'blue-900/30',
+                    activeBorder: 'blue-500'
+                  },
+                  {
+                    value: 'inactive',
+                    label: 'Inactivos',
+                    icon: UserX,
+                    count: inactiveWorkers,
+                    activeColor: 'red-400',
+                    activeBg: 'red-900/30',
+                    activeBorder: 'red-500'
                   }
-                }, 100)
-              }}
-              defaultOption={{
-                value: 'active',
-                label: 'Activos',
-                icon: UserCheck,
-                count: activeWorkers,
-                activeColor: 'emerald-400',
-                activeBg: 'emerald-900/30',
-                activeBorder: 'emerald-500'
-              }}
-              options={[
-                {
-                  value: 'all',
-                  label: 'Todos',
-                  icon: Layers,
-                  count: totalWorkers,
-                  activeColor: 'blue-400',
-                  activeBg: 'blue-900/30',
-                  activeBorder: 'blue-500'
-                },
-                {
-                  value: 'inactive',
-                  label: 'Inactivos',
-                  icon: UserX,
-                  count: inactiveWorkers,
-                  activeColor: 'red-400',
-                  activeBg: 'red-900/30',
-                  activeBorder: 'red-500'
-                }
-              ]}
-            />
-
-      {/* Filtros */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, RUT, email o teléfono..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                ]}
               />
             </div>
-          </div>
-        </div>
 
-      </div>
+            {/* Filtros */}
+            <div className="space-y-4 flex-shrink-0">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre, RUT, email o teléfono..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
 
-      {/* Lista de trabajadores */}
-      <div id="workers-table" className="bg-white rounded-lg shadow">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-800 border border-slate-600">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                  Trabajador
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                  RUT
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                  Contacto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredWorkers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                    {searchTerm || statusFilter !== 'all' 
-                      ? 'No se encontraron trabajadores con los filtros aplicados'
-                      : 'No hay trabajadores registrados'
-                    }
-                  </td>
-                </tr>
-              ) : (
-                filteredWorkers.map((worker) => (
-                  <tr key={worker.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <User className="h-5 w-5 text-blue-600" />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {worker.full_name}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-gray-900">
-                        {worker.rut}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {worker.email && (
-                          <div className="text-blue-600">{worker.email}</div>
-                        )}
-                        {worker.phone && (
-                          <div className="text-gray-500">{worker.phone}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        worker.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {worker.is_active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEdit(worker)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Editar trabajador"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        {worker.is_deleted ? (
-                          <button
-                            onClick={() => handleRestore(worker.id)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Restaurar trabajador"
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleShowContractHistory(worker)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Ver historial de contratos"
-                          >
-                            <History className="h-4 w-4" />
-                          </button>
-                        )}
-                        {!worker.is_deleted && (
-                          <button
-                            onClick={() => handleDelete(worker.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Eliminar trabajador"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
 
-        {/* Modal de creación/edición */}
-        <Modal
-          isOpen={showCreateModal || !!editingWorker}
-          onClose={handleCloseModal}
-          title={editingWorker ? 'Editar Trabajador' : 'Nuevo Trabajador'}
-          className="modal_trabajadores"
-        >
-          <WorkerForm
-            worker={editingWorker}
-            onSave={handleSave}
-            onCancel={handleCloseModal}
-          />
-        </Modal>
+            {/* Lista de trabajadores */}
+            <div id="workers-table" className="bg-white rounded-lg shadow flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="overflow-auto h-full">
+                <table className="w-full relative">
+                  <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                        Trabajador
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                        RUT
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                        Contacto
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                        Estado
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredWorkers.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                          {searchTerm || statusFilter !== 'all'
+                            ? 'No se encontraron trabajadores con los filtros aplicados'
+                            : 'No hay trabajadores registrados'
+                          }
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredWorkers.map((worker) => (
+                        <tr key={worker.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-blue-600" />
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {worker.full_name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-mono text-gray-900">
+                              {worker.rut}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {worker.email && (
+                                <div className="text-blue-600">{worker.email}</div>
+                              )}
+                              {worker.phone && (
+                                <div className="text-gray-500">{worker.phone}</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                              }`}>
+                              {worker.is_active ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleEdit(worker)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Editar trabajador"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              {worker.is_deleted ? (
+                                <button
+                                  onClick={() => handleRestore(worker.id)}
+                                  className="text-green-600 hover:text-green-900"
+                                  title="Restaurar trabajador"
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleShowContractHistory(worker)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Ver historial de contratos"
+                                >
+                                  <History className="h-4 w-4" />
+                                </button>
+                              )}
+                              {!worker.is_deleted && (
+                                <button
+                                  onClick={() => handleDelete(worker.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                  title="Eliminar trabajador"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-        {/* Modal de generación de contratos */}
+            {/* Modal de creación/edición */}
+            <Modal
+              isOpen={showCreateModal || !!editingWorker}
+              onClose={handleCloseModal}
+              title={editingWorker ? 'Editar Trabajador' : 'Nuevo Trabajador'}
+              className="modal_trabajadores"
+            >
+              <WorkerForm
+                worker={editingWorker}
+                onSave={handleSave}
+                onCancel={handleCloseModal}
+              />
+            </Modal>
+
+            {/* Modal de generación de contratos */}
           </>
         )}
 
@@ -1111,167 +1112,139 @@ export default function TrabajadoresPage() {
         {currentView === 'contracts' && (
           <>
             {/* Estadísticas de contratos */}
-            <StatusFilterCards
-              selectedValue={contractCardFilter}
-              onSelect={(value) => {
-                const filterValue = value as 'all' | 'active' | 'finalized'
-                if (contractCardFilter === filterValue) {
-                  setContractCardFilter('all')
-                  setContractStatusFilter('all')
-                } else {
-                  setContractCardFilter(filterValue)
-                  // Actualizar el select de estado según la tarjeta clickeada
-                  if (filterValue === 'active') {
-                    setContractStatusFilter('activo')
-                  } else if (filterValue === 'finalized') {
-                    setContractStatusFilter('finalizado')
-                  } else {
+            <div className="flex-shrink-0">
+              <StatusFilterCards
+                selectedValue={contractCardFilter}
+                onSelect={(value) => {
+                  const filterValue = value as 'all' | 'active' | 'finalized'
+                  if (contractCardFilter === filterValue) {
+                    setContractCardFilter('all')
                     setContractStatusFilter('all')
+                  } else {
+                    setContractCardFilter(filterValue)
+                    // Actualizar el select de estado según la tarjeta clickeada
+                    if (filterValue === 'active') {
+                      setContractStatusFilter('activo')
+                    } else if (filterValue === 'finalized') {
+                      setContractStatusFilter('finalizado')
+                    } else {
+                      setContractStatusFilter('all')
+                    }
                   }
-                }
-                
-                // Resetear paginación
-                setCurrentPage(1)
-                
-                // Scroll automático a la tabla de contratos
-                setTimeout(() => {
-                  const contractsTable = document.getElementById('contracts-table')
-                  if (contractsTable) {
-                    contractsTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+                  // Resetear paginación
+                  setCurrentPage(1)
+
+                  // Scroll automático a la tabla de contratos
+                  setTimeout(() => {
+                    const contractsTable = document.getElementById('contracts-table')
+                    if (contractsTable) {
+                      contractsTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }, 100)
+                }}
+                defaultOption={{
+                  value: 'active',
+                  label: 'Activos',
+                  icon: UserCheck,
+                  count: activeContracts,
+                  activeColor: 'emerald-400',
+                  activeBg: 'emerald-900/30',
+                  activeBorder: 'emerald-500'
+                }}
+                options={[
+                  {
+                    value: 'all',
+                    label: 'Todos',
+                    icon: Layers,
+                    count: totalContracts,
+                    activeColor: 'blue-400',
+                    activeBg: 'blue-900/30',
+                    activeBorder: 'blue-500'
+                  },
+                  {
+                    value: 'finalized',
+                    label: 'Finalizados',
+                    icon: UserX,
+                    count: finalizedContracts,
+                    activeColor: 'red-400',
+                    activeBg: 'red-900/30',
+                    activeBorder: 'red-500'
                   }
-                }, 100)
-              }}
-              defaultOption={{
-                value: 'active',
-                label: 'Activos',
-                icon: UserCheck,
-                count: activeContracts,
-                activeColor: 'emerald-400',
-                activeBg: 'emerald-900/30',
-                activeBorder: 'emerald-500'
-              }}
-              options={[
-                {
-                  value: 'all',
-                  label: 'Todos',
-                  icon: Layers,
-                  count: totalContracts,
-                  activeColor: 'blue-400',
-                  activeBg: 'blue-900/30',
-                  activeBorder: 'blue-500'
-                },
-                {
-                  value: 'finalized',
-                  label: 'Finalizados',
-                  icon: UserX,
-                  count: finalizedContracts,
-                  activeColor: 'red-400',
-                  activeBg: 'red-900/30',
-                  activeBorder: 'red-500'
-                }
-              ]}
-            />
+                ]}
+              />
+            </div>
 
 
             {/* Filtros para contratos */}
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="Buscar contratos..."
-                      value={contractSearchTerm}
-                      onChange={(e) => setContractSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-between mb-4 flex-shrink-0">
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar contratos..."
+                    value={contractSearchTerm}
+                    onChange={(e) => setContractSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
-                
-                {/* Filtro por proyecto (principal) */}
-                <select
-                  value={contractProjectFilter}
-                  onChange={(e) => setContractProjectFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsFilterSidebarOpen(true)}
+                  className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
                 >
-                  <option value="all">Todos los proyectos</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-                
-                {/* Filtro por trabajador */}
-                <select
-                  value={contractWorkerFilter}
-                  onChange={(e) => handleContractWorkerFilterChange(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">Todos los trabajadores</option>
-                  {workers.map(worker => (
-                    <option key={worker.id} value={worker.id}>
-                      {worker.full_name}
-                    </option>
-                  ))}
-                </select>
-                
-                {/* Filtro por estado */}
-                <select
-                  value={contractStatusFilter}
-                  onChange={(e) => handleContractStatusSelectChange(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="all">Todos los estados</option>
-                  <option value="activo">Activo</option>
-                  <option value="finalizado">Finalizado</option>
-                  <option value="cancelado">Cancelado</option>
-                  <option value="indefinite">Indefinidos</option>
-                </select>
-                
+                  <Filter className="w-4 h-4" />
+                  Filtros
+                  {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all') && (
+                    <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                      !
+                    </span>
+                  )}
+                </Button>
+
+                {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all') && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setContractProjectFilter('all')
+                      setContractWorkerFilter('all')
+                      setContractStatusFilter('all')
+                      setContractTypeButtonFilter('all')
+                    }}
+                    className="text-slate-400 hover:text-white hover:bg-slate-800"
+                    title="Limpiar filtros"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </Button>
+                )}
               </div>
             </div>
 
-            {/* Botones de filtro por tipo */}
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => handleContractTypeButtonFilter('all')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all border-2 ${
-                  contractTypeButtonFilter === 'all'
-                    ? 'border-white bg-white/10 text-gray-900 shadow-lg'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                }`}
-              >
-                Todo tipo de contrato
-              </button>
-              <button
-                onClick={() => handleContractTypeButtonFilter('a_trato')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all border-2 ${
-                  contractTypeButtonFilter === 'a_trato'
-                    ? 'border-orange-500 bg-orange-50 text-orange-900 shadow-lg'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                }`}
-              >
-                A trato
-              </button>
-              <button
-                onClick={() => handleContractTypeButtonFilter('por_dia')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all border-2 ${
-                  contractTypeButtonFilter === 'por_dia'
-                    ? 'border-blue-500 bg-blue-50 text-blue-900 shadow-lg'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                }`}
-              >
-                Por Día
-              </button>
-            </div>
+            <ContractFiltersSidebar
+              isOpen={isFilterSidebarOpen}
+              onClose={() => setIsFilterSidebarOpen(false)}
+              currentProjectFilter={contractProjectFilter}
+              onProjectFilterChange={setContractProjectFilter}
+              currentWorkerFilter={contractWorkerFilter}
+              onWorkerFilterChange={handleContractWorkerFilterChange}
+              currentStatusFilter={contractStatusFilter}
+              onStatusFilterChange={handleContractStatusSelectChange}
+              currentTypeFilter={contractTypeButtonFilter as 'all' | 'a_trato' | 'por_dia'}
+              onTypeFilterChange={handleContractTypeButtonFilter}
+              projects={projects}
+              workers={workers}
+            />
 
             {/* Lista de contratos */}
-            <div id="contracts-table" className="bg-white rounded-lg shadow">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-800 border border-slate-600">
+            <div id="contracts-table" className="bg-white rounded-lg shadow flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="overflow-auto h-full">
+                <table className="w-full relative">
+                  <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
                         Trabajador
@@ -1322,33 +1295,30 @@ export default function TrabajadoresPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              contract.is_renovacion 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : 'bg-cyan-100 text-cyan-800'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.is_renovacion
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-cyan-100 text-cyan-800'
+                              }`}>
                               {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              contract.contract_type === 'por_dia' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-orange-100 text-orange-800'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.contract_type === 'por_dia'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-orange-100 text-orange-800'
+                              }`}>
                               {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              contract.status === 'activo' 
-                                ? 'bg-green-100 text-green-800' 
-                                : contract.status === 'finalizado'
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
+                              ? 'bg-green-100 text-green-800'
+                              : contract.status === 'finalizado'
                                 ? 'bg-red-100 text-red-800'
                                 : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {contract.status === 'activo' ? 'Activo' : 
-                               contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                              }`}>
+                              {contract.status === 'activo' ? 'Activo' :
+                                contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1389,7 +1359,7 @@ export default function TrabajadoresPage() {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Controles de paginación */}
               {filteredContracts.length > itemsPerPage && (
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
@@ -1432,11 +1402,10 @@ export default function TrabajadoresPage() {
                           <button
                             key={page}
                             onClick={() => setCurrentPage(page)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              currentPage === page
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                            }`}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                              }`}
                           >
                             {page}
                           </button>
@@ -1463,11 +1432,11 @@ export default function TrabajadoresPage() {
               className="modal_contratos_wide"
             >
               <form onSubmit={handleSaveContract}>
-                    <div className="grid grid-cols-1 gap-8">
+                <div className="grid grid-cols-1 gap-8">
                   {/* Información del Contrato */}
                   <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
                     <h3 className="text-lg font-medium text-slate-100 mb-4">Información del Contrato</h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Primera fila: Trabajador y Proyecto */}
                       <div className="md:col-span-1">
@@ -1553,9 +1522,8 @@ export default function TrabajadoresPage() {
                           onChange={handleContractFormChange}
                           required={!isIndefiniteContract}
                           disabled={isIndefiniteContract}
-                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            isIndefiniteContract ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
+                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isIndefiniteContract ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                         />
                       </div>
 
@@ -1701,9 +1669,8 @@ export default function TrabajadoresPage() {
                           onChange={handleContractFormChange}
                           placeholder={editingContract ? "Ej: CONT-2024-001 (opcional)" : "Se genera automáticamente"}
                           readOnly={!editingContract}
-                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                            !editingContract ? 'opacity-75 cursor-not-allowed' : ''
-                          }`}
+                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!editingContract ? 'opacity-75 cursor-not-allowed' : ''
+                            }`}
                         />
                         {!editingContract && (
                           <p className="text-xs text-slate-400 mt-1">
@@ -1773,33 +1740,30 @@ export default function TrabajadoresPage() {
                                   </div>
                                 </td>
                                 <td className="px-3 py-2 text-sm">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                    contract.is_renovacion 
-                                      ? 'bg-purple-100 text-purple-800' 
-                                      : 'bg-cyan-100 text-cyan-800'
-                                  }`}>
+                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.is_renovacion
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : 'bg-cyan-100 text-cyan-800'
+                                    }`}>
                                     {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
                                   </span>
                                 </td>
                                 <td className="px-3 py-2 text-sm">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                    contract.contract_type === 'por_dia' 
-                                      ? 'bg-blue-100 text-blue-800' 
-                                      : 'bg-orange-100 text-orange-800'
-                                  }`}>
+                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.contract_type === 'por_dia'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-orange-100 text-orange-800'
+                                    }`}>
                                     {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
                                   </span>
                                 </td>
                                 <td className="px-3 py-2 text-sm">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                    contract.status === 'activo' 
-                                      ? 'bg-green-100 text-green-800'
-                                      : contract.status === 'finalizado'
+                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.status === 'activo'
+                                    ? 'bg-green-100 text-green-800'
+                                    : contract.status === 'finalizado'
                                       ? 'bg-red-100 text-red-800'
                                       : 'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {contract.status === 'activo' ? 'Activo' : 
-                                     contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                                    }`}>
+                                    {contract.status === 'activo' ? 'Activo' :
+                                      contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
                                   </span>
                                 </td>
                               </tr>
@@ -2050,33 +2014,30 @@ export default function TrabajadoresPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                contract.is_renovacion 
-                                  ? 'bg-purple-100 text-purple-800' 
-                                  : 'bg-cyan-100 text-cyan-800'
-                              }`}>
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.is_renovacion
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-cyan-100 text-cyan-800'
+                                }`}>
                                 {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                contract.contract_type === 'por_dia' 
-                                  ? 'bg-blue-100 text-blue-800' 
-                                  : 'bg-orange-100 text-orange-800'
-                              }`}>
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.contract_type === 'por_dia'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-orange-100 text-orange-800'
+                                }`}>
                                 {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                contract.status === 'activo' 
-                                  ? 'bg-green-100 text-green-800'
-                                  : contract.status === 'finalizado'
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.status === 'activo'
+                                ? 'bg-green-100 text-green-800'
+                                : contract.status === 'finalizado'
                                   ? 'bg-red-100 text-red-800'
                                   : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {contract.status === 'activo' ? 'Activo' : 
-                                 contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                                }`}>
+                                {contract.status === 'activo' ? 'Activo' :
+                                  contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
                               </span>
                             </td>
                           </tr>

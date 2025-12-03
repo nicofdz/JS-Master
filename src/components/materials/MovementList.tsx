@@ -12,27 +12,27 @@ import { useWorkers } from "@/hooks/useWorkers";
 import { supabase } from "@/lib/supabase";
 
 type MovementListProps = {
-    refreshToken?: number;
+	refreshToken?: number;
+	movementType: 'todos' | 'entrada' | 'salida';
+	materialId: string;
+	projectId: string;
+	workerId: string;
+	userId: string;
+	dateFrom: string;
+	dateTo: string;
 };
 
-export function MovementList({ refreshToken }: MovementListProps) {
+export function MovementList({
+	refreshToken,
+	movementType,
+	materialId,
+	projectId,
+	workerId,
+	userId,
+	dateFrom,
+	dateTo
+}: MovementListProps) {
 	const { movements, loading, fetchMovements } = useMaterialMovements();
-	const { materials, fetchMaterials } = useMaterials();
-	const { warehouses, fetchWarehouses } = useWarehouses();
-	const projectsHook = useProjects();
-	const workersHook = useWorkers();
-	
-	const projects = Array.isArray(projectsHook) ? projectsHook : (projectsHook?.projects || []);
-	const workers = Array.isArray(workersHook) ? workersHook : (workersHook?.workers || []);
-
-	const [materialFilter, setMaterialFilter] = useState("");
-	const [projectFilter, setProjectFilter] = useState("");
-	const [workerFilter, setWorkerFilter] = useState("");
-	const [deliveredByFilter, setDeliveredByFilter] = useState("");
-	const [dateFrom, setDateFrom] = useState("");
-	const [dateTo, setDateTo] = useState("");
-	const [movementTypeFilter, setMovementTypeFilter] = useState<"entrada" | "salida" | "todos">("todos");
-	const [users, setUsers] = useState<any[]>([]);
 
 	// Aplicar filtros
 	useEffect(() => {
@@ -41,16 +41,16 @@ export function MovementList({ refreshToken }: MovementListProps) {
 			// Para "salida" no filtramos en backend (obtenemos todos) y luego filtramos en frontend
 			// para incluir tanto 'entrega' como 'ajuste_negativo'
 			let movement_type: 'ingreso' | 'entrega' | 'ajuste_negativo' | undefined = undefined;
-			if (movementTypeFilter === 'entrada') {
+			if (movementType === 'entrada') {
 				movement_type = 'ingreso';
 			}
 			// Para 'salida' y 'todos', no filtramos por movement_type en backend
-			
+
 			fetchMovements({
-				material_id: materialFilter ? Number(materialFilter) : undefined,
-				project_id: projectFilter ? Number(projectFilter) : undefined,
-				worker_id: workerFilter ? Number(workerFilter) : undefined,
-				delivered_by: deliveredByFilter || undefined,
+				material_id: materialId ? Number(materialId) : undefined,
+				project_id: projectId ? Number(projectId) : undefined,
+				worker_id: workerId ? Number(workerId) : undefined,
+				delivered_by: userId || undefined,
 				date_from: dateFrom || undefined,
 				date_to: dateTo || undefined,
 				movement_type: movement_type,
@@ -59,43 +59,18 @@ export function MovementList({ refreshToken }: MovementListProps) {
 		}, 300);
 
 		return () => clearTimeout(timeoutId);
-	}, [materialFilter, projectFilter, workerFilter, deliveredByFilter, dateFrom, dateTo, movementTypeFilter]);
+	}, [materialId, projectId, workerId, userId, dateFrom, dateTo, movementType]);
 
-    // Refrescar cuando cambie refreshToken (por ejemplo tras un ajuste/entrega)
-    useEffect(() => {
-        if (refreshToken !== undefined) {
-            fetchMovements({ limit: 100 });
-        }
-    }, [refreshToken]);
+	// Refrescar cuando cambie refreshToken (por ejemplo tras un ajuste/entrega)
+	useEffect(() => {
+		if (refreshToken !== undefined) {
+			fetchMovements({ limit: 100 });
+		}
+	}, [refreshToken]);
 
 	// Cargar datos necesarios
 	useEffect(() => {
-		// Asegurar que se carguen materiales activos al montar el componente
-		fetchMaterials({ activeOnly: true });
-		fetchWarehouses(true);
-		if (!Array.isArray(projectsHook) && projectsHook?.refresh) {
-			projectsHook.refresh();
-		}
-		if (!Array.isArray(workersHook) && workersHook?.refresh) {
-			workersHook.refresh();
-		}
 		fetchMovements({ limit: 100 });
-		
-		// Cargar usuarios del sistema
-		const loadUsers = async () => {
-			try {
-				const { data, error } = await supabase
-					.from('user_profiles')
-					.select('id, full_name, email')
-					.order('full_name');
-				if (!error && data) {
-					setUsers(data);
-				}
-			} catch (err) {
-				console.error('Error loading users:', err);
-			}
-		};
-		loadUsers();
 	}, []);
 
 	const formatDate = (dateString: string) => {
@@ -112,105 +87,14 @@ export function MovementList({ refreshToken }: MovementListProps) {
 	};
 
 	// Filtrar movimientos por tipo si es necesario (para salida que incluye ajuste_negativo)
-	const filteredMovements = movementTypeFilter === 'salida' 
+	const filteredMovements = movementType === 'salida'
 		? movements.filter(m => m.movement_type === 'entrega' || m.movement_type === 'ajuste_negativo')
-		: movementTypeFilter === 'entrada'
-		? movements.filter(m => m.movement_type === 'ingreso')
-		: movements;
+		: movementType === 'entrada'
+			? movements.filter(m => m.movement_type === 'ingreso')
+			: movements;
 
 	return (
 		<div className="space-y-4">
-			<div className="flex items-center justify-between mb-4">
-				<div className="flex items-center gap-3">
-					<span className="text-sm font-medium text-gray-700">Tipo de movimiento:</span>
-					<div className="flex bg-slate-700/30 p-1 rounded-lg">
-						<button
-							onClick={() => setMovementTypeFilter("todos")}
-							className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-								movementTypeFilter === "todos"
-									? "bg-blue-600 text-white shadow-md"
-									: "text-slate-400 hover:text-slate-300"
-							}`}
-						>
-							Todos
-						</button>
-						<button
-							onClick={() => setMovementTypeFilter("entrada")}
-							className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-								movementTypeFilter === "entrada"
-									? "bg-blue-600 text-white shadow-md"
-									: "text-slate-400 hover:text-slate-300"
-							}`}
-						>
-							Entrada
-						</button>
-						<button
-							onClick={() => setMovementTypeFilter("salida")}
-							className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-								movementTypeFilter === "salida"
-									? "bg-blue-600 text-white shadow-md"
-									: "text-slate-400 hover:text-slate-300"
-							}`}
-						>
-							Salida
-						</button>
-					</div>
-				</div>
-			</div>
-
-			<div className="flex flex-wrap items-end gap-3">
-				<div className="w-56">
-					<Select value={materialFilter} onChange={(e) => setMaterialFilter(e.target.value)}>
-						<option value="">Todos los materiales</option>
-						{materials.map((mat) => (
-							<option key={mat.id} value={mat.id.toString()}>{mat.name}</option>
-						))}
-					</Select>
-				</div>
-				<div className="w-48">
-					<Select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
-						<option value="">Todos los proyectos</option>
-						{projects.map((proj) => (
-							<option key={proj.id} value={proj.id.toString()}>{proj.name}</option>
-						))}
-					</Select>
-				</div>
-				<div className="w-48">
-					<Select value={workerFilter} onChange={(e) => setWorkerFilter(e.target.value)}>
-						<option value="">Todos los trabajadores</option>
-						{workers.map((worker) => (
-							<option key={worker.id} value={worker.id.toString()}>{worker.full_name}</option>
-						))}
-					</Select>
-				</div>
-				<div className="w-48">
-					<Select 
-						value={deliveredByFilter} 
-						onChange={(e) => setDeliveredByFilter(e.target.value)}
-					>
-						<option value="">Todos los usuarios</option>
-						{users.map((usr) => (
-							<option key={usr.id} value={usr.id}>
-								{usr.full_name} {usr.email ? `(${usr.email})` : ''}
-							</option>
-						))}
-					</Select>
-				</div>
-				<div className="w-44">
-					<Input
-						type="date"
-						value={dateFrom}
-						onChange={(e) => setDateFrom(e.target.value)}
-					/>
-				</div>
-				<div className="w-44">
-					<Input
-						type="date"
-						value={dateTo}
-						onChange={(e) => setDateTo(e.target.value)}
-					/>
-				</div>
-			</div>
 
 			<div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 				<div className="overflow-x-auto">

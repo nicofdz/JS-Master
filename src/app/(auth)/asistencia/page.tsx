@@ -8,11 +8,13 @@ import { useAttendance } from '@/hooks/useAttendance'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { Card } from '@/components/ui/Card'
-import { Users, Check, X, Calendar, Clock, RefreshCw, Building2, User, ChevronDown, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Users, Check, X, Calendar, Clock, RefreshCw, Building2, User, ChevronDown, ChevronRight, XCircle, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { AttendanceHistoryByWorker } from '@/components/attendance/AttendanceHistoryByWorker'
 import { AttendanceHistoryByCalendar } from '@/components/attendance/AttendanceHistoryByCalendar'
 import { ProjectAttendanceModal } from '@/components/attendance/ProjectAttendanceModal'
+import { AttendanceFiltersSidebar } from '@/components/attendance/AttendanceFiltersSidebar'
 
 type ViewMode = 'register' | 'history'
 type HistoryMode = 'by-worker' | 'by-calendar'
@@ -26,8 +28,12 @@ export default function AsistenciaPage() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('register')
   const [historyMode, setHistoryMode] = useState<HistoryMode>('by-worker')
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
+  const [registerProjectId, setRegisterProjectId] = useState<number | null>(null)
   const [historyProjectId, setHistoryProjectId] = useState<number | null>(null)
+  const [registerWorkerFilter, setRegisterWorkerFilter] = useState<string>('all')
+  const [historyWorkerFilter, setHistoryWorkerFilter] = useState<string>('all')
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+
   const [historyYear, setHistoryYear] = useState(new Date().getFullYear())
   const [historyMonth, setHistoryMonth] = useState(new Date().getMonth() + 1)
   const [historyAttendances, setHistoryAttendances] = useState<any[]>([])
@@ -37,6 +43,7 @@ export default function AsistenciaPage() {
   const [showAttendanceModal, setShowAttendanceModal] = useState(false)
   const [selectedProjectForModal, setSelectedProjectForModal] = useState<{ id: number; name: string } | null>(null)
   const [workersChangedToAbsent, setWorkersChangedToAbsent] = useState<Set<number>>(new Set())
+
   // Obtener fecha actual en zona horaria de Chile
   const getChileDate = () => {
     const now = new Date()
@@ -107,18 +114,32 @@ export default function AsistenciaPage() {
       if (contract.fecha_termino && contract.fecha_termino < today) return false
 
       // Filtro por proyecto si está seleccionado
-      if (selectedProjectId && contract.project_id !== selectedProjectId) return false
+      if (registerProjectId && contract.project_id !== registerProjectId) return false
+
+      // Filtro por trabajador
+      if (registerWorkerFilter !== 'all' && contract.worker_id.toString() !== registerWorkerFilter) return false
 
       return true
     })
-  }, [contracts, today, selectedProjectId])
+  }, [contracts, today, registerProjectId, registerWorkerFilter])
+
+  // Lógica de auto-expansión
+  useEffect(() => {
+    if (registerProjectId) {
+      setExpandedProjects(prev => {
+        const newSet = new Set(prev)
+        newSet.add(registerProjectId)
+        return newSet
+      })
+    }
+  }, [registerProjectId])
 
   // Cargar asistencias del día (solo en modo registro)
   useEffect(() => {
     if (viewMode === 'register') {
-      fetchAttendances(today, selectedProjectId)
+      fetchAttendances(today, registerProjectId)
     }
-  }, [today, selectedProjectId, viewMode, fetchAttendances])
+  }, [today, registerProjectId, viewMode, fetchAttendances])
 
   // Función para cargar asistencias de un rango amplio (últimos 12 meses)
   const loadHistoryAttendances = useCallback(async () => {
@@ -147,6 +168,13 @@ export default function AsistenciaPage() {
         query = query.eq('project_id', historyProjectId)
       }
 
+      // Filtrar por trabajador si está seleccionado
+      if (historyWorkerFilter !== 'all') {
+        query = query.eq('worker_id', parseInt(historyWorkerFilter))
+      }
+
+
+
       query = query.order('attendance_date', { ascending: false })
 
       const { data, error } = await query
@@ -171,7 +199,7 @@ export default function AsistenciaPage() {
     } finally {
       setHistoryLoading(false)
     }
-  }, [historyProjectId])
+  }, [historyProjectId, historyWorkerFilter])
 
   // Cargar asistencias de un rango amplio (solo en modo historial)
   useEffect(() => {
@@ -184,11 +212,6 @@ export default function AsistenciaPage() {
   const handleHistoryMonthChange = (year: number, month: number) => {
     setHistoryYear(year)
     setHistoryMonth(month)
-  }
-
-  // Handler para cambio de proyecto en historial
-  const handleHistoryProjectChange = (projectId: number | null) => {
-    setHistoryProjectId(projectId)
   }
 
   // Inicializar estados de contratos
@@ -367,7 +390,7 @@ export default function AsistenciaPage() {
       })
 
       // Recargar asistencias
-      await fetchAttendances(today, selectedProjectId)
+      await fetchAttendances(today, registerProjectId)
 
       // Actualizar estado original después de guardar exitosamente
       setOriginalStates(prev => ({
@@ -515,7 +538,7 @@ export default function AsistenciaPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-6 space-y-6">
+    <div className="w-full py-8 px-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -593,332 +616,384 @@ export default function AsistenciaPage() {
         </div>
       )}
 
+      {/* Barra de Herramientas Común (Filtros) */}
+      <div className="flex justify-end">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsFilterSidebarOpen(true)}
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+            {((viewMode === 'register' && (registerProjectId !== null || registerWorkerFilter !== 'all')) ||
+              (viewMode === 'history' && (historyProjectId !== null || historyWorkerFilter !== 'all'))) && (
+                <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                  !
+                </span>
+              )}
+          </Button>
+
+          {((viewMode === 'register' && (registerProjectId !== null || registerWorkerFilter !== 'all')) ||
+            (viewMode === 'history' && (historyProjectId !== null || historyWorkerFilter !== 'all'))) && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (viewMode === 'register') {
+                    setRegisterProjectId(null)
+                    setRegisterWorkerFilter('all')
+                  } else {
+                    setHistoryProjectId(null)
+                    setHistoryWorkerFilter('all')
+                  }
+                }}
+                className="text-slate-400 hover:text-white hover:bg-slate-800"
+                title="Limpiar filtros"
+              >
+                <XCircle className="w-5 h-5" />
+              </Button>
+            )}
+        </div>
+      </div>
+
       {/* Contenido según modo seleccionado */}
-      {viewMode === 'register' ? (
-        <>
-          {/* Estadísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-slate-800/50 border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Total Contratos Activos</p>
-                    <p className="text-2xl font-bold text-slate-100 mt-1">{stats.total}</p>
-                  </div>
-                  <div className="p-3 bg-blue-900/30 rounded-lg">
-                    <Users className="w-6 h-6 text-blue-400" />
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="bg-slate-800/50 border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Presentes</p>
-                    <p className="text-2xl font-bold text-emerald-400 mt-1">{stats.present}</p>
-                  </div>
-                  <div className="p-3 bg-emerald-900/30 rounded-lg">
-                    <Check className="w-6 h-6 text-emerald-400" />
+      {
+        viewMode === 'register' ? (
+          <>
+            {/* Estadísticas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-slate-800/50 border-slate-700">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-400">Total Contratos Activos</p>
+                      <p className="text-2xl font-bold text-slate-100 mt-1">{stats.total}</p>
+                    </div>
+                    <div className="p-3 bg-blue-900/30 rounded-lg">
+                      <Users className="w-6 h-6 text-blue-400" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
 
-            <Card className="bg-slate-800/50 border-slate-700">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400">Ausentes</p>
-                    <p className="text-2xl font-bold text-red-400 mt-1">{stats.absent}</p>
-                  </div>
-                  <div className="p-3 bg-red-900/30 rounded-lg">
-                    <X className="w-6 h-6 text-red-400" />
+              <Card className="bg-slate-800/50 border-slate-700">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-400">Presentes</p>
+                      <p className="text-2xl font-bold text-emerald-400 mt-1">{stats.present}</p>
+                    </div>
+                    <div className="p-3 bg-emerald-900/30 rounded-lg">
+                      <Check className="w-6 h-6 text-emerald-400" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
 
-          {/* Filtros */}
-          <Card className="bg-slate-800/50 border-slate-700">
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Calendar className="w-5 h-5 text-slate-400" />
-                <h2 className="text-lg font-semibold text-slate-100">
-                  {new Date(today + 'T00:00:00').toLocaleDateString('es-CL', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </h2>
-              </div>
-
-              <div className="flex gap-4">
-                {/* Filtro por proyecto */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Filtrar por Proyecto
-                  </label>
-                  <select
-                    value={selectedProjectId?.toString() || ''}
-                    onChange={(e) => setSelectedProjectId(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Todos los proyectos</option>
-                    {projects.map(project => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
+              <Card className="bg-slate-800/50 border-slate-700">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-400">Ausentes</p>
+                      <p className="text-2xl font-bold text-red-400 mt-1">{stats.absent}</p>
+                    </div>
+                    <div className="p-3 bg-red-900/30 rounded-lg">
+                      <X className="w-6 h-6 text-red-400" />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </Card>
             </div>
-          </Card>
 
-          {/* Lista de Contratos/Asistencia - Estructura Tree View */}
-          <Card className="bg-slate-800/50 border-slate-700">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-slate-100 mb-4">Asistencia por Contrato</h3>
-
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="text-slate-400 mt-4">Cargando contratos...</p>
+            {/* Filtros (Solo fecha para modo registro) */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <div className="p-4">
+                <div className="flex gap-4 items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-slate-400" />
+                    <h2 className="text-lg font-semibold text-slate-100">
+                      {new Date(today + 'T00:00:00').toLocaleDateString('es-CL', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </h2>
+                  </div>
                 </div>
-              ) : contractsByProject.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                  <p className="text-slate-400">
-                    {selectedProjectId
-                      ? 'No hay contratos activos en este proyecto'
-                      : 'No hay contratos activos para hoy'
-                    }
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {contractsByProject.map((projectGroup, index) => {
-                    const isProjectExpanded = expandedProjects.has(projectGroup.projectId)
-                    const projectStats = getProjectStats(projectGroup.contracts)
+              </div>
+            </Card>
 
-                    return (
-                      <div key={projectGroup.projectId} className={`space-y-3 ${index > 0 ? 'mt-6 pt-4 border-t-2 border-slate-600' : ''}`}>
-                        {/* Card del Proyecto - Expandible */}
-                        <div
-                          className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 hover:bg-slate-700/70 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div
-                              className="flex items-center gap-2 cursor-pointer flex-1"
-                              onClick={() => toggleProjectExpansion(projectGroup.projectId)}
-                            >
-                              {isProjectExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-slate-300" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-slate-300" />
-                              )}
-                              <Building2 className="w-4 h-4 text-blue-400" />
-                              <p className="text-sm font-medium text-slate-200">
-                                {projectGroup.projectName}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-4 text-xs">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-400">Total:</span>
-                                  <span className="text-slate-300 font-medium">{projectStats.total}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-400">Presentes:</span>
-                                  <span className="text-emerald-400 font-medium">{projectStats.present}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-slate-400">Ausentes:</span>
-                                  <span className="text-red-400 font-medium">{projectStats.absent}</span>
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleOpenAttendanceModal(projectGroup.projectId, projectGroup.projectName)
-                                }}
-                                className="ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1.5"
-                                title="Registrar asistencia de todos los trabajadores"
+
+
+            {/* Lista de Contratos/Asistencia - Estructura Tree View */}
+            <Card className="bg-slate-800/50 border-slate-700">
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-slate-100 mb-4">Asistencia por Contrato</h3>
+
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="text-slate-400 mt-4">Cargando contratos...</p>
+                  </div>
+                ) : contractsByProject.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                    <p className="text-slate-400">
+                      {registerProjectId
+                        ? 'No hay contratos activos en este proyecto'
+                        : 'No hay contratos activos para hoy'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {contractsByProject.map((projectGroup, index) => {
+                      const isProjectExpanded = expandedProjects.has(projectGroup.projectId)
+                      const projectStats = getProjectStats(projectGroup.contracts)
+
+                      return (
+                        <div key={projectGroup.projectId} className={`space-y-3 ${index > 0 ? 'mt-6 pt-4 border-t-2 border-slate-600' : ''}`}>
+                          {/* Card del Proyecto - Expandible */}
+                          <div
+                            className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 hover:bg-slate-700/70 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div
+                                className="flex items-center gap-2 cursor-pointer flex-1"
+                                onClick={() => toggleProjectExpansion(projectGroup.projectId)}
                               >
-                                <Calendar className="w-3.5 h-3.5" />
-                                Registrar Asistencia - {new Date(today + 'T00:00:00').toLocaleDateString('es-CL', {
-                                  weekday: 'short',
-                                  day: '2-digit',
-                                  month: '2-digit'
-                                })}
-                              </button>
+                                {isProjectExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-slate-300" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-slate-300" />
+                                )}
+                                <Building2 className="w-4 h-4 text-blue-400" />
+                                <p className="text-sm font-medium text-slate-200">
+                                  {projectGroup.projectName}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-4 text-xs">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-400">Total:</span>
+                                    <span className="text-slate-300 font-medium">{projectStats.total}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-400">Presentes:</span>
+                                    <span className="text-emerald-400 font-medium">{projectStats.present}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-400">Ausentes:</span>
+                                    <span className="text-red-400 font-medium">{projectStats.absent}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleOpenAttendanceModal(projectGroup.projectId, projectGroup.projectName)
+                                  }}
+                                  className="ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1.5"
+                                  title="Registrar asistencia de todos los trabajadores"
+                                >
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  Registrar Asistencia - {new Date(today + 'T00:00:00').toLocaleDateString('es-CL', {
+                                    weekday: 'short',
+                                    day: '2-digit',
+                                    month: '2-digit'
+                                  })}
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Trabajadores del Proyecto */}
-                        {isProjectExpanded && (
-                          <div className="ml-4 space-y-3">
-                            {projectGroup.contracts.map(contract => {
-                              const state = contractStates[contract.id]
-                              if (!state) return null
+                          {/* Trabajadores del Proyecto */}
+                          {isProjectExpanded && (
+                            <div className="ml-4 space-y-3">
+                              {projectGroup.contracts.map(contract => {
+                                const state = contractStates[contract.id]
+                                if (!state) return null
 
-                              const worker = workers.find(w => w.id === contract.worker_id)
-                              const attendance = attendances.find(a => a.contract_id === contract.id)
+                                const worker = workers.find(w => w.id === contract.worker_id)
+                                const attendance = attendances.find(a => a.contract_id === contract.id)
 
-                              // Determinar el estado de asistencia desde la base de datos
-                              const isPresentFromDB = attendance?.is_present ?? false
+                                // Determinar el estado de asistencia desde la base de datos
+                                const isPresentFromDB = attendance?.is_present ?? false
 
-                              // Determinar si llegó tarde o salió temprano
-                              const checkInTime = attendance?.check_in_time ? extractTimeFromTimestamp(attendance.check_in_time) : null
-                              const checkOutTime = attendance?.check_out_time ? extractTimeFromTimestamp(attendance.check_out_time) : null
-                              const isLateArrival = isPresentFromDB && checkInTime && checkInTime > '08:00'
-                              const isEarlyDeparture = isPresentFromDB && checkOutTime && checkOutTime < '18:00'
-                              const hasBothIssues = isLateArrival && isEarlyDeparture
+                                // Determinar si llegó tarde o salió temprano
+                                const checkInTime = attendance?.check_in_time ? extractTimeFromTimestamp(attendance.check_in_time) : null
+                                const checkOutTime = attendance?.check_out_time ? extractTimeFromTimestamp(attendance.check_out_time) : null
+                                const isLateArrival = isPresentFromDB && checkInTime && checkInTime > '08:00'
+                                const isEarlyDeparture = isPresentFromDB && checkOutTime && checkOutTime < '18:00'
+                                const hasBothIssues = isLateArrival && isEarlyDeparture
 
-                              // Determinar color del borde según el estado
-                              let borderColor = 'border-slate-500'
-                              if (!isPresentFromDB) {
-                                borderColor = 'border-red-500'
-                              } else if (hasBothIssues) {
-                                borderColor = 'border-orange-500'
-                              } else if (isLateArrival) {
-                                borderColor = 'border-yellow-500'
-                              } else if (isEarlyDeparture) {
-                                borderColor = 'border-red-500'
-                              } else {
-                                borderColor = 'border-emerald-500'
-                              }
+                                // Determinar color del borde según el estado
+                                let borderColor = 'border-slate-500'
+                                if (!isPresentFromDB) {
+                                  borderColor = 'border-red-500'
+                                } else if (hasBothIssues) {
+                                  borderColor = 'border-orange-500'
+                                } else if (isLateArrival) {
+                                  borderColor = 'border-yellow-500'
+                                } else if (isEarlyDeparture) {
+                                  borderColor = 'border-red-500'
+                                } else {
+                                  borderColor = 'border-emerald-500'
+                                }
 
-                              return (
-                                <div key={contract.id}>
-                                  {/* Card del Trabajador - Solo visual */}
-                                  <div
-                                    className={`bg-slate-700/30 rounded-lg border-2 px-4 py-3 transition-colors ${borderColor}`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      {/* Izquierda: Icono, Nombre, RUT */}
-                                      <div className="flex items-center gap-3 flex-1">
-                                        <User className="w-4 h-4 text-purple-400" />
-                                        <p className={`text-sm font-medium ${isPresentFromDB ? 'text-emerald-300' : 'text-red-300'}`}>
-                                          {worker?.full_name}
-                                        </p>
-                                        <span className="text-xs text-slate-400">{worker?.rut}</span>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] ${contract.contract_type === 'por_dia'
-                                          ? 'bg-purple-900/30 text-purple-400'
-                                          : 'bg-orange-900/30 text-orange-400'
-                                          }`}>
-                                          {contract.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
-                                        </span>
-                                      </div>
+                                return (
+                                  <div key={contract.id}>
+                                    {/* Card del Trabajador - Solo visual */}
+                                    <div
+                                      className={`bg-slate-700/30 rounded-lg border-2 px-4 py-3 transition-colors ${borderColor}`}
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        {/* Izquierda: Icono, Nombre, RUT */}
+                                        <div className="flex items-center gap-3 flex-1">
+                                          <User className="w-4 h-4 text-purple-400" />
+                                          <p className={`text-sm font-medium ${isPresentFromDB ? 'text-emerald-300' : 'text-red-300'}`}>
+                                            {worker?.full_name}
+                                          </p>
+                                          <span className="text-xs text-slate-400">{worker?.rut}</span>
+                                          <span className={`px-2 py-0.5 rounded text-[10px] ${contract.contract_type === 'por_dia'
+                                            ? 'bg-purple-900/30 text-purple-400'
+                                            : 'bg-orange-900/30 text-orange-400'
+                                            }`}>
+                                            {contract.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
+                                          </span>
+                                        </div>
 
-                                      {/* Derecha: Estado y Horas */}
-                                      <div className="flex items-center gap-4">
-                                        {isPresentFromDB ? (
-                                          <div className="flex items-center gap-3 text-sm">
-                                            <div className="flex items-center gap-1 text-slate-300">
-                                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                              <span>{checkInTime} - {checkOutTime}</span>
+                                        {/* Derecha: Estado y Horas */}
+                                        <div className="flex items-center gap-4">
+                                          {isPresentFromDB ? (
+                                            <div className="flex items-center gap-3 text-sm">
+                                              <div className="flex items-center gap-1 text-slate-300">
+                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                <span>{checkInTime} - {checkOutTime}</span>
+                                              </div>
+
+                                              {/* Badges de estado */}
+                                              <div className="flex gap-1">
+                                                {isLateArrival && (
+                                                  <span className="px-1.5 py-0.5 bg-yellow-900/30 text-yellow-400 text-[10px] rounded border border-yellow-700/50" title="Llegada Tardía">
+                                                    Tarde
+                                                  </span>
+                                                )}
+                                                {isEarlyDeparture && (
+                                                  <span className="px-1.5 py-0.5 bg-red-900/30 text-red-400 text-[10px] rounded border border-red-700/50" title="Salida Temprana">
+                                                    Salida T.
+                                                  </span>
+                                                )}
+                                                {!isLateArrival && !isEarlyDeparture && (
+                                                  <span className="px-1.5 py-0.5 bg-emerald-900/30 text-emerald-400 text-[10px] rounded border border-emerald-700/50">
+                                                    Normal
+                                                  </span>
+                                                )}
+                                              </div>
                                             </div>
-
-                                            {/* Badges de estado */}
-                                            <div className="flex gap-1">
-                                              {isLateArrival && (
-                                                <span className="px-1.5 py-0.5 bg-yellow-900/30 text-yellow-400 text-[10px] rounded border border-yellow-700/50" title="Llegada Tardía">
-                                                  Tarde
-                                                </span>
-                                              )}
-                                              {isEarlyDeparture && (
-                                                <span className="px-1.5 py-0.5 bg-red-900/30 text-red-400 text-[10px] rounded border border-red-700/50" title="Salida Temprana">
-                                                  Salida T.
-                                                </span>
-                                              )}
-                                              {!isLateArrival && !isEarlyDeparture && (
-                                                <span className="px-1.5 py-0.5 bg-emerald-900/30 text-emerald-400 text-[10px] rounded border border-emerald-700/50">
-                                                  Normal
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <span className="text-sm text-red-400 font-medium">Ausente</span>
-                                        )}
+                                          ) : (
+                                            <span className="text-sm text-red-400 font-medium">Ausente</span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </Card>
-        </>
-      ) : (
-        <div className="space-y-6">
-          {historyMode === 'by-worker' ? (
-            <AttendanceHistoryByWorker
-              contracts={contracts}
-              workers={workers}
-              attendances={historyAttendances}
-              projects={projects}
-              selectedProjectId={historyProjectId}
-              onProjectChange={handleHistoryProjectChange}
-              onMonthChange={(year, month) => handleHistoryMonthChange(year, month)}
-              onRefresh={loadHistoryAttendances}
-            />
-          ) : (
-            <AttendanceHistoryByCalendar
-              attendances={historyAttendances}
-              projects={projects}
-              selectedProjectId={historyProjectId}
-              onProjectChange={handleHistoryProjectChange}
-              onMonthChange={(year, month) => handleHistoryMonthChange(year, month)}
-              onRefresh={loadHistoryAttendances}
-            />
-          )}
-        </div>
-      )}
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </>
+        ) : (
+          <div className="space-y-6">
+            {historyMode === 'by-worker' ? (
+              <AttendanceHistoryByWorker
+                contracts={contracts.filter(c => {
+                  if (historyProjectId && c.project_id !== historyProjectId) return false
+                  if (historyWorkerFilter !== 'all' && c.worker_id.toString() !== historyWorkerFilter) return false
+                  return true
+                })}
+                workers={workers.filter(w => {
+                  if (historyWorkerFilter !== 'all' && w.id.toString() !== historyWorkerFilter) return false
+                  return true
+                })}
+                attendances={historyAttendances}
+                projects={projects}
+                selectedProjectId={historyProjectId}
+                onProjectChange={(id) => setHistoryProjectId(id)}
+                onMonthChange={(year, month) => handleHistoryMonthChange(year, month)}
+                onRefresh={loadHistoryAttendances}
+              />
+            ) : (
+              <AttendanceHistoryByCalendar
+                attendances={historyAttendances}
+                projects={projects}
+                selectedProjectId={historyProjectId}
+                onProjectChange={(id) => setHistoryProjectId(id)}
+                onMonthChange={(year, month) => handleHistoryMonthChange(year, month)}
+                onRefresh={loadHistoryAttendances}
+              />
+            )}
+          </div>
+        )
+      }
+
+      <AttendanceFiltersSidebar
+        isOpen={isFilterSidebarOpen}
+        onClose={() => setIsFilterSidebarOpen(false)}
+        currentProjectFilter={viewMode === 'register' ? (registerProjectId?.toString() || 'all') : (historyProjectId?.toString() || 'all')}
+        onProjectFilterChange={(val) => {
+          const id = val === 'all' ? null : parseInt(val)
+          if (viewMode === 'register') setRegisterProjectId(id)
+          else setHistoryProjectId(id)
+        }}
+        currentWorkerFilter={viewMode === 'register' ? registerWorkerFilter : historyWorkerFilter}
+        onWorkerFilterChange={(val) => {
+          if (viewMode === 'register') setRegisterWorkerFilter(val)
+          else setHistoryWorkerFilter(val)
+        }}
+        projects={projects}
+        workers={workers}
+      />
 
       {/* Modal de Asistencia por Proyecto */}
-      {showAttendanceModal && selectedProjectForModal && (
-        <ProjectAttendanceModal
-          isOpen={showAttendanceModal}
-          onClose={() => setShowAttendanceModal(false)}
-          projectId={selectedProjectForModal.id}
-          projectName={selectedProjectForModal.name}
-          contracts={contractsByProject.find(p => p.projectId === selectedProjectForModal.id)?.contracts || []}
-          workers={workers}
-          today={today}
-          onWorkersChanged={(changedToAbsent) => {
-            // Actualizar estado local para reflejar cambios a ausente
-            setContractStates(prev => {
-              const newStates = { ...prev }
-              changedToAbsent.forEach(id => {
-                if (newStates[id]) {
-                  newStates[id] = {
-                    ...newStates[id],
-                    isPresent: false
+      {
+        showAttendanceModal && selectedProjectForModal && (
+          <ProjectAttendanceModal
+            isOpen={showAttendanceModal}
+            onClose={() => setShowAttendanceModal(false)}
+            projectId={selectedProjectForModal.id}
+            projectName={selectedProjectForModal.name}
+            contracts={contractsByProject.find(p => p.projectId === selectedProjectForModal.id)?.contracts || []}
+            workers={workers}
+            today={today}
+            onWorkersChanged={(changedToAbsent) => {
+              // Actualizar estado local para reflejar cambios a ausente
+              setContractStates(prev => {
+                const newStates = { ...prev }
+                changedToAbsent.forEach(id => {
+                  if (newStates[id]) {
+                    newStates[id] = {
+                      ...newStates[id],
+                      isPresent: false
+                    }
                   }
-                }
+                })
+                return newStates
               })
-              return newStates
-            })
 
-            // Recargar datos
-            fetchAttendances(today, selectedProjectId)
-          }}
-        />
-      )}
-    </div>
+              // Recargar datos
+              fetchAttendances(today, registerProjectId)
+            }}
+          />
+        )
+      }
+    </div >
   )
 }

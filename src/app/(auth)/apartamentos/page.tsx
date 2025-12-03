@@ -13,11 +13,14 @@ import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTempla
 import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock, Layers, Eye, Circle, CheckCircle2, AlertTriangle, XCircle, FileText } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { formatDate, getStatusColor, getStatusEmoji, getStatusText, formatApartmentNumber } from '@/lib/utils'
+import { APARTMENT_STATUSES } from '@/lib/constants'
+import toast from 'react-hot-toast'
+import { ApartmentFiltersSidebar } from '@/components/apartments/ApartmentFiltersSidebar'
 
 // Función para obtener icono de estado en lugar de emoji
 const getStatusIcon = (status: string | null | undefined) => {
   if (!status) return <Circle className="w-3 h-3" />
-  
+
   switch (status) {
     case 'completed': return <CheckCircle2 className="w-3 h-3" />
     case 'good': return <CheckCircle2 className="w-3 h-3" />
@@ -32,8 +35,6 @@ const getStatusIcon = (status: string | null | undefined) => {
     default: return <Circle className="w-3 h-3" />
   }
 }
-import { APARTMENT_STATUSES } from '@/lib/constants'
-import toast from 'react-hot-toast'
 
 export default function ApartamentosPage() {
   const { apartments, floors, projects, loading, error, createApartment, updateApartment, deleteApartment } = useApartments()
@@ -42,6 +43,7 @@ export default function ApartamentosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('all')
   const [towerFilter, setTowerFilter] = useState<string>('all')
+  const [floorFilter, setFloorFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed' | 'blocked'>('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
@@ -54,11 +56,41 @@ export default function ApartamentosPage() {
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
   const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false)
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
 
-  // Resetear filtro de torre cuando cambie el proyecto
+  // Resetear filtros dependientes
   useEffect(() => {
     setTowerFilter('all')
+    setFloorFilter('all')
   }, [projectFilter])
+
+  useEffect(() => {
+    setFloorFilter('all')
+  }, [towerFilter])
+
+  // Auto-expansión basada en filtros
+  useEffect(() => {
+    if (projectFilter !== 'all') {
+      const projectId = parseInt(projectFilter)
+      if (!isNaN(projectId)) {
+        setExpandedProjects(prev => new Set(prev).add(projectId))
+      }
+    }
+
+    if (towerFilter !== 'all') {
+      const towerId = parseInt(towerFilter)
+      if (!isNaN(towerId)) {
+        setExpandedTowers(prev => new Set(prev).add(towerId))
+      }
+    }
+
+    if (floorFilter !== 'all') {
+      const floorId = parseInt(floorFilter)
+      if (!isNaN(floorId)) {
+        setExpandedFloors(prev => new Set(prev).add(floorId))
+      }
+    }
+  }, [projectFilter, towerFilter, floorFilter])
 
   // Cargar estado expandido desde localStorage
   useEffect(() => {
@@ -112,20 +144,21 @@ export default function ApartamentosPage() {
   const filteredApartments = apartments.filter(apartment => {
     const fullNumber = formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)
     const matchesSearch = fullNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    
+      apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
+
     // Filtro por estado (usando el filtro de tarjetas)
     const matchesStatus = statusFilter === 'all' || apartment.status === statusFilter
-    
+
     // Si hay un filtro local de proyecto, usarlo; si no, usar el filtro global
     const projectToMatch = projectFilter !== 'all' ? projectFilter : (selectedProjectId ? selectedProjectId.toString() : null)
     const matchesProject = !projectToMatch || (apartment.project_id && apartment.project_id.toString() === projectToMatch)
     const matchesTower = towerFilter === 'all' || ((apartment as any).tower_id && (apartment as any).tower_id.toString() === towerFilter)
-    
-    return matchesSearch && matchesStatus && matchesProject && matchesTower
+    const matchesFloor = floorFilter === 'all' || (apartment.floor_id && apartment.floor_id.toString() === floorFilter)
+
+    return matchesSearch && matchesStatus && matchesProject && matchesTower && matchesFloor
   })
 
   // Obtener proyectos únicos para el filtro (igual que en pisos)
@@ -134,14 +167,24 @@ export default function ApartamentosPage() {
   )
 
   // Obtener torres únicas para el filtro (solo del proyecto seleccionado)
-  const uniqueTowers = projectFilter === 'all' 
+  const uniqueTowers = projectFilter === 'all'
     ? [] // No mostrar torres si no hay proyecto seleccionado
     : Array.from(
-        new Map(apartments
-          .filter(apartment => apartment.project_id && apartment.project_id.toString() === projectFilter)
-          .map(apartment => [(apartment as any).tower_id || 0, { id: (apartment as any).tower_id || 0, number: (apartment as any).tower_number || 0, name: (apartment as any).tower_name || 'Sin torre' }])
-        ).values()
-      ).sort((a, b) => a.number - b.number)
+      new Map(apartments
+        .filter(apartment => apartment.project_id && apartment.project_id.toString() === projectFilter)
+        .map(apartment => [(apartment as any).tower_id || 0, { id: (apartment as any).tower_id || 0, number: (apartment as any).tower_number || 0, name: (apartment as any).tower_name || 'Sin torre' }])
+      ).values()
+    ).sort((a, b) => a.number - b.number)
+
+  // Obtener pisos únicos para el filtro (solo de la torre seleccionada)
+  const uniqueFloors = towerFilter === 'all'
+    ? []
+    : Array.from(
+      new Map(apartments
+        .filter(apartment => (apartment as any).tower_id && (apartment as any).tower_id.toString() === towerFilter)
+        .map(apartment => [apartment.floor_id || 0, { id: apartment.floor_id || 0, floor_number: apartment.floor_number || 0 }])
+      ).values()
+    ).sort((a, b) => a.floor_number - b.floor_number)
 
   // Obtener tareas por apartamento
   const getTasksForApartment = (apartmentId: number) => {
@@ -236,31 +279,31 @@ export default function ApartamentosPage() {
   const handleBlockApartment = async (apartmentId: number, currentStatus: string) => {
     let updateData: any = {}
     let action: string
-    
+
     if (currentStatus === 'blocked') {
       // Desbloquear: restaurar el estado anterior
       const apartment = apartments.find(a => a.id === apartmentId)
       console.log('🔓 Desbloqueando apartamento:', apartment)
       console.log('📋 previous_status en memoria:', (apartment as any)?.previous_status)
-      
+
       const previousStatus = (apartment as any)?.previous_status || 'pending'
       console.log('✅ Estado a restaurar:', previousStatus)
-      
-      updateData = { 
+
+      updateData = {
         status: previousStatus,
-        previous_status: null 
+        previous_status: null
       }
       action = 'desbloquear'
     } else {
       // Bloquear: guardar el estado actual antes de bloquear
       console.log('🔒 Bloqueando apartamento - Estado actual:', currentStatus)
-      updateData = { 
+      updateData = {
         status: 'blocked',
-        previous_status: currentStatus 
+        previous_status: currentStatus
       }
       action = 'bloquear'
     }
-    
+
     if (!confirm(`¿Estás seguro de que quieres ${action} este apartamento?`)) {
       return
     }
@@ -276,13 +319,13 @@ export default function ApartamentosPage() {
   const handleCreateApartment = async (data: any) => {
     try {
       console.log('📝 Creando apartamento con tareas:', data)
-      
+
       // Extraer las tareas seleccionadas antes de crear el apartamento
       const { selectedTasks, ...apartmentData } = data
-      
+
       // Crear el apartamento
       const createdApartment = await createApartment(apartmentData)
-      
+
       // Si hay tareas seleccionadas, crearlas
       if (selectedTasks && selectedTasks.length > 0) {
         // Descripciones más útiles según el tipo de tarea
@@ -307,9 +350,9 @@ export default function ApartamentosPage() {
             estimated_hours: task.estimated_hours,
             status: 'pending'
           }))
-        
+
         console.log('📋 Creando', tasksToCreate.length, 'tareas automáticamente')
-        
+
         // Crear todas las tareas
         for (const taskData of tasksToCreate) {
           try {
@@ -319,12 +362,12 @@ export default function ApartamentosPage() {
             // Continuar con las siguientes tareas aunque falle una
           }
         }
-        
+
         toast.success(`Apartamento creado con ${tasksToCreate.length} tarea(s)`)
       } else {
         toast.success('Apartamento creado exitosamente')
       }
-      
+
       setShowCreateModal(false)
       setFormError(null)
     } catch (err: any) {
@@ -371,14 +414,14 @@ export default function ApartamentosPage() {
   const apartmentsForStats = apartments.filter(apartment => {
     const fullNumber = formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)
     const matchesSearch = fullNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
     // Si hay un filtro local de proyecto, usarlo; si no, usar el filtro global
     const projectToMatch = projectFilter !== 'all' ? projectFilter : (selectedProjectId ? selectedProjectId.toString() : null)
     const matchesProject = !projectToMatch || (apartment.project_id && apartment.project_id.toString() === projectToMatch)
-    
+
     return matchesSearch && matchesProject
   })
 
@@ -388,152 +431,148 @@ export default function ApartamentosPage() {
   const completedApartments = apartmentsForStats.filter(a => a.status === 'completed').length
   const blockedApartments = apartmentsForStats.filter(a => a.status === 'blocked').length
 
-  // Debug: Ver qué status tienen los apartamentos
-  console.log('🔍 Debug Apartamentos Status:', {
-    total: totalApartments,
-    pending: pendingApartments,
-    inProgress: inProgressApartments,
-    completed: completedApartments,
-    blocked: blockedApartments,
-    allStatuses: filteredApartments.map(a => ({ id: a.id, number: a.apartment_number, status: a.status }))
-  })
+  const statusOptions = [
+    {
+      value: 'pending',
+      label: 'Pendientes',
+      icon: Clock,
+      count: pendingApartments,
+      activeColor: 'yellow-400',
+      activeBg: 'yellow-900/30',
+      activeBorder: 'yellow-500'
+    },
+    {
+      value: 'in-progress',
+      label: 'En Progreso',
+      icon: Play,
+      count: inProgressApartments,
+      activeColor: 'emerald-400',
+      activeBg: 'emerald-900/30',
+      activeBorder: 'emerald-500'
+    },
+    {
+      value: 'completed',
+      label: 'Completados',
+      icon: CheckCircle,
+      count: completedApartments,
+      activeColor: 'emerald-400',
+      activeBg: 'emerald-900/30',
+      activeBorder: 'emerald-500'
+    },
+    {
+      value: 'blocked',
+      label: 'Bloqueados',
+      icon: Lock,
+      count: blockedApartments,
+      activeColor: 'red-400',
+      activeBg: 'red-900/30',
+      activeBorder: 'red-500'
+    }
+  ]
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full py-8 px-6">
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Gestión de Apartamentos</h1>
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Listado de Apartamentos</h2>
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 flex-1">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por número, tipo o proyecto..."
+              className="pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg w-full text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setIsFilterSidebarOpen(true)}
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+          >
+            <Filter className="w-5 h-5" />
+            Filtros
+            {(statusFilter !== 'all' || projectFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all') && (
+              <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                !
+              </span>
+            )}
+          </Button>
+
+          {(statusFilter !== 'all' || projectFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all') && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setStatusFilter('all')
+                setProjectFilter('all')
+                setTowerFilter('all')
+                setFloorFilter('all')
+              }}
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
+              title="Limpiar filtros"
+            >
+              <XCircle className="w-5 h-5" />
+            </Button>
+          )}
+
           <Button onClick={() => setShowTemplatesModal(true)} variant="outline">
             <FileText className="mr-2 h-4 w-4" />
-            Plantillas de Departamentos
+            Plantillas
           </Button>
           <Button onClick={() => {
             setSelectedFloorForApartment(null)
             setShowCreateModal(true)
-          }} className="flex items-center">
-          <Plus className="w-5 h-5 mr-2" />
-          Nuevo Apartamento
-        </Button>
+          }} className="flex items-center bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-5 h-5 mr-2" />
+            Nuevo
+          </Button>
         </div>
       </div>
 
-      {/* Filtros y Búsqueda */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filtros y Búsqueda</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por número, tipo o proyecto..."
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className="pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-              >
-                <option value="all">Todos los proyectos</option>
-                {uniqueProjects.map((project) => (
-                  <option key={project.id} value={project.id}>{project.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="relative">
-              <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                className={`pl-9 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none ${
-                  projectFilter === 'all' ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
-                value={towerFilter}
-                onChange={(e) => setTowerFilter(e.target.value)}
-                disabled={projectFilter === 'all'}
-              >
-                <option value="all">
-                  {projectFilter === 'all' ? 'Selecciona un proyecto primero' : 'Todas las torres'}
-                </option>
-                {uniqueTowers.map((tower) => {
-                  // Si el nombre es igual al número, solo mostrar el número
-                  const displayName = tower.name === `Torre ${tower.number}` || tower.name === `Torre ${tower.number}` || tower.name === `Torre${tower.number}` 
-                    ? `Torre ${tower.number}` 
-                    : `Torre ${tower.number} - ${tower.name}`
-                  return (
-                    <option key={tower.id} value={tower.id}>
-                      {displayName}
-                  </option>
-                  )
-                })}
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      
-
-      {/* Estadísticas rápidas */}
-      <StatusFilterCards
-        selectedValue={statusFilter}
-        onSelect={(value) => setStatusFilter(value as 'all' | 'pending' | 'in-progress' | 'completed' | 'blocked')}
-        scrollTargetId="apartments-list"
-        defaultOption={{
-          value: 'all',
-          label: 'Todos',
-          icon: Layers,
-          count: totalApartments,
-          activeColor: 'blue-400',
-          activeBg: 'blue-900/30',
-          activeBorder: 'blue-500'
+      <ApartmentFiltersSidebar
+        isOpen={isFilterSidebarOpen}
+        onClose={() => setIsFilterSidebarOpen(false)}
+        currentStatusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        currentProjectFilter={projectFilter}
+        onProjectFilterChange={setProjectFilter}
+        currentTowerFilter={towerFilter}
+        onTowerFilterChange={setTowerFilter}
+        currentFloorFilter={floorFilter}
+        onFloorFilterChange={setFloorFilter}
+        projects={uniqueProjects}
+        towers={uniqueTowers}
+        floors={uniqueFloors}
+        counts={{
+          all: totalApartments,
+          pending: pendingApartments,
+          in_progress: inProgressApartments,
+          completed: completedApartments,
+          blocked: blockedApartments
         }}
-        options={[
-          {
-            value: 'pending',
-            label: 'Pendientes',
-            icon: Clock,
-            count: pendingApartments,
-            activeColor: 'yellow-400',
-            activeBg: 'yellow-900/30',
-            activeBorder: 'yellow-500'
-          },
-          {
-            value: 'in-progress',
-            label: 'En Progreso',
-            icon: Play,
-            count: inProgressApartments,
-            activeColor: 'emerald-400',
-            activeBg: 'emerald-900/30',
-            activeBorder: 'emerald-500'
-          },
-          {
-            value: 'completed',
-            label: 'Completados',
-            icon: CheckCircle,
-            count: completedApartments,
-            activeColor: 'emerald-400',
-            activeBg: 'emerald-900/30',
-            activeBorder: 'emerald-500'
-          },
-          {
-            value: 'blocked',
-            label: 'Bloqueados',
-            icon: Lock,
-            count: blockedApartments,
-            activeColor: 'red-400',
-            activeBg: 'red-900/30',
-            activeBorder: 'red-500'
-          }
-        ]}
       />
 
+      {/* Tarjetas de Estado */}
+      <div className="mb-6">
+        <StatusFilterCards
+          options={statusOptions}
+          selectedValue={statusFilter}
+          onSelect={(value) => setStatusFilter(value as any)}
+          defaultOption={{
+            value: 'all',
+            label: 'Todos',
+            icon: Layers,
+            count: totalApartments,
+            activeColor: 'blue-400',
+            activeBg: 'blue-900/30',
+            activeBorder: 'blue-500'
+          }}
+        />
+      </div>
 
       {/* Vista Jerárquica de Departamentos */}
       {filteredApartments.length === 0 ? (
@@ -554,7 +593,7 @@ export default function ApartamentosPage() {
               const projectId = apartment.project_id || 0
               const towerId = (apartment as any).tower_id || 0
               const floorId = apartment.floor_id || 0
-              
+
               if (!acc[projectId]) {
                 acc[projectId] = {
                   projectId,
@@ -571,7 +610,7 @@ export default function ApartamentosPage() {
                   }>
                 }
               }
-              
+
               if (!acc[projectId].towers[towerId]) {
                 acc[projectId].towers[towerId] = {
                   towerId,
@@ -580,7 +619,7 @@ export default function ApartamentosPage() {
                   floors: {}
                 }
               }
-              
+
               if (!acc[projectId].towers[towerId].floors[floorId]) {
                 acc[projectId].towers[towerId].floors[floorId] = {
                   floorId,
@@ -588,7 +627,7 @@ export default function ApartamentosPage() {
                   apartments: []
                 }
               }
-              
+
               acc[projectId].towers[towerId].floors[floorId].apartments.push(apartment)
               return acc
             }, {} as Record<number, {
@@ -640,7 +679,7 @@ export default function ApartamentosPage() {
                 })
               })
             })
-            
+
             return (Object.values(apartmentsByProject) as Array<{
               projectId: number
               projectName: string
@@ -656,11 +695,11 @@ export default function ApartamentosPage() {
               }>
             }>).map((projectGroup, projectIndex) => {
               const isProjectExpanded = expandedProjects.has(projectGroup.projectId)
-              
+
               // Calcular estadísticas del proyecto
               const allProjectApartments = Object.values(projectGroup.towers)
                 .flatMap(tower => Object.values(tower.floors).flatMap(floor => floor.apartments))
-              
+
               const totalApartments = allProjectApartments.length
               const totalTasks = allProjectApartments.reduce((sum, apt) => sum + (apt.tasks_count || 0), 0)
               const completedTasks = allProjectApartments.reduce((sum, apt) => {
@@ -670,16 +709,16 @@ export default function ApartamentosPage() {
               const averageProgress = totalApartments > 0
                 ? Math.round(allProjectApartments.reduce((sum, apt) => sum + (apt.progress_percentage || 0), 0) / totalApartments)
                 : 0
-            
-            return (
+
+              return (
                 <div key={projectGroup.projectId} className={`space-y-4 ${projectIndex > 0 ? 'mt-8 pt-6 border-t-2 border-slate-600' : ''}`}>
                   {/* Header de Proyecto - Colapsable */}
-                  <div 
+                  <div
                     className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
                     onClick={() => toggleProjectExpansion(projectGroup.projectId)}
                   >
                     <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         {isProjectExpanded ? (
                           <ChevronDown className="w-4 h-4 text-slate-300" />
                         ) : (
@@ -689,9 +728,9 @@ export default function ApartamentosPage() {
                         <p className="text-sm font-medium text-slate-200">
                           {projectGroup.projectName}
                         </p>
-                    </div>
+                      </div>
                       <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span className="text-slate-400">Progreso:</span>
                           <div className="flex items-center gap-1">
                             <div className="w-16 bg-slate-800 rounded-full h-1.5">
@@ -724,7 +763,7 @@ export default function ApartamentosPage() {
                         .sort((a, b) => a.towerNumber - b.towerNumber)
                         .map((towerGroup) => {
                           const isTowerExpanded = expandedTowers.has(towerGroup.towerId)
-                          
+
                           // Calcular estadísticas de la torre
                           const allTowerApartments = Object.values(towerGroup.floors)
                             .flatMap(floor => floor.apartments)
@@ -740,7 +779,7 @@ export default function ApartamentosPage() {
                           return (
                             <div key={towerGroup.towerId} className="space-y-3">
                               {/* Header de Torre - Colapsable */}
-                              <div 
+                              <div
                                 className="bg-slate-700/40 rounded-lg border border-slate-600 px-4 py-2 cursor-pointer hover:bg-slate-700/60 transition-colors"
                                 onClick={() => toggleTowerExpansion(towerGroup.towerId)}
                               >
@@ -782,7 +821,7 @@ export default function ApartamentosPage() {
                                     .sort((a, b) => a.floorNumber - b.floorNumber)
                                     .map((floorGroup) => {
                                       const isFloorExpanded = expandedFloors.has(floorGroup.floorId)
-                                      
+
                                       // Calcular estadísticas del piso
                                       const floorTotalTasks = floorGroup.apartments.reduce((sum, apt) => sum + (apt.tasks_count || 0), 0)
                                       const floorCompletedTasks = floorGroup.apartments.reduce((sum, apt) => {
@@ -796,7 +835,7 @@ export default function ApartamentosPage() {
                                       return (
                                         <div key={floorGroup.floorId} className="space-y-3">
                                           {/* Header de Piso - Colapsable */}
-                                          <div 
+                                          <div
                                             className="bg-slate-700/30 rounded-lg border border-slate-600 px-3 py-2 cursor-pointer hover:bg-slate-700/50 transition-colors"
                                             onClick={() => toggleFloorExpansion(floorGroup.floorId)}
                                           >
@@ -822,8 +861,8 @@ export default function ApartamentosPage() {
                                                     <div className="flex items-center gap-1">
                                                       <span className="text-slate-400">Tareas:</span>
                                                       <span className="text-slate-300 font-medium">{floorCompletedTasks}/{floorTotalTasks}</span>
-                    </div>
-                  )}
+                                                    </div>
+                                                  )}
                                                   <div className="flex items-center gap-1">
                                                     <span className="text-slate-400">Deptos:</span>
                                                     <span className="text-slate-300 font-medium">{floorGroup.apartments.length}</span>
@@ -858,7 +897,7 @@ export default function ApartamentosPage() {
                                                 const apartmentTasks = getTasksForApartment(apartment.id)
                                                 const completedTasks = apartmentTasks.filter(t => t.status === 'completed').length
                                                 const apartmentWorkers = getWorkersForApartment(apartment.id)
-                                                
+
                                                 // Función para abreviar nombres
                                                 const abbreviateName = (fullName: string): string => {
                                                   const parts = fullName.trim().split(' ')
@@ -867,7 +906,7 @@ export default function ApartamentosPage() {
                                                   }
                                                   return fullName
                                                 }
-                                                
+
                                                 return (
                                                   <div
                                                     key={apartment.id}
@@ -881,7 +920,7 @@ export default function ApartamentosPage() {
                                                           <div className="flex items-center gap-3">
                                                             <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                                               <Home className="w-4 h-4 text-blue-400" />
-                    </div>
+                                                            </div>
                                                             <div>
                                                               <h3 className="text-base font-semibold text-slate-100">
                                                                 {formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)}
@@ -889,29 +928,28 @@ export default function ApartamentosPage() {
                                                               <p className="text-xs text-slate-400">
                                                                 {apartment.apartment_type || 'Sin tipo'} {apartment.area ? `• ${apartment.area} m²` : ''}
                                                               </p>
-                    </div>
-                  </div>
+                                                            </div>
+                                                          </div>
 
-                  {/* Estado */}
-                                                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${
-                      getStatusColor(apartment.status)
-                    }`}>
-                      {getStatusIcon(apartment.status)}
-                      {getStatusText(apartment.status)}
-                    </span>
+                                                          {/* Estado */}
+                                                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(apartment.status)
+                                                            }`}>
+                                                            {getStatusIcon(apartment.status)}
+                                                            {getStatusText(apartment.status)}
+                                                          </span>
 
-                  {/* Progreso */}
+                                                          {/* Progreso */}
                                                           <div className="flex items-center gap-2 flex-1 max-w-xs">
                                                             <div className="flex-1 bg-slate-700 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${apartment.progress_percentage || 0}%` }}
-                      ></div>
-                    </div>
+                                                              <div
+                                                                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                                                style={{ width: `${apartment.progress_percentage || 0}%` }}
+                                                              ></div>
+                                                            </div>
                                                             <span className="text-xs text-slate-300 font-medium w-10 text-right">
                                                               {apartment.progress_percentage || 0}%
                                                             </span>
-                  </div>
+                                                          </div>
 
                                                           {/* Tareas */}
                                                           <div className="flex items-center gap-2 text-sm">
@@ -945,45 +983,44 @@ export default function ApartamentosPage() {
                                                               <span className="text-xs text-slate-400">No hay nadie</span>
                                                             )}
                                                           </div>
-                  </div>
+                                                        </div>
 
-                  {/* Acciones */}
+                                                        {/* Acciones */}
                                                         <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                    <Button
+                                                          <Button
                                                             variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingApartment(apartment)}
+                                                            size="sm"
+                                                            onClick={() => setEditingApartment(apartment)}
                                                             className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-                      title="Editar"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
+                                                            title="Editar"
+                                                          >
+                                                            <Edit className="w-4 h-4" />
+                                                          </Button>
+                                                          <Button
                                                             variant="ghost"
-                      size="sm"
-                      onClick={() => handleBlockApartment(apartment.id, apartment.status)}
-                                                            className={`${
-                        apartment.status === 'blocked' 
-                                                                ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30' 
-                                                                : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
-                      }`}
-                      title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
-                    >
-                      {apartment.status === 'blocked' ? (
-                        <Unlock className="w-4 h-4" />
-                      ) : (
-                        <Lock className="w-4 h-4" />
-                      )}
-                    </Button>
-                    <Button
+                                                            size="sm"
+                                                            onClick={() => handleBlockApartment(apartment.id, apartment.status)}
+                                                            className={`${apartment.status === 'blocked'
+                                                              ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30'
+                                                              : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
+                                                              }`}
+                                                            title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
+                                                          >
+                                                            {apartment.status === 'blocked' ? (
+                                                              <Unlock className="w-4 h-4" />
+                                                            ) : (
+                                                              <Lock className="w-4 h-4" />
+                                                            )}
+                                                          </Button>
+                                                          <Button
                                                             variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(apartment.id)}
+                                                            size="sm"
+                                                            onClick={() => handleDelete(apartment.id)}
                                                             className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                                                            title="Eliminar"
+                                                          >
+                                                            <Trash2 className="w-4 h-4" />
+                                                          </Button>
                                                           <Button
                                                             variant="ghost"
                                                             size="sm"
@@ -995,8 +1032,8 @@ export default function ApartamentosPage() {
                                                             title="Ver detalles del departamento"
                                                           >
                                                             <Eye className="w-4 h-4" />
-                    </Button>
-                  </div>
+                                                          </Button>
+                                                        </div>
                                                       </div>
                                                     </div>
                                                   </div>
@@ -1009,7 +1046,7 @@ export default function ApartamentosPage() {
                                     })}
                                 </div>
                               )}
-                  </div>
+                            </div>
                           )
                         })}
                     </div>
@@ -1020,8 +1057,6 @@ export default function ApartamentosPage() {
           })()}
         </div>
       )}
-
-
 
       {/* Modal de Creación de Departamento */}
       <ApartmentFormModalV2
@@ -1042,10 +1077,10 @@ export default function ApartamentosPage() {
       {/* Modal de Tareas del Apartamento */}
       {selectedApartmentForTasks && (
         <ApartmentTasksModal
-        isOpen={!!selectedApartmentForTasks}
-        onClose={() => setSelectedApartmentForTasks(null)}
-                apartmentId={selectedApartmentForTasks.id}
-                apartmentNumber={formatApartmentNumber(selectedApartmentForTasks.apartment_code, selectedApartmentForTasks.apartment_number)}
+          isOpen={!!selectedApartmentForTasks}
+          onClose={() => setSelectedApartmentForTasks(null)}
+          apartmentId={selectedApartmentForTasks.id}
+          apartmentNumber={formatApartmentNumber(selectedApartmentForTasks.apartment_code, selectedApartmentForTasks.apartment_number)}
         />
       )}
 

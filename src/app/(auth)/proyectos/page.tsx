@@ -13,7 +13,7 @@ import { StructureViewModal } from '@/components/projects/StructureViewModal'
 import { EditStructureModal } from '@/components/projects/EditStructureModal'
 import { ProjectWorkersModal } from '@/components/projects/ProjectWorkersModal'
 import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTemplatesModal'
-import { Plus, Search, Filter, Edit, Trash2, Eye, ChevronDown, ChevronRight, Building2, CheckCircle, Calendar, AlertCircle, FileText, Info, DollarSign, Users, UserCheck, FileSignature, Play, Layers } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2, Eye, ChevronDown, ChevronRight, Building2, CheckCircle, Calendar, AlertCircle, FileText, Info, DollarSign, Users, UserCheck, FileSignature, Play, Layers, XCircle, Clock } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { formatDate, getStatusColor, getStatusEmoji } from '@/lib/utils'
 import { PROJECT_STATUSES } from '@/lib/constants'
@@ -43,14 +43,15 @@ export default function ProyectosPage() {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [selectedProjectForTemplates, setSelectedProjectForTemplates] = useState<number | null>(null)
 
+
   // Filtrar proyectos
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          project.address?.toLowerCase().includes(searchTerm.toLowerCase())
-    
+      project.address?.toLowerCase().includes(searchTerm.toLowerCase())
+
     // Filtro por estado (usando cardFilter)
     const matchesCardFilter = cardFilter === 'all' || project.status === cardFilter
-    
+
     return matchesSearch && matchesCardFilter
   })
 
@@ -71,10 +72,10 @@ export default function ProyectosPage() {
     try {
       // Extraer archivos del data
       const { plan_pdf, contract_pdf, specifications_pdf, ...projectData } = data
-      
+
       // Crear el proyecto primero
       const project = await createProject(projectData)
-      
+
       // Subir archivos si existen
       const uploadPromises = []
       if (plan_pdf) {
@@ -86,12 +87,12 @@ export default function ProyectosPage() {
       if (specifications_pdf) {
         uploadPromises.push(uploadSpecifications(project.id, specifications_pdf))
       }
-      
+
       // Esperar a que todos los archivos se suban
       if (uploadPromises.length > 0) {
         await Promise.all(uploadPromises)
       }
-      
+
       setShowCreateModal(false)
       toast.success('Proyecto creado exitosamente')
     } catch (error) {
@@ -106,10 +107,10 @@ export default function ProyectosPage() {
       try {
         // Extraer archivos del data
         const { plan_pdf, contract_pdf, specifications_pdf, ...updateData } = data
-        
+
         // Actualizar el proyecto con los demás datos
         await updateProject(editingProject.id, updateData)
-        
+
         // Subir archivos si existen
         const uploadPromises = []
         if (plan_pdf) {
@@ -121,12 +122,12 @@ export default function ProyectosPage() {
         if (specifications_pdf) {
           uploadPromises.push(uploadSpecifications(editingProject.id, specifications_pdf))
         }
-        
+
         // Esperar a que todos los archivos se suban
         if (uploadPromises.length > 0) {
           await Promise.all(uploadPromises)
         }
-        
+
         setEditingProject(null)
         toast.success('Proyecto actualizado exitosamente')
       } catch (error) {
@@ -175,7 +176,7 @@ export default function ProyectosPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-6">
+    <div className="w-full py-8 px-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Proyectos</h1>
@@ -196,62 +197,76 @@ export default function ProyectosPage() {
               className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-
         </div>
 
-        {/* Botón crear */}
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5" />
-          Nuevo Proyecto
-        </Button>
+        <div className="flex items-center gap-3">
+          {cardFilter !== 'all' && (
+            <Button
+              variant="ghost"
+              onClick={() => setCardFilter('all')}
+              className="text-slate-400 hover:text-white hover:bg-slate-800"
+              title="Limpiar filtros"
+            >
+              <XCircle className="w-5 h-5" />
+            </Button>
+          )}
+
+          {/* Botón crear */}
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            Nuevo Proyecto
+          </Button>
+        </div>
       </div>
 
-      {/* Estadísticas rápidas */}
-      <StatusFilterCards
-        selectedValue={cardFilter}
-        onSelect={(value) => setCardFilter(value as 'all' | 'planning' | 'active' | 'completed')}
-        defaultOption={{
-          value: 'all',
-          label: 'Todos',
-          icon: Layers,
-          count: projects.length,
-          activeColor: 'blue-400',
-          activeBg: 'blue-900/30',
-          activeBorder: 'blue-500'
-        }}
-        options={[
-          {
-            value: 'planning',
-            label: 'Planificación',
-            icon: Calendar,
-            count: projects.filter(p => p.status === 'planning').length,
-            activeColor: 'yellow-400',
-            activeBg: 'yellow-900/30',
-            activeBorder: 'yellow-500'
-          },
-          {
-            value: 'active',
-            label: 'Activos',
-            icon: Play,
-            count: projects.filter(p => p.status === 'active').length,
-            activeColor: 'emerald-400',
-            activeBg: 'emerald-900/30',
-            activeBorder: 'emerald-500'
-          },
-          {
-            value: 'completed',
-            label: 'Completados',
-            icon: CheckCircle,
-            count: projects.filter(p => p.status === 'completed').length,
+      {/* Tarjetas de Estado */}
+      <div className="mb-6">
+        <StatusFilterCards
+          options={[
+            {
+              value: 'planning',
+              label: 'Planificación',
+              icon: Calendar,
+              count: projects.filter(p => p.status === 'planning').length,
+              activeColor: 'blue-400',
+              activeBg: 'blue-900/30',
+              activeBorder: 'blue-500'
+            },
+            {
+              value: 'active',
+              label: 'Activos',
+              icon: Play,
+              count: projects.filter(p => p.status === 'active').length,
+              activeColor: 'emerald-400',
+              activeBg: 'emerald-900/30',
+              activeBorder: 'emerald-500'
+            },
+            {
+              value: 'completed',
+              label: 'Completados',
+              icon: CheckCircle,
+              count: projects.filter(p => p.status === 'completed').length,
+              activeColor: 'purple-400',
+              activeBg: 'purple-900/30',
+              activeBorder: 'purple-500'
+            }
+          ]}
+          selectedValue={cardFilter}
+          onSelect={(value) => setCardFilter(value as any)}
+          defaultOption={{
+            value: 'all',
+            label: 'Todos',
+            icon: Layers,
+            count: projects.length,
             activeColor: 'blue-400',
             activeBg: 'blue-900/30',
             activeBorder: 'blue-500'
-          }
-        ]}
-      />
+          }}
+        />
+      </div>
 
       {/* Lista de proyectos */}
       <Card>
@@ -374,11 +389,10 @@ export default function ProyectosPage() {
                           </div>
                           <div className="w-full bg-slate-700 rounded-full h-2 mb-1">
                             <div
-                              className={`h-2 rounded-full transition-all duration-300 ${
-                                project.status === 'planning' || project.status === 'blocked'
-                                  ? 'bg-gray-500'
-                                  : 'bg-blue-600'
-                              }`}
+                              className={`h-2 rounded-full transition-all duration-300 ${project.status === 'planning' || project.status === 'blocked'
+                                ? 'bg-gray-500'
+                                : 'bg-blue-600'
+                                }`}
                               style={{ width: `${project.progress_percentage || project.progress || 0}%` }}
                             ></div>
                           </div>
@@ -523,7 +537,7 @@ export default function ProyectosPage() {
 
                           {/* Botones de acción a la derecha */}
                           <div className="flex flex-col gap-3 flex-shrink-0 ml-auto">
-                            <button 
+                            <button
                               onClick={() => {
                                 setSelectedProjectForEditStructure(project)
                                 setShowEditStructureModal(true)
@@ -533,7 +547,7 @@ export default function ProyectosPage() {
                               <Edit className="w-4 h-4 text-cyan-400" />
                               <span className="text-sm font-medium">Editar Estructura</span>
                             </button>
-                            <button 
+                            <button
                               onClick={() => {
                                 setSelectedProjectForStructure(project)
                                 setShowStructureModal(true)
@@ -543,7 +557,7 @@ export default function ProyectosPage() {
                               <Eye className="w-4 h-4 text-indigo-400" />
                               <span className="text-sm font-medium">Ver Estructura</span>
                             </button>
-                            <button 
+                            <button
                               onClick={() => {
                                 setSelectedProjectForTemplates(project.id)
                                 setShowTemplatesModal(true)
@@ -631,17 +645,19 @@ export default function ProyectosPage() {
       />
 
       {/* Modal de Vista de Estructura */}
-      {selectedProjectForStructure && (
-        <StructureViewModal
-          isOpen={showStructureModal}
-          onClose={() => {
-            setShowStructureModal(false)
-            setSelectedProjectForStructure(null)
-          }}
-          projectId={selectedProjectForStructure.id}
-          projectName={selectedProjectForStructure.name}
-        />
-      )}
+      {
+        selectedProjectForStructure && (
+          <StructureViewModal
+            isOpen={showStructureModal}
+            onClose={() => {
+              setShowStructureModal(false)
+              setSelectedProjectForStructure(null)
+            }}
+            projectId={selectedProjectForStructure.id}
+            projectName={selectedProjectForStructure.name}
+          />
+        )
+      }
 
       {/* Modal de Detalles del Proyecto */}
       <Modal
@@ -722,7 +738,7 @@ export default function ProyectosPage() {
               <div>
                 <p className="text-sm text-slate-300">Presupuesto Inicial</p>
                 <p className="text-2xl font-bold text-green-400">
-                  {selectedProjectForDetails.initial_budget 
+                  {selectedProjectForDetails.initial_budget
                     ? `$${selectedProjectForDetails.initial_budget.toLocaleString('es-CL')}`
                     : 'No especificado'
                   }
@@ -802,7 +818,7 @@ export default function ProyectosPage() {
                 <div className="col-span-2">
                   <p className="text-sm text-slate-300">Monto del Contrato</p>
                   <p className="text-2xl font-bold text-cyan-400">
-                    {selectedProjectForDetails.contract_amount 
+                    {selectedProjectForDetails.contract_amount
                       ? `$${selectedProjectForDetails.contract_amount.toLocaleString('es-CL')}`
                       : 'No especificado'
                     }
@@ -864,44 +880,50 @@ export default function ProyectosPage() {
       </Modal>
 
       {/* Modal de Editar Estructura */}
-      {selectedProjectForEditStructure && (
-        <EditStructureModal
-          isOpen={showEditStructureModal}
-          onClose={() => {
-            setShowEditStructureModal(false)
-            setSelectedProjectForEditStructure(null)
-            refresh() // Refrescar proyectos para actualizar contadores
-          }}
-          projectId={selectedProjectForEditStructure.id}
-          projectName={selectedProjectForEditStructure.name}
-        />
-      )}
+      {
+        selectedProjectForEditStructure && (
+          <EditStructureModal
+            isOpen={showEditStructureModal}
+            onClose={() => {
+              setShowEditStructureModal(false)
+              setSelectedProjectForEditStructure(null)
+              refresh() // Refrescar proyectos para actualizar contadores
+            }}
+            projectId={selectedProjectForEditStructure.id}
+            projectName={selectedProjectForEditStructure.name}
+          />
+        )
+      }
 
       {/* Modal de Trabajadores del Proyecto */}
-      {selectedProjectForWorkers && (
-        <ProjectWorkersModal
-          isOpen={showWorkersModal}
-          onClose={() => {
-            setShowWorkersModal(false)
-            setSelectedProjectForWorkers(null)
-          }}
-          projectId={selectedProjectForWorkers.id}
-          projectName={selectedProjectForWorkers.name}
-        />
-      )}
+      {
+        selectedProjectForWorkers && (
+          <ProjectWorkersModal
+            isOpen={showWorkersModal}
+            onClose={() => {
+              setShowWorkersModal(false)
+              setSelectedProjectForWorkers(null)
+            }}
+            projectId={selectedProjectForWorkers.id}
+            projectName={selectedProjectForWorkers.name}
+          />
+        )
+      }
 
       {/* Modal de Plantillas de Departamentos */}
-      {selectedProjectForTemplates !== null && (
-        <ApartmentTemplatesModal
-          isOpen={showTemplatesModal}
-          onClose={() => {
-            setShowTemplatesModal(false)
-            setSelectedProjectForTemplates(null)
-          }}
-          projectId={selectedProjectForTemplates}
-        />
-      )}
+      {
+        selectedProjectForTemplates !== null && (
+          <ApartmentTemplatesModal
+            isOpen={showTemplatesModal}
+            onClose={() => {
+              setShowTemplatesModal(false)
+              setSelectedProjectForTemplates(null)
+            }}
+            projectId={selectedProjectForTemplates}
+          />
+        )
+      }
 
-    </div>
+    </div >
   )
 }

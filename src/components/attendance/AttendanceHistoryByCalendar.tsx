@@ -213,24 +213,7 @@ export function AttendanceHistoryByCalendar({
       <Card className="bg-slate-800/50 border-slate-700">
         <div className="p-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            {/* Filtro de proyecto */}
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Filtrar por Proyecto
-              </label>
-              <select
-                value={selectedProjectId?.toString() || ''}
-                onChange={(e) => onProjectChange(e.target.value ? parseInt(e.target.value) : null)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Todos los proyectos</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+
 
             {/* Selector de mes */}
             <div className="relative flex items-center gap-3">

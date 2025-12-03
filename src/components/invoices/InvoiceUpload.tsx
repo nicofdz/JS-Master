@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/Select'
 import { useProjects } from '@/hooks/useProjects'
 import { useInvoices } from '@/hooks/useInvoices'
 import { formatCurrency } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface InvoiceUploadProps {
   onUploadSuccess?: () => void
@@ -17,7 +18,7 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
   const [selectedProject, setSelectedProject] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   const { projects } = useProjects()
   const { processInvoice } = useInvoices()
 
@@ -26,40 +27,40 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file)
     } else {
-      alert('Por favor selecciona un archivo PDF válido')
+      toast.error('Por favor selecciona un archivo PDF válido')
     }
   }
 
   const handleUpload = async () => {
     if (!selectedFile || !selectedProject) {
-      alert('Por favor selecciona un archivo PDF y un proyecto')
+      toast.error('Por favor selecciona un archivo PDF y un proyecto')
       return
     }
 
     try {
       setIsUploading(true)
-      
+
       // Agregar timeout para evitar que se quede colgado
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Timeout: La operación tardó demasiado')), 45000) // 45 segundos
       })
-      
+
       const uploadPromise = processInvoice(selectedFile, parseInt(selectedProject))
-      
+
       const result = await Promise.race([uploadPromise, timeoutPromise])
-      
+
       // Reset form
       setSelectedFile(null)
       setSelectedProject('')
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-      
-      alert('Factura procesada exitosamente')
+
+      toast.success('Factura procesada exitosamente')
       onUploadSuccess?.()
     } catch (error) {
       console.error('Error uploading invoice:', error)
-      
+
       // Mostrar mensaje de error más específico
       let errorMessage = 'Error al procesar la factura'
       if (error instanceof Error) {
@@ -71,8 +72,8 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
           errorMessage = `Error: ${error.message}`
         }
       }
-      
-      alert(errorMessage)
+
+      toast.error(errorMessage)
     } finally {
       setIsUploading(false)
     }

@@ -92,7 +92,7 @@ export function useDashboard() {
       const completedTasks = activities.filter(a => a.status === 'completed').length
       const totalTasks = activities.length
 
-      
+
       setStats({
         totalProjects: projects.length,
         activeProjects,
@@ -125,7 +125,7 @@ export function useDashboard() {
           }
 
           const floors = projectFloors || []
-          
+
           let totalTasks = 0
           let completedTasks = 0
           let delayedTasks = 0
@@ -170,14 +170,15 @@ export function useDashboard() {
           })
 
           // Si el proyecto está en planificación, el progreso debe ser 0%
-          const progressPercentage = project.status === 'planning' 
-            ? 0 
+          const progressPercentage = project.status === 'planning'
+            ? 0
             : (totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0)
 
 
           // Determinar si el proyecto está retrasado
-          const isDelayed = delayedTasks > 0
+          // Solo marcar como retrasado si hay tareas retrasadas Y el porcentaje es mayor a 0
           const delayPercentage = totalTasks > 0 ? Math.round((delayedTasks / totalTasks) * 100) : 0
+          const isDelayed = delayedTasks > 0 && delayPercentage > 0
 
           return {
             id: project.id,
@@ -200,7 +201,7 @@ export function useDashboard() {
 
       // Calcular progreso promedio basado solo en proyectos activos
       const activeProjectsList = projectProgressData.filter(p => p.status === 'active')
-      const averageProgress = activeProjectsList.length > 0 
+      const averageProgress = activeProjectsList.length > 0
         ? Math.round(activeProjectsList.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) / activeProjectsList.length)
         : 0
 
@@ -233,19 +234,19 @@ export function useDashboard() {
       // Procesar datos de pisos
       const processedFloorStatus: FloorStatus[] = (floorStatusData || []).map(floor => {
         const apartments = floor.apartments || []
-        
+
         // Contar apartamentos por estado (excluyendo bloqueados del progreso)
         const pendingApartments = apartments.filter(apt => apt.status === 'pending').length
         const completedApartments = apartments.filter(apt => apt.status === 'completed').length
         const inProgressApartments = apartments.filter(apt => apt.status === 'in-progress').length
         const blockedApartments = apartments.filter(apt => apt.status === 'blocked').length
-        
+
         // Calcular tareas solo de apartamentos no bloqueados
         const nonBlockedApartments = apartments.filter(apt => apt.status !== 'blocked')
         const allTasks = nonBlockedApartments.flatMap((apt: any) => (apt.tasks || []).filter((task: any) => !task.is_deleted))
         const completedTasks = allTasks.filter((task: any) => task.status === 'completed').length
         const totalTasks = allTasks.length
-        
+
         // Determinar el estado del piso basado en sus apartamentos
         let floorStatus = 'pending'
         if (completedApartments > 0 && pendingApartments === 0 && inProgressApartments === 0) {
@@ -255,7 +256,7 @@ export function useDashboard() {
         } else if (pendingApartments > 0) {
           floorStatus = 'pending'
         }
-        
+
         return {
           id: floor.id,
           project_id: floor.project_id,

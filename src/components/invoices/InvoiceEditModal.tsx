@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { InvoiceIncome } from '@/hooks/useInvoices'
 import { formatCurrency } from '@/lib/utils'
+import toast from 'react-hot-toast'
 
 interface InvoiceEditModalProps {
   invoice: InvoiceIncome | null
@@ -25,26 +26,26 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
       // Corregir la fecha para zona horaria chilena
       const formatDateForInput = (dateString: string) => {
         if (!dateString) return ''
-        
+
         console.log('🔍 FECHA ORIGINAL:', dateString)
-        
+
         // Si la fecha viene con hora, solo tomar la parte de la fecha
         const dateOnly = dateString.split('T')[0]
         console.log('🔍 FECHA SIN HORA:', dateOnly)
-        
+
         // Crear fecha en zona horaria chilena (UTC-3)
         const [year, month, day] = dateOnly.split('-')
         const chileDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-        
+
         // Ajustar a zona horaria chilena (UTC-3)
         const chileOffset = -3 * 60 // -3 horas en minutos
         const utc = chileDate.getTime() + (chileDate.getTimezoneOffset() * 60000)
         const chileTime = new Date(utc + (chileOffset * 60000))
-        
-        const formattedDate = chileTime.getFullYear() + '-' + 
-          String(chileTime.getMonth() + 1).padStart(2, '0') + '-' + 
+
+        const formattedDate = chileTime.getFullYear() + '-' +
+          String(chileTime.getMonth() + 1).padStart(2, '0') + '-' +
           String(chileTime.getDate()).padStart(2, '0')
-        
+
         console.log('🔍 FECHA CHILENA:', formattedDate)
         return formattedDate
       }
@@ -80,7 +81,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
         const netAmount = field === 'net_amount' ? Number(value) : (newData.net_amount || 0)
         const ivaAmount = field === 'iva_amount' ? Number(value) : (newData.iva_amount || 0)
         const additionalTax = field === 'additional_tax' ? Number(value) : (newData.additional_tax || 0)
-        
+
         newData.total_amount = netAmount + ivaAmount + additionalTax
       }
 
@@ -91,23 +92,23 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
   const handleSave = async () => {
     try {
       setIsLoading(true)
-      
+
       console.log('💾 GUARDANDO FECHA:', formData.issue_date)
-      
+
       // Convertir fecha a zona horaria chilena antes de guardar
       const dataToSave = {
         ...formData,
-        issue_date: formData.issue_date ? 
-          new Date(formData.issue_date + 'T00:00:00-03:00').toISOString().split('T')[0] : 
+        issue_date: formData.issue_date ?
+          new Date(formData.issue_date + 'T00:00:00-03:00').toISOString().split('T')[0] :
           formData.issue_date
       }
-      
+
       console.log('💾 FECHA CONVERTIDA A CHILE:', dataToSave.issue_date)
       await onSave(dataToSave)
       onClose()
     } catch (error) {
       console.error('Error saving invoice:', error)
-      alert('Error al guardar la factura')
+      toast.error('Error al guardar la factura')
     } finally {
       setIsLoading(false)
     }
@@ -319,7 +320,7 @@ export function InvoiceEditModal({ invoice, isOpen, onClose, onSave }: InvoiceEd
             <Button variant="outline" onClick={onClose} className="text-slate-300 hover:text-slate-100">
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleSave}
               disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
