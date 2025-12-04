@@ -147,7 +147,12 @@ export default function ApartamentosPage() {
       apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // Búsqueda por torre
+      (apartment as any).tower_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apartment as any).tower_number?.toString().includes(searchTerm.toLowerCase()) ||
+      // Búsqueda por piso
+      apartment.floor_number?.toString().includes(searchTerm.toLowerCase())
 
     // Filtro por estado (usando el filtro de tarjetas)
     const matchesStatus = statusFilter === 'all' || apartment.status === statusFilter
@@ -417,7 +422,12 @@ export default function ApartamentosPage() {
       apartment.apartment_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // Búsqueda por torre
+      (apartment as any).tower_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (apartment as any).tower_number?.toString().includes(searchTerm.toLowerCase()) ||
+      // Búsqueda por piso
+      apartment.floor_number?.toString().includes(searchTerm.toLowerCase())
     // Si hay un filtro local de proyecto, usarlo; si no, usar el filtro global
     const projectToMatch = projectFilter !== 'all' ? projectFilter : (selectedProjectId ? selectedProjectId.toString() : null)
     const matchesProject = !projectToMatch || (apartment.project_id && apartment.project_id.toString() === projectToMatch)

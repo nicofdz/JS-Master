@@ -295,7 +295,11 @@ export default function TareasPage() {
       fullApartmentNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (task.apartment_code?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (task.apartment_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (task.project_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+      (task.project_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      // Búsqueda por torre (número)
+      (task.tower_number?.toString() || '').includes(searchTerm.toLowerCase()) ||
+      // Búsqueda por piso (número)
+      (task.floor_number?.toString() || '').includes(searchTerm.toLowerCase())
 
     const matchesProject = !selectedProjectId || selectedProjectId === 'all' ||
       task.project_id?.toString() === selectedProjectId

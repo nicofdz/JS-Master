@@ -104,7 +104,10 @@ export default function PisosPage() {
   // Filtrar pisos
   const filteredFloors = floors.filter(floor => {
     const matchesSearch = floor.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      floor.floor_number.toString().includes(searchTerm)
+      floor.floor_number.toString().includes(searchTerm) ||
+      // Búsqueda por torre
+      (floor as any).tower_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (floor as any).tower_number?.toString().includes(searchTerm)
 
     // Filtro por estado (usando el filtro de tarjetas)
     let matchesStatus = false
