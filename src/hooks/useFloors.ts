@@ -38,7 +38,7 @@ export function useFloors(projectId?: number) {
     }
   }
 
-  const fetchFloors = async () => {
+  const fetchFloors = async (includeDeleted = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -58,8 +58,11 @@ export function useFloors(projectId?: number) {
             is_active
           )
         `)
-        .eq('is_active', true)
         .order('floor_number', { ascending: true })
+
+      if (!includeDeleted) {
+        query = query.eq('is_active', true)
+      }
 
       if (projectId) {
         query = query.eq('project_id', projectId)
@@ -71,14 +74,14 @@ export function useFloors(projectId?: number) {
 
       // Obtener todos los IDs de apartamentos para consultar sus tareas (tasks V2)
       const allApartmentIds: number[] = []
-      ;(data || []).forEach(floor => {
-        const apartments = floor.apartments || []
-        apartments.forEach((apt: any) => {
-          if (apt.is_active !== false && apt.id) {
-            allApartmentIds.push(apt.id)
-          }
+        ; (data || []).forEach(floor => {
+          const apartments = floor.apartments || []
+          apartments.forEach((apt: any) => {
+            if (apt.is_active !== false && apt.id) {
+              allApartmentIds.push(apt.id)
+            }
+          })
         })
-      })
 
       // Consultar tareas de todos los apartamentos (tasks V2)
       let tasksByApartment: Record<number, Array<{ id: number; status: string }>> = {}
@@ -109,9 +112,14 @@ export function useFloors(projectId?: number) {
       const validFloors = (data || []).filter(floor => {
         const project = floor.projects as any
         const tower = floor.towers as any
-        const isValid = project?.is_active === true && 
-               project?.status === 'active' && 
-               tower?.is_active === true
+
+        // Si estamos incluyendo eliminados, permitimos pisos de torres/proyectos inactivos
+        if (includeDeleted) return true
+
+        const isValid = project?.is_active === true &&
+          project?.status === 'active' &&
+          tower?.is_active === true
+
         if (!isValid) {
           console.log('❌ Piso filtrado:', {
             floor_id: floor.id,
@@ -126,25 +134,25 @@ export function useFloors(projectId?: number) {
         }
         return isValid
       })
-      
+
       console.log('✅ Pisos válidos después del filtro:', validFloors.length, 'de', (data || []).length)
 
       // Procesar datos para incluir información adicional
       const processedFloors = validFloors.map(floor => {
-        // Filtrar solo apartments activos
+        // Filtrar solo apartments activos si no estamos en modo papelera
         const allApartments = floor.apartments || []
-        const apartments = Array.isArray(allApartments) 
-          ? allApartments.filter((apt: any) => apt.is_active !== false)
+        const apartments = Array.isArray(allApartments)
+          ? allApartments.filter((apt: any) => includeDeleted ? true : apt.is_active !== false)
           : []
         const totalApartments = apartments.length
         const tower = floor.towers as any
-        
+
         // Calcular progreso basado en tareas (tasks V2)
         let totalTasks = 0
         let completedTasks = 0
         let delayedTasks = 0
         let apartmentsWithoutTasks = 0
-        
+
         // Agregar tareas a cada apartamento y calcular estadísticas
         const apartmentsWithTasks = apartments.map((apt: any) => {
           const tasks = tasksByApartment[apt.id] || []
@@ -158,24 +166,24 @@ export function useFloors(projectId?: number) {
           const tasks = apt.tasks || []
           totalTasks += tasks.length
           completedTasks += tasks.filter((task: any) => task.status === 'completed').length
-          
+
           // Contar tareas retrasadas (excluir bloqueadas y canceladas)
-          delayedTasks += tasks.filter((task: any) => 
-            task.is_delayed === true && 
-            task.status !== 'blocked' && 
+          delayedTasks += tasks.filter((task: any) =>
+            task.is_delayed === true &&
+            task.status !== 'blocked' &&
             task.status !== 'cancelled'
           ).length
-          
+
           // Contar apartamentos sin tareas
           if (tasks.length === 0) {
             apartmentsWithoutTasks++
           }
         })
-        
-        const progress_percentage = totalTasks > 0 
-          ? Math.round((completedTasks / totalTasks) * 100) 
+
+        const progress_percentage = totalTasks > 0
+          ? Math.round((completedTasks / totalTasks) * 100)
           : 0
-        
+
         const processedFloor = {
           ...floor,
           project_name: (floor.projects as any)?.name || 'Proyecto Desconocido',
@@ -190,7 +198,7 @@ export function useFloors(projectId?: number) {
           apartments_without_tasks: apartmentsWithoutTasks,
           apartments: apartmentsWithTasks // Incluir apartamentos con tareas
         }
-        
+
         // Debug: verificar que tower_id esté presente
         if (!processedFloor.tower_id) {
           console.warn('⚠️ Piso sin tower_id:', {
@@ -200,7 +208,7 @@ export function useFloors(projectId?: number) {
             tower: tower
           })
         }
-        
+
         return processedFloor
       })
 
@@ -216,12 +224,12 @@ export function useFloors(projectId?: number) {
   const createFloor = async (floor: FloorInsert) => {
     try {
       console.log('🔍 Intentando crear piso:', floor)
-      
+
       const { data, error } = await supabase
         .from('floors')
         .insert(floor)
         .select(`
-          *,
+      *,
           projects!inner(name),
           towers!inner(id, tower_number, name)
         `)
@@ -231,11 +239,11 @@ export function useFloors(projectId?: number) {
         console.error('❌ Error de Supabase:', error)
         throw new Error(`Error de Supabase: ${error.message} (Código: ${error.code})`)
       }
-      
+
       console.log('✅ Piso creado exitosamente:', data)
-      
+
       const tower = data.towers as any
-      
+
       // Actualizar la lista local
       const newFloor = {
         ...data,
@@ -245,7 +253,7 @@ export function useFloors(projectId?: number) {
         apartments_count: 0,
         progress_percentage: 0
       }
-      
+
       setFloors(prev => [...prev, newFloor].sort((a, b) => {
         if (a.tower_number !== b.tower_number) return a.tower_number - b.tower_number
         return a.floor_number - b.floor_number
@@ -266,13 +274,13 @@ export function useFloors(projectId?: number) {
         .update(updates)
         .eq('id', id)
         .select(`
-          *,
+      *,
           projects!inner(name)
         `)
         .single()
 
       if (error) throw error
-      
+
       // Actualizar la lista local
       setFloors(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f))
       return data
@@ -282,24 +290,66 @@ export function useFloors(projectId?: number) {
     }
   }
 
-  const deleteFloor = async (id: number) => {
+  const hardDeleteFloor = async (id: number) => {
     try {
-      const { error } = await supabase
+      console.log(`🗑️ Iniciando hard delete del piso ${id}...`)
+
+      // Obtener apartamentos
+      const { data: apartments, error: apartmentsError } = await supabase
+        .from('apartments')
+        .select('id')
+        .eq('floor_id', id)
+
+      if (apartmentsError) {
+        console.error('❌ Error obteniendo apartamentos:', apartmentsError)
+        throw apartmentsError
+      }
+
+      console.log(`📦 Apartamentos encontrados: ${apartments?.length || 0}`)
+
+      // Eliminar apartamentos (CASCADE eliminará las tasks)
+      if (apartments && apartments.length > 0) {
+        const apartmentIds = apartments.map(a => a.id)
+        console.log(`🗑️ Eliminando apartamentos: ${apartmentIds.join(', ')}...`)
+
+        const { error: deleteApartmentsError } = await supabase
+          .from('apartments')
+          .delete()
+          .in('id', apartmentIds)
+
+        if (deleteApartmentsError) {
+          console.error('❌ Error eliminando apartamentos:', deleteApartmentsError)
+          throw deleteApartmentsError
+        }
+
+        console.log('✅ Apartamentos eliminados')
+      }
+
+      // Eliminar el piso
+      console.log(`🗑️ Eliminando piso ${id}...`)
+      const { error: deleteFloorError } = await supabase
         .from('floors')
         .delete()
         .eq('id', id)
 
-      if (error) throw error
-      
-      // Actualizar la lista local
+      if (deleteFloorError) {
+        console.error('❌ Error eliminando piso:', deleteFloorError)
+        throw deleteFloorError
+      }
+
+      console.log('✅ Piso eliminado exitosamente!')
+
       setFloors(prev => prev.filter(f => f.id !== id))
+      return true
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al eliminar piso')
+      console.error('❌ Error completo en hardDeleteFloor:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar piso permanentemente'
+      setError(errorMessage)
       throw err
     }
   }
 
-  const softDeleteFloor = async (id: number) => {
+  const deleteFloor = async (id: number) => {
     try {
       // Primero, hacer soft delete de todos los departamentos del piso (cascada)
       const { data: apartments, error: apartmentsError } = await supabase
@@ -310,6 +360,24 @@ export function useFloors(projectId?: number) {
 
       if (apartmentsError) throw apartmentsError
 
+      // Verificar si hay tareas completadas en los departamentos
+      if (apartments && apartments.length > 0) {
+        const apartmentIds = apartments.map(a => a.id)
+        const { data: completedTasks, error: tasksError } = await supabase
+          .from('tasks')
+          .select('id')
+          .in('apartment_id', apartmentIds)
+          .eq('status', 'completed')
+          .eq('is_deleted', false)
+          .limit(1)
+
+        if (tasksError) throw tasksError
+
+        if (completedTasks && completedTasks.length > 0) {
+          throw new Error('No se puede eliminar el piso porque contiene departamentos con tareas completadas. Elimine las tareas primero.')
+        }
+      }
+
       // Soft delete de todos los departamentos
       if (apartments && apartments.length > 0) {
         const apartmentUpdates = apartments.map(apt => {
@@ -317,7 +385,7 @@ export function useFloors(projectId?: number) {
           const newNumber = currentNumber.startsWith('[ELIMINADO] ')
             ? currentNumber
             : `[ELIMINADO] ${currentNumber}`
-          
+
           return {
             id: apt.id,
             apartment_number: newNumber,
@@ -329,7 +397,7 @@ export function useFloors(projectId?: number) {
         for (const update of apartmentUpdates) {
           const { error: aptError } = await supabase
             .from('apartments')
-            .update({ 
+            .update({
               is_active: false,
               apartment_number: update.apartment_number
             })
@@ -345,7 +413,7 @@ export function useFloors(projectId?: number) {
         .update({ is_active: false })
         .eq('id', id)
         .select(`
-          *,
+      *,
           projects!inner(name),
           towers!inner(id, tower_number, name)
         `)
@@ -425,7 +493,7 @@ export function useFloors(projectId?: number) {
 
       // Obtener tareas retrasadas del piso (EXCLUIR tareas bloqueadas) solo si hay apartamentos (tasks V2)
       const apartmentIds = apartments?.map(a => a.id) || []
-      
+
       let delayedTasksCount = 0
       if (apartmentIds.length > 0) {
         const { data: delayedTasks, error: tasksError } = await supabase
@@ -507,7 +575,7 @@ export function useFloors(projectId?: number) {
         `)
 
       if (error) throw error
-      
+
       // Actualizar la lista local
       const newFloors = (data || []).map(floor => {
         const tower = floor.towers as any
@@ -520,7 +588,7 @@ export function useFloors(projectId?: number) {
           progress_percentage: 0
         }
       })
-      
+
       // Ordenar por torre y luego por piso
       setFloors(prev => [...prev, ...newFloors].sort((a, b) => {
         if (a.tower_number !== b.tower_number) {
@@ -531,6 +599,72 @@ export function useFloors(projectId?: number) {
       return data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear pisos')
+      throw err
+    }
+  }
+
+  const restoreFloor = async (id: number) => {
+    try {
+      // 1. Restaurar el piso
+      const { data, error } = await supabase
+        .from('floors')
+        .update({ is_active: true })
+        .eq('id', id)
+        .select(`
+          *,
+          projects!inner(name),
+          towers!inner(id, tower_number, name)
+        `)
+        .single()
+
+      if (error) throw error
+
+      // 2. Restaurar los departamentos asociados (Cascada)
+      // Obtener departamentos eliminados de este piso
+      const { data: apartments, error: apartmentsError } = await supabase
+        .from('apartments')
+        .select('id, apartment_number')
+        .eq('floor_id', id)
+        .eq('is_active', false)
+
+      if (apartmentsError) {
+        console.error('Error al obtener departamentos para restaurar:', apartmentsError)
+        // No lanzamos error para no interrumpir la restauración del piso, pero logueamos
+      } else if (apartments && apartments.length > 0) {
+        // Preparar actualizaciones
+        for (const apt of apartments) {
+          const currentNumber = apt.apartment_number
+          // Remover prefijo [ELIMINADO] si existe
+          const restoredNumber = currentNumber.startsWith('[ELIMINADO] ')
+            ? currentNumber.replace('[ELIMINADO] ', '')
+            : currentNumber
+
+          // Restaurar departamento
+          await supabase
+            .from('apartments')
+            .update({
+              is_active: true,
+              apartment_number: restoredNumber
+            })
+            .eq('id', apt.id)
+
+          // También restaurar tareas canceladas a 'pending'
+          await supabase
+            .from('tasks')
+            .update({
+              status: 'pending',
+              updated_at: new Date().toISOString()
+            })
+            .eq('apartment_id', apt.id)
+            .eq('status', 'cancelled')
+            .eq('is_deleted', false)
+        }
+      }
+
+      await fetchFloors(true) // Recargar incluyendo eliminados para actualizar la vista
+      return data
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al restaurar piso')
       throw err
     }
   }
@@ -550,7 +684,8 @@ export function useFloors(projectId?: number) {
     createFloor,
     updateFloor,
     deleteFloor,
-    softDeleteFloor,
+    hardDeleteFloor,
+    restoreFloor,
     getNextFloorNumber,
     createFloorsForProject,
     updateFloorStatusFromApartments

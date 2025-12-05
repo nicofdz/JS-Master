@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useTowers } from '@/hooks'
+import toast from 'react-hot-toast'
 
 interface AddTowerModalProps {
   isOpen: boolean
@@ -37,7 +38,7 @@ export function AddTowerModal({ isOpen, onClose, projectId, onSuccess }: AddTowe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!nextNumber) {
       return
     }
@@ -49,12 +50,14 @@ export function AddTowerModal({ isOpen, onClose, projectId, onSuccess }: AddTowe
         tower_number: nextNumber,
         name: name.trim() || undefined
       })
-      
+
+      toast.success('Torre creada exitosamente')
       onSuccess?.()
       onClose()
       setName('')
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating tower:', err)
+      toast.error(err.message || 'Error al crear la torre')
     } finally {
       setSubmitting(false)
     }

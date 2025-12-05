@@ -25,9 +25,9 @@ interface EditStructureModalProps {
 }
 
 export function EditStructureModal({ isOpen, onClose, projectId, projectName }: EditStructureModalProps) {
-  const { towers, loading: loadingTowers, refresh: refreshTowers, softDeleteTower } = useTowers(projectId)
-  const { floors, loading: loadingFloors, refresh: refreshFloors, softDeleteFloor } = useFloors(projectId)
-  const { apartments, loading: loadingApartments, refresh: refreshApartments, fetchAllApartments, softDeleteApartment, hardDeleteApartment, restoreApartment } = useApartments()
+  const { towers, loading: loadingTowers, refresh: refreshTowers, softDeleteTower, hardDeleteTower, restoreTower } = useTowers(projectId)
+  const { floors, loading: loadingFloors, refresh: refreshFloors, deleteFloor } = useFloors(projectId)
+  const { apartments, loading: loadingApartments, refresh: refreshApartments, fetchAllApartments, deleteApartment, hardDeleteApartment, restoreApartment } = useApartments()
 
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
   const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
@@ -46,6 +46,17 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
   const [apartmentToDelete, setApartmentToDelete] = useState<{ id: number; number: string } | null>(null)
   const [showHardDeleteApartmentConfirm, setShowHardDeleteApartmentConfirm] = useState(false)
   const [apartmentToHardDelete, setApartmentToHardDelete] = useState<{ id: number; number: string } | null>(null)
+  const [showHardDeleteTowerConfirm, setShowHardDeleteTowerConfirm] = useState(false)
+  const [towerToHardDelete, setTowerToHardDelete] = useState<{ id: number; name: string } | null>(null)
+  const [showTrash, setShowTrash] = useState(false)
+
+  // Recargar torres cuando cambia el modo papelera
+  // Recargar datos cuando cambia el modo papelera
+  useEffect(() => {
+    refreshTowers(showTrash)
+    refreshFloors(showTrash)
+    fetchAllApartments(true) // Siempre traer todos para poder filtrar localmente
+  }, [showTrash])
 
   // Estados para elementos seleccionados
   const [selectedTowerForFloor, setSelectedTowerForFloor] = useState<number | null>(null)
@@ -65,6 +76,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
 
   // Filtrar pisos y departamentos por el proyecto actual
   const projectFloors = floors.filter(f => f.project_id === projectId)
+
   const projectApartments = apartments.filter(a => {
     const floor = projectFloors.find(f => f.id === a.floor_id)
     return !!floor
@@ -88,7 +100,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
   const fetchTaskCounts = async () => {
     try {
       const apartmentIds = projectApartments.map(a => a.id)
-      
+
       // Consultar tasks V2 en lugar de apartment_tasks
       const { data, error } = await supabase
         .from('tasks')
@@ -99,7 +111,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
       if (error) throw error
 
       const counts: Record<number, { completed: number; total: number }> = {}
-      
+
       data?.forEach(task => {
         if (!counts[task.apartment_id]) {
           counts[task.apartment_id] = { completed: 0, total: 0 }
@@ -197,7 +209,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     }
 
     try {
-      await softDeleteFloor(floorId)
+      await deleteFloor(floorId)
       toast.success('Piso eliminado exitosamente')
       refreshFloors()
       refreshApartments()
@@ -216,7 +228,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     if (!apartmentToDelete) return
 
     try {
-      await softDeleteApartment(apartmentToDelete.id)
+      await deleteApartment(apartmentToDelete.id)
       toast.success('Departamento eliminado exitosamente')
       refreshApartments()
       fetchTaskCounts()
@@ -235,7 +247,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
   }
 
   const handleRefresh = () => {
-    refreshTowers()
+    refreshTowers(showTrash)
     refreshFloors()
     fetchAllApartments(true) // Incluir inactivos
     fetchTaskCounts()
@@ -257,6 +269,45 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
   const handleHardDeleteApartment = (apartmentId: number, apartmentNumber: string) => {
     setApartmentToHardDelete({ id: apartmentId, number: apartmentNumber })
     setShowHardDeleteApartmentConfirm(true)
+  }
+
+  const handleRestoreTower = async (towerId: number, towerName: string) => {
+    if (!confirm(`¿Estás seguro de que quieres restaurar la ${towerName}?`)) {
+      return
+    }
+
+    try {
+      await restoreTower(towerId)
+      toast.success('Torre restaurada exitosamente')
+      refreshTowers(showTrash)
+    } catch (err) {
+      toast.error('Error al restaurar la torre')
+      console.error(err)
+    }
+  }
+
+  const handleHardDeleteTower = (towerId: number, towerName: string) => {
+    setTowerToHardDelete({ id: towerId, name: towerName })
+    setShowHardDeleteTowerConfirm(true)
+  }
+
+  const confirmHardDeleteTower = async () => {
+    if (!towerToHardDelete) return
+
+    try {
+      await hardDeleteTower(towerToHardDelete.id)
+      toast.success('Torre eliminada definitivamente. Las tareas completadas se mantienen en el sistema.')
+      refreshTowers(showTrash)
+      refreshFloors(showTrash)
+      fetchAllApartments(true)
+      fetchTaskCounts()
+      setShowHardDeleteTowerConfirm(false)
+      setTowerToHardDelete(null)
+    } catch (err: any) {
+      console.error('Error completo al eliminar definitivamente torre:', err)
+      const errorMessage = err?.message || 'Error desconocido al eliminar definitivamente la torre'
+      toast.error(`Error al eliminar la torre: ${errorMessage}`)
+    }
   }
 
   const confirmHardDeleteApartment = async () => {
@@ -296,7 +347,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
 
     const isComplete = count.completed === count.total
     const bgColor = isComplete ? 'bg-green-500' : 'bg-yellow-500'
-    
+
     return (
       <div className={`absolute -top-1 -right-1 ${bgColor} text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[28px] text-center shadow-lg`}>
         {count.completed}/{count.total}
@@ -347,13 +398,25 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
               <Plus className="w-4 h-4" />
               Agregar Torre
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              size="sm"
-            >
-              Actualizar
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant={showTrash ? "secondary" : "outline"}
+                onClick={() => setShowTrash(!showTrash)}
+                size="sm"
+                className={`flex items-center gap-2 ${showTrash ? 'bg-red-900/30 text-red-400 border-red-500/50' : 'border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50'}`}
+                title={showTrash ? "Ver activos" : "Ver papelera"}
+              >
+                <Trash2 className="w-4 h-4" />
+                {showTrash ? 'Salir de Papelera' : 'Papelera'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                size="sm"
+              >
+                Actualizar
+              </Button>
+            </div>
           </div>
 
           {loading && <p className="text-center text-blue-400">Cargando estructura...</p>}
@@ -371,283 +434,319 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
 
           {!loading && towers.length > 0 && (
             <div className="space-y-3">
-              {towers.sort((a, b) => a.tower_number - b.tower_number).map(tower => {
-                const isTowerExpanded = expandedTowers.has(tower.id)
-                const towerFloors = (tower.id && floorsByTower[tower.id]) || []
+              {towers
+                .filter(t => showTrash ? !t.is_active : t.is_active)
+                .sort((a, b) => a.tower_number - b.tower_number)
+                .map(tower => {
+                  const isTowerExpanded = expandedTowers.has(tower.id)
+                  const towerFloors = (tower.id && floorsByTower[tower.id]) || []
 
-                return (
-                  <div key={tower.id} className="space-y-2">
-                    {/* Torre */}
-                    <div className="relative group">
-                      <button
-                        onClick={() => toggleTower(tower.id)}
-                        className="w-full bg-slate-700 hover:bg-slate-600 rounded-lg border border-blue-500/30 hover:border-blue-500/50 p-4 transition-all duration-200 flex items-center gap-3"
-                      >
-                        {isTowerExpanded ? (
-                          <ChevronDown className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                        )}
-                        <Building2 className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                        <div className="flex-1 text-left">
-                          <div className="text-lg font-semibold text-white">
-                            {tower.name || `Torre ${tower.tower_number}`}
+                  return (
+                    <div key={tower.id} className="space-y-2">
+                      {/* Torre */}
+                      <div className="relative group">
+                        <button
+                          onClick={() => toggleTower(tower.id)}
+                          className="w-full bg-slate-700 hover:bg-slate-600 rounded-lg border border-blue-500/30 hover:border-blue-500/50 p-4 transition-all duration-200 flex items-center gap-3"
+                        >
+                          {isTowerExpanded ? (
+                            <ChevronDown className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                          )}
+                          <Building2 className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                          <div className="flex-1 text-left">
+                            <div className="text-lg font-semibold text-white">
+                              {tower.name || `Torre ${tower.tower_number}`}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-400">
-                            {towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}
-                          </div>
+                        </button>
+
+                        {/* Botones de acción de Torre */}
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {showTrash ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRestoreTower(tower.id, tower.name || '')
+                                }}
+                                className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-2"
+                                title="Restaurar Torre"
+                              >
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                                Restaurar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleHardDeleteTower(tower.id, tower.name || `Torre ${tower.tower_number}`)
+                                }}
+                                className="bg-red-700 hover:bg-red-600 text-white border-red-700 text-xs px-2"
+                                title="Eliminar Definitivamente"
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Eliminar
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddApartmentsToAllFloors(tower.id)
+                                }}
+                                className="bg-blue-600 hover:bg-blue-500 text-white border-blue-500 text-xs px-2"
+                                title="Agregar Departamentos a Todos los Pisos"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Departamentos
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleAddFloor(tower.id)
+                                }}
+                                className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-2"
+                                title="Agregar Piso"
+                              >
+                                <Plus className="w-3 h-3 mr-1" />
+                                Piso
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditTower(tower.id, tower.name)
+                                }}
+                                className="bg-slate-600 hover:bg-slate-500 text-white border-slate-500"
+                                title="Editar Torre"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteTower(tower.id)
+                                }}
+                                className="bg-red-600 hover:bg-red-500 text-white border-red-500"
+                                title="Eliminar Torre"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
-                      </button>
-                      
-                      {/* Botones de acción de Torre */}
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleAddApartmentsToAllFloors(tower.id)
-                          }}
-                          className="bg-blue-600 hover:bg-blue-500 text-white border-blue-500 text-xs px-2"
-                          title="Agregar Departamentos a Todos los Pisos"
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Departamentos
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleAddFloor(tower.id)
-                          }}
-                          className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-2"
-                          title="Agregar Piso"
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Piso
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditTower(tower.id, tower.name)
-                          }}
-                          className="bg-slate-600 hover:bg-slate-500 text-white border-slate-500"
-                          title="Editar Torre"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteTower(tower.id)
-                          }}
-                          className="bg-red-600 hover:bg-red-500 text-white border-red-500"
-                          title="Eliminar Torre"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
                       </div>
-                    </div>
 
-                    {/* Pisos de la Torre */}
-                    {isTowerExpanded && (
-                      <div className="ml-8 space-y-2">
-                        {(Array.isArray(towerFloors) ? towerFloors : []).sort((a, b) => a.floor_number - b.floor_number).map(floor => {
-                          const isFloorExpanded = expandedFloors.has(floor.id)
-                          const floorApartments = apartmentsByFloor[floor.id] || []
+                      {/* Pisos de la Torre */}
+                      {isTowerExpanded && (
+                        <div className="ml-8 space-y-2">
+                          {(Array.isArray(towerFloors) ? towerFloors : []).sort((a, b) => a.floor_number - b.floor_number).map(floor => {
+                            const isFloorExpanded = expandedFloors.has(floor.id)
+                            const floorApartments = apartmentsByFloor[floor.id] || []
 
-                          return (
-                            <div key={floor.id} className="space-y-2">
-                              {/* Piso */}
-                              <div className="relative group">
-                                <button
-                                  onClick={() => toggleFloor(floor.id)}
-                                  className="w-full bg-slate-600 hover:bg-slate-550 rounded-lg border border-purple-500/30 hover:border-purple-500/50 p-3 transition-all duration-200 flex items-center gap-3"
-                                >
-                                  {isFloorExpanded ? (
-                                    <ChevronDown className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                                  )}
-                                  <div className="flex-1 text-left">
-                                    <div className="text-base font-semibold text-white">
-                                      Piso {floor.floor_number}
-                                    </div>
-                                    <div className="text-xs text-gray-400">
-                                      {floorApartments.length} {floorApartments.length === 1 ? 'departamento' : 'departamentos'}
-                                    </div>
-                                  </div>
-                                </button>
-
-                                {/* Botones de acción de Piso */}
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleAddApartments(floor.id)
-                                    }}
-                                    className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-2"
-                                    title="Agregar Departamentos"
+                            return (
+                              <div key={floor.id} className="space-y-2">
+                                {/* Piso */}
+                                <div className="relative group">
+                                  <button
+                                    onClick={() => toggleFloor(floor.id)}
+                                    className="w-full bg-slate-600 hover:bg-slate-550 rounded-lg border border-purple-500/30 hover:border-purple-500/50 p-3 transition-all duration-200 flex items-center gap-3"
                                   >
-                                    <Plus className="w-3 h-3 mr-1" />
-                                    Departamentos
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleAddTasks(floor.id)
-                                    }}
-                                    className="bg-slate-500 hover:bg-slate-400 text-white border-slate-400 text-xs px-2"
-                                    title="Agregar Tareas"
-                                  >
-                                    <ClipboardList className="w-3 h-3 mr-1" />
-                                    Tareas
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDeleteFloor(floor.id)
-                                    }}
-                                    className="bg-red-600 hover:bg-red-500 text-white border-red-500 text-xs px-2"
-                                    title="Eliminar Piso"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Departamentos del Piso */}
-                              {isFloorExpanded && floorApartments.length > 0 && (() => {
-                                const activeApartments = floorApartments.filter((a: any) => a.is_active)
-                                const deletedApartments = floorApartments.filter((a: any) => !a.is_active)
-                                
-                                return (
-                                  <div className="ml-8 space-y-4">
-                                    {/* Departamentos Activos */}
-                                    {activeApartments.length > 0 && (
-                                      <div>
-                                        <div className="grid grid-cols-8 gap-2">
-                                          {sortApartments(activeApartments).map(apartment => (
-                                            <div key={apartment.id} className="relative">
-                                              <button
-                                                onClick={() => handleApartmentClick(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
-                                                className="bg-slate-500 text-white hover:bg-slate-400 rounded-lg border border-green-500/30 p-3 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg relative w-full"
-                                                title={`Departamento ${formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)} - Click para ver tareas`}
-                                              >
-                                                <span className="text-sm font-bold">{formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)}</span>
-                                                {getTaskBadge(apartment.id)}
-                                              </button>
-                                              
-                                              {/* Botones de acción del Departamento */}
-                                              <div className="flex gap-1 mt-1 justify-center">
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => handleEditApartment({
-                                                    id: apartment.id,
-                                                    apartment_number: formatApartmentNumber(apartment.apartment_code, apartment.apartment_number),
-                                                    apartment_type: apartment.apartment_type,
-                                                    area: apartment.area,
-                                                    bedrooms: apartment.bedrooms,
-                                                    bathrooms: apartment.bathrooms
-                                                  })}
-                                                  className="bg-slate-400 hover:bg-slate-300 text-white border-slate-300 text-xs px-1 py-0 h-6"
-                                                  title="Editar"
-                                                >
-                                                  <Edit className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => handleDeleteApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
-                                                  className="bg-red-600 hover:bg-red-500 text-white border-red-500 text-xs px-1 py-0 h-6"
-                                                  title="Eliminar"
-                                                >
-                                                  <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
+                                    {isFloorExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
                                     )}
-                                    
-                                    {/* Departamentos Eliminados */}
-                                    {deletedApartments.length > 0 && (
-                                      <div>
-                                        <div className="text-xs text-gray-400 mb-2 font-semibold">
-                                          Departamentos Eliminados
-                                        </div>
-                                        <div className="grid grid-cols-8 gap-2">
-                                          {sortApartments(deletedApartments).map(apartment => {
-                                            const fullNumber = formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)
-                                            const displayNumber = fullNumber.replace('[ELIMINADO] ', '')
-                                            return (
+                                    <div className="flex-1 text-left">
+                                      <div className="text-base font-semibold text-white">
+                                        Piso {floor.floor_number}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        {floorApartments.length} {floorApartments.length === 1 ? 'departamento' : 'departamentos'}
+                                      </div>
+                                    </div>
+                                  </button>
+
+                                  {/* Botones de acción de Piso */}
+                                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleAddApartments(floor.id)
+                                      }}
+                                      className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-2"
+                                      title="Agregar Departamentos"
+                                    >
+                                      <Plus className="w-3 h-3 mr-1" />
+                                      Departamentos
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleAddTasks(floor.id)
+                                      }}
+                                      className="bg-slate-500 hover:bg-slate-400 text-white border-slate-400 text-xs px-2"
+                                      title="Agregar Tareas"
+                                    >
+                                      <ClipboardList className="w-3 h-3 mr-1" />
+                                      Tareas
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleDeleteFloor(floor.id)
+                                      }}
+                                      className="bg-red-600 hover:bg-red-500 text-white border-red-500 text-xs px-2"
+                                      title="Eliminar Piso"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Departamentos del Piso */}
+                                {isFloorExpanded && floorApartments.length > 0 && (() => {
+                                  const activeApartments = floorApartments.filter((a: any) => a.is_active)
+                                  const deletedApartments = floorApartments.filter((a: any) => !a.is_active)
+
+                                  return (
+                                    <div className="ml-8 space-y-4">
+                                      {/* Departamentos Activos */}
+                                      {activeApartments.length > 0 && (
+                                        <div>
+                                          <div className="grid grid-cols-8 gap-2">
+                                            {sortApartments(activeApartments).map(apartment => (
                                               <div key={apartment.id} className="relative">
                                                 <button
-                                                  onClick={() => handleApartmentClick(apartment.id, fullNumber)}
-                                                  className="bg-slate-700/50 text-gray-400 hover:bg-slate-700/70 rounded-lg border-2 border-red-500/50 p-3 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg relative w-full opacity-60"
-                                                  title={`Departamento ${displayNumber} (Eliminado) - Click para ver tareas`}
+                                                  onClick={() => handleApartmentClick(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
+                                                  className="bg-slate-500 text-white hover:bg-slate-400 rounded-lg border border-green-500/30 p-3 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg relative w-full"
+                                                  title={`Departamento ${formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)} - Click para ver tareas`}
                                                 >
-                                                  <span className="text-sm font-bold line-through">{displayNumber}</span>
+                                                  <span className="text-sm font-bold">{formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)}</span>
                                                   {getTaskBadge(apartment.id)}
                                                 </button>
-                                                
-                                                {/* Botones de acción del Departamento Eliminado */}
+
+                                                {/* Botones de acción del Departamento */}
                                                 <div className="flex gap-1 mt-1 justify-center">
                                                   <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() => handleRestoreApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
-                                                    className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-1 py-0 h-6"
-                                                    title="Restaurar"
+                                                    onClick={() => handleEditApartment({
+                                                      id: apartment.id,
+                                                      apartment_number: formatApartmentNumber(apartment.apartment_code, apartment.apartment_number),
+                                                      apartment_type: apartment.apartment_type,
+                                                      area: apartment.area,
+                                                      bedrooms: apartment.bedrooms,
+                                                      bathrooms: apartment.bathrooms
+                                                    })}
+                                                    className="bg-slate-400 hover:bg-slate-300 text-white border-slate-300 text-xs px-1 py-0 h-6"
+                                                    title="Editar"
                                                   >
-                                                    <RotateCcw className="w-3 h-3" />
+                                                    <Edit className="w-3 h-3" />
                                                   </Button>
                                                   <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() => handleHardDeleteApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
-                                                    className="bg-red-700 hover:bg-red-600 text-white border-red-600 text-xs px-1 py-0 h-6"
-                                                    title="Eliminar Definitivamente"
+                                                    onClick={() => handleDeleteApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
+                                                    className="bg-red-600 hover:bg-red-500 text-white border-red-500 text-xs px-1 py-0 h-6"
+                                                    title="Eliminar"
                                                   >
                                                     <Trash2 className="w-3 h-3" />
                                                   </Button>
                                                 </div>
                                               </div>
-                                            )
-                                          })}
+                                            ))}
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })()}
+                                      )}
 
-                              {isFloorExpanded && floorApartments.length === 0 && (
-                                <div className="ml-8 text-center py-4 text-gray-400 text-sm">
-                                  No hay departamentos en este piso
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+                                      {/* Departamentos Eliminados */}
+                                      {deletedApartments.length > 0 && (
+                                        <div>
+                                          <div className="text-xs text-gray-400 mb-2 font-semibold">
+                                            Departamentos Eliminados
+                                          </div>
+                                          <div className="grid grid-cols-8 gap-2">
+                                            {sortApartments(deletedApartments).map(apartment => {
+                                              const fullNumber = formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)
+                                              const displayNumber = fullNumber.replace('[ELIMINADO] ', '')
+                                              return (
+                                                <div key={apartment.id} className="relative">
+                                                  <button
+                                                    onClick={() => handleApartmentClick(apartment.id, fullNumber)}
+                                                    className="bg-slate-700/50 text-gray-400 hover:bg-slate-700/70 rounded-lg border-2 border-red-500/50 p-3 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg relative w-full opacity-60"
+                                                    title={`Departamento ${displayNumber} (Eliminado) - Click para ver tareas`}
+                                                  >
+                                                    <span className="text-sm font-bold line-through">{displayNumber}</span>
+                                                    {getTaskBadge(apartment.id)}
+                                                  </button>
+
+                                                  {/* Botones de acción del Departamento Eliminado */}
+                                                  <div className="flex gap-1 mt-1 justify-center">
+                                                    <Button
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={() => handleRestoreApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
+                                                      className="bg-green-600 hover:bg-green-500 text-white border-green-500 text-xs px-1 py-0 h-6"
+                                                      title="Restaurar"
+                                                    >
+                                                      <RotateCcw className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={() => handleHardDeleteApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
+                                                      className="bg-red-700 hover:bg-red-600 text-white border-red-600 text-xs px-1 py-0 h-6"
+                                                      title="Eliminar Definitivamente"
+                                                    >
+                                                      <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                  </div>
+                                                </div>
+                                              )
+                                            })}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
+
+                                {isFloorExpanded && floorApartments.length === 0 && (
+                                  <div className="ml-8 text-center py-4 text-gray-400 text-sm">
+                                    No hay departamentos en este piso
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
             </div>
           )}
         </div>
@@ -825,6 +924,53 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
             </Button>
             <Button
               onClick={confirmHardDeleteApartment}
+              className="bg-red-700 hover:bg-red-800 text-white"
+            >
+              Eliminar Definitivamente
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de Confirmación de Eliminación Definitiva de Torre */}
+      <Modal
+        isOpen={showHardDeleteTowerConfirm}
+        onClose={() => {
+          setShowHardDeleteTowerConfirm(false)
+          setTowerToHardDelete(null)
+        }}
+        title="Confirmar Eliminación Definitiva de Torre"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-slate-300">
+            ¿Está seguro de que desea eliminar <strong className="text-white">definitivamente</strong> la torre <strong className="text-white">{towerToHardDelete?.name}</strong>?
+          </p>
+          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 space-y-2">
+            <p className="text-sm text-red-300 font-semibold">
+              ⚠️ Esta acción es irreversible y tendrá los siguientes efectos:
+            </p>
+            <ul className="text-sm text-slate-300 space-y-1 list-disc list-inside">
+              <li>La torre será eliminada permanentemente de la base de datos</li>
+              <li>Todos los <strong className="text-white">pisos</strong> de la torre serán eliminados</li>
+              <li>Todos los <strong className="text-white">departamentos</strong> de esos pisos serán eliminados</li>
+              <li>Las tareas <strong className="text-white">no completadas</strong> serán eliminadas definitivamente</li>
+              <li>Las tareas <strong className="text-white">completadas</strong> se mantendrán pero quedarán sin departamento asignado</li>
+              <li>No podrá restaurar esta torre después de esta acción</li>
+            </ul>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowHardDeleteTowerConfirm(false)
+                setTowerToHardDelete(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmHardDeleteTower}
               className="bg-red-700 hover:bg-red-800 text-white"
             >
               Eliminar Definitivamente

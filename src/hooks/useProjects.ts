@@ -48,21 +48,24 @@ export const useProjects = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProjects = async () => {
+  const fetchProjects = async (includeDeleted = false) => {
     try {
       setLoading(true)
       setError(null)
 
       // Consulta SQL personalizada para obtener proyectos con progreso y conteo de torres
-      // Ahora filtra por is_active = true (unificado con el resto del sistema)
       const { data, error } = await supabase.rpc('get_projects_with_progress')
 
       if (error) {
         throw error
       }
 
-      // Filtrar proyectos activos (la función RPC debería hacerlo, pero por seguridad)
-      setProjects((data || []).filter((p: any) => p.is_active !== false))
+      // Filtrar proyectos según includeDeleted
+      if (includeDeleted) {
+        setProjects(data || [])
+      } else {
+        setProjects((data || []).filter((p: any) => p.is_active !== false))
+      }
     } catch (err: any) {
       console.error('Error fetching projects:', err)
       setError(err.message || 'Error al cargar proyectos')
@@ -75,7 +78,7 @@ export const useProjects = () => {
     try {
       // Extraer 'towers' del form data (no existe en la tabla)
       const { towers, plan_pdf, ...dataToSave } = projectData
-      
+
       // Limpiar campos numéricos: asegurar que cadenas vacías sean null/undefined
       if (dataToSave.initial_budget === '' || dataToSave.initial_budget === null) {
         dataToSave.initial_budget = null
@@ -83,14 +86,14 @@ export const useProjects = () => {
         const parsed = parseFloat(dataToSave.initial_budget)
         dataToSave.initial_budget = isNaN(parsed) ? null : parsed
       }
-      
+
       if (dataToSave.contract_amount === '' || dataToSave.contract_amount === null) {
         dataToSave.contract_amount = null
       } else if (typeof dataToSave.contract_amount === 'string') {
         const parsed = parseFloat(dataToSave.contract_amount)
         dataToSave.contract_amount = isNaN(parsed) ? null : parsed
       }
-      
+
       const { data, error } = await supabase
         .from('projects')
         .insert(dataToSave)
@@ -123,7 +126,7 @@ export const useProjects = () => {
     try {
       // Extraer campos que no existen en la tabla
       const { towers, plan_pdf, ...dataToSave } = projectData
-      
+
       // Limpiar campos numéricos: asegurar que cadenas vacías sean null/undefined
       if (dataToSave.initial_budget === '' || dataToSave.initial_budget === null) {
         dataToSave.initial_budget = null
@@ -131,14 +134,14 @@ export const useProjects = () => {
         const parsed = parseFloat(dataToSave.initial_budget)
         dataToSave.initial_budget = isNaN(parsed) ? null : parsed
       }
-      
+
       if (dataToSave.contract_amount === '' || dataToSave.contract_amount === null) {
         dataToSave.contract_amount = null
       } else if (typeof dataToSave.contract_amount === 'string') {
         const parsed = parseFloat(dataToSave.contract_amount)
         dataToSave.contract_amount = isNaN(parsed) ? null : parsed
       }
-      
+
       const { data, error } = await supabase
         .from('projects')
         .update(dataToSave)
@@ -159,10 +162,20 @@ export const useProjects = () => {
 
   const deleteProject = async (id: number) => {
     try {
-      // Soft delete: marcar como eliminado usando is_active (unificado con el resto del sistema)
+      // Obtener el proyecto actual para agregar prefijo al nombre
+      const project = projects.find(p => p.id === id)
+      const currentName = project?.name || ''
+      const newName = currentName.startsWith('[ELIMINADO] ')
+        ? currentName
+        : `[ELIMINADO] ${currentName}`
+
+      // Soft delete: marcar como eliminado usando is_active y actualizar nombre
       const { error } = await supabase
         .from('projects')
-        .update({ is_active: false })
+        .update({
+          is_active: false,
+          name: newName
+        })
         .eq('id', id)
 
       if (error) throw error
@@ -177,15 +190,31 @@ export const useProjects = () => {
 
   const restoreProject = async (id: number) => {
     try {
-      // Restaurar proyecto: marcar como activo
+      // Obtener el proyecto actual para remover el prefijo [ELIMINADO]
+      // Necesitamos buscarlo en la BD porque podría no estar en el estado local si está filtrado
+      const { data: currentProject, error: fetchError } = await supabase
+        .from('projects')
+        .select('name')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      const currentName = currentProject?.name || ''
+      const newName = currentName.replace('[ELIMINADO] ', '')
+
+      // Restaurar proyecto: marcar como activo y restaurar nombre
       const { error } = await supabase
         .from('projects')
-        .update({ is_active: true })
+        .update({
+          is_active: true,
+          name: newName
+        })
         .eq('id', id)
 
       if (error) throw error
 
-      await fetchProjects()
+      await fetchProjects(true) // Recargar incluyendo eliminados para que la UI se actualice correctamente si estamos en vista papelera
     } catch (err: any) {
       console.error('Error restoring project:', err)
       setError(err.message || 'Error al restaurar proyecto')

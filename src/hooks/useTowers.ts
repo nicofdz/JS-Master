@@ -27,7 +27,7 @@ export function useTowers(projectId?: number) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchTowers = async () => {
+  const fetchTowers = async (includeDeleted = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -38,9 +38,12 @@ export function useTowers(projectId?: number) {
           *,
           projects!inner(name)
         `)
-        .eq('is_active', true)
         .order('project_id', { ascending: true })
         .order('tower_number', { ascending: true })
+
+      if (!includeDeleted) {
+        query = query.eq('is_active', true)
+      }
 
       if (projectId) {
         query = query.eq('project_id', projectId)
@@ -133,16 +136,106 @@ export function useTowers(projectId?: number) {
 
   const softDeleteTower = async (id: number) => {
     try {
+      // 1. Verificar si hay tareas completadas en algún departamento de la torre
+      const { data: floors, error: floorsError } = await supabase
+        .from('floors')
+        .select('id')
+        .eq('tower_id', id)
+        .eq('is_active', true)
+
+      if (floorsError) throw floorsError
+
+      if (floors && floors.length > 0) {
+        const floorIds = floors.map(f => f.id)
+
+        // Obtener departamentos de estos pisos
+        const { data: apartments, error: apartmentsError } = await supabase
+          .from('apartments')
+          .select('id')
+          .in('floor_id', floorIds)
+          .eq('is_active', true)
+
+        if (apartmentsError) throw apartmentsError
+
+        if (apartments && apartments.length > 0) {
+          const apartmentIds = apartments.map(a => a.id)
+
+          // Verificar tareas completadas
+          const { data: completedTasks, error: tasksError } = await supabase
+            .from('tasks')
+            .select('id')
+            .in('apartment_id', apartmentIds)
+            .eq('status', 'completed')
+            .eq('is_deleted', false)
+            .limit(1)
+
+          if (tasksError) throw tasksError
+
+          if (completedTasks && completedTasks.length > 0) {
+            throw new Error('No se puede eliminar la torre porque contiene departamentos con tareas completadas. Elimine las tareas primero.')
+          }
+        }
+      }
+
+      // 2. Proceder con el soft delete en cascada
+
+      // Soft delete de departamentos
+      if (floors && floors.length > 0) {
+        const floorIds = floors.map(f => f.id)
+
+        const { data: apartmentsToUpdate, error: fetchAptsError } = await supabase
+          .from('apartments')
+          .select('id, apartment_number')
+          .in('floor_id', floorIds)
+          .eq('is_active', true)
+
+        if (fetchAptsError) throw fetchAptsError
+
+        if (apartmentsToUpdate && apartmentsToUpdate.length > 0) {
+          for (const apt of apartmentsToUpdate) {
+            const currentNumber = apt.apartment_number
+            const newNumber = currentNumber.startsWith('[ELIMINADO] ')
+              ? currentNumber
+              : `[ELIMINADO] ${currentNumber}`
+
+            await supabase
+              .from('apartments')
+              .update({
+                is_active: false,
+                apartment_number: newNumber
+              })
+              .eq('id', apt.id)
+
+            // Cancelar tareas
+            await supabase
+              .from('tasks')
+              .update({
+                status: 'cancelled',
+                updated_at: new Date().toISOString()
+              })
+              .eq('apartment_id', apt.id)
+              .eq('is_deleted', false)
+          }
+        }
+      }
+
+      // Soft delete de pisos
+      await supabase
+        .from('floors')
+        .update({ is_active: false })
+        .eq('tower_id', id)
+
+      // Soft delete de la torre
       // Obtener la torre actual para agregar prefijo al nombre
       const tower = towers.find(t => t.id === id)
       const currentName = tower?.name || `Torre ${tower?.tower_number || ''}`
-      const newName = currentName.startsWith('[ELIMINADO] ') 
-        ? currentName 
+      const newName = currentName.startsWith('[ELIMINADO] ')
+        ? currentName
         : `[ELIMINADO] ${currentName}`
 
       const { data, error } = await supabase
         .from('towers')
-        .update({ 
+        .update({
           is_active: false,
           name: newName
         })
@@ -160,6 +253,171 @@ export function useTowers(projectId?: number) {
       return data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar torre')
+      throw err
+    }
+  }
+
+  const restoreTower = async (id: number) => {
+    try {
+      // 1. Restaurar la torre
+      // Obtener el nombre actual de la BD
+      const { data: currentTower, error: fetchError } = await supabase
+        .from('towers')
+        .select('name')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      const currentName = currentTower?.name || ''
+      const newName = currentName.replace('[ELIMINADO] ', '')
+
+      const { data, error } = await supabase
+        .from('towers')
+        .update({
+          is_active: true,
+          name: newName
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          projects!inner(name)
+        `)
+        .single()
+
+      if (error) throw error
+
+      // 2. Restaurar pisos asociados (Cascada)
+      await supabase
+        .from('floors')
+        .update({ is_active: true })
+        .eq('tower_id', id)
+        .eq('is_active', false)
+
+      // 3. Restaurar departamentos asociados (Cascada)
+      // Primero obtener los pisos de la torre (ahora activos)
+      const { data: floors } = await supabase
+        .from('floors')
+        .select('id')
+        .eq('tower_id', id)
+
+      if (floors && floors.length > 0) {
+        const floorIds = floors.map(f => f.id)
+
+        // Obtener departamentos eliminados de estos pisos
+        const { data: apartments } = await supabase
+          .from('apartments')
+          .select('id, apartment_number')
+          .in('floor_id', floorIds)
+          .eq('is_active', false)
+
+        if (apartments && apartments.length > 0) {
+          for (const apt of apartments) {
+            const currentNumber = apt.apartment_number
+            const restoredNumber = currentNumber.replace('[ELIMINADO] ', '')
+
+            await supabase
+              .from('apartments')
+              .update({
+                is_active: true,
+                apartment_number: restoredNumber
+              })
+              .eq('id', apt.id)
+
+            // Restaurar tareas canceladas
+            await supabase
+              .from('tasks')
+              .update({
+                status: 'pending',
+                updated_at: new Date().toISOString()
+              })
+              .eq('apartment_id', apt.id)
+              .eq('status', 'cancelled')
+              .eq('is_deleted', false)
+          }
+        }
+      }
+
+      // Actualizar la lista local agregando la torre restaurada
+      const restoredTower = {
+        ...data,
+        project_name: (data.projects as any)?.name || 'Proyecto Desconocido'
+      }
+
+      setTowers(prev => [...prev, restoredTower].sort((a, b) => {
+        if (a.project_id !== b.project_id) return a.project_id - b.project_id
+        return a.tower_number - b.tower_number
+      }))
+
+      return data
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al restaurar torre')
+      throw err
+    }
+  }
+
+  const hardDeleteTower = async (id: number) => {
+    try {
+      // 1. Obtener pisos de la torre
+      const { data: floors, error: floorsError } = await supabase
+        .from('floors')
+        .select('id')
+        .eq('tower_id', id)
+
+      if (floorsError) throw floorsError
+
+      if (floors && floors.length > 0) {
+        const floorIds = floors.map(f => f.id)
+
+        // 2. Obtener apartamentos de estos pisos
+        const { data: apartments, error: apartmentsError } = await supabase
+          .from('apartments')
+          .select('id')
+          .in('floor_id', floorIds)
+
+        if (apartmentsError) throw apartmentsError
+
+        if (apartments && apartments.length > 0) {
+          const apartmentIds = apartments.map(a => a.id)
+
+          console.log(`Hard delete: Eliminando ${apartmentIds.length} apartamentos de la torre ${id}...`)
+
+          // Eliminar apartamentos directamente
+          // Las tareas deberían ser manejadas por la base de datos (CASCADE o SET NULL)
+          const { error: deleteApartmentsError } = await supabase
+            .from('apartments')
+            .delete()
+            .in('id', apartmentIds)
+
+          if (deleteApartmentsError) {
+            console.error('Error al eliminar apartamentos:', deleteApartmentsError)
+            throw deleteApartmentsError
+          }
+
+          console.log('Apartamentos eliminados exitosamente')
+        }
+
+        // 5. Eliminar pisos
+        await supabase
+          .from('floors')
+          .delete()
+          .in('id', floorIds)
+      }
+
+      // 6. Eliminar la torre
+      const { error } = await supabase
+        .from('towers')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Actualizar la lista local
+      setTowers(prev => prev.filter(t => t.id !== id))
+
+      return true
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar torre definitivamente')
       throw err
     }
   }
@@ -235,6 +493,8 @@ export function useTowers(projectId?: number) {
     updateTower,
     deleteTower,
     softDeleteTower,
+    hardDeleteTower,
+    restoreTower,
     getNextTowerNumber,
     createTowersForProject
   }

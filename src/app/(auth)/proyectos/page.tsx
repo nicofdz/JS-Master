@@ -13,14 +13,14 @@ import { StructureViewModal } from '@/components/projects/StructureViewModal'
 import { EditStructureModal } from '@/components/projects/EditStructureModal'
 import { ProjectWorkersModal } from '@/components/projects/ProjectWorkersModal'
 import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTemplatesModal'
-import { Plus, Search, Filter, Edit, Trash2, Eye, ChevronDown, ChevronRight, Building2, CheckCircle, Calendar, AlertCircle, FileText, Info, DollarSign, Users, UserCheck, FileSignature, Play, Layers, XCircle, Clock } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2, Eye, ChevronDown, ChevronRight, Building2, CheckCircle, Calendar, AlertCircle, FileText, Info, DollarSign, Users, UserCheck, FileSignature, Play, Layers, XCircle, Clock, RotateCcw } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { formatDate, getStatusColor, getStatusEmoji } from '@/lib/utils'
 import { PROJECT_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
 
 export default function ProyectosPage() {
-  const { projects, loading, error, createProject, updateProject, deleteProject, refresh, uploadPlan, uploadContract, uploadSpecifications } = useProjects()
+  const { projects, loading, error, createProject, updateProject, deleteProject, restoreProject, refresh, uploadPlan, uploadContract, uploadSpecifications } = useProjects()
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
   const [searchTerm, setSearchTerm] = useState('')
   const [cardFilter, setCardFilter] = useState<'all' | 'planning' | 'active' | 'completed'>('all')
@@ -42,6 +42,12 @@ export default function ProyectosPage() {
   const [selectedProjectForWorkers, setSelectedProjectForWorkers] = useState<any>(null)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [selectedProjectForTemplates, setSelectedProjectForTemplates] = useState<number | null>(null)
+  const [showTrash, setShowTrash] = useState(false)
+
+  // Recargar proyectos cuando cambia el modo papelera
+  React.useEffect(() => {
+    refresh(showTrash)
+  }, [showTrash])
 
 
   // Filtrar proyectos
@@ -52,19 +58,37 @@ export default function ProyectosPage() {
     // Filtro por estado (usando cardFilter)
     const matchesCardFilter = cardFilter === 'all' || project.status === cardFilter
 
-    return matchesSearch && matchesCardFilter
+    // Filtro de papelera
+    const matchesTrash = showTrash
+      ? project.is_active === false
+      : project.is_active !== false
+
+    return matchesSearch && matchesCardFilter && matchesTrash
   })
 
   const handleDelete = async (projectId: number) => {
-    if (!confirm('¿Estás seguro de que quieres archivar este proyecto? Podrás restaurarlo más tarde si lo necesitas.')) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este proyecto? Se moverá a la papelera.')) {
       return
     }
 
     try {
       await deleteProject(projectId)
-      toast.success('Proyecto archivado exitosamente')
+      toast.success('Proyecto movido a la papelera')
     } catch (error) {
-      toast.error('Error al archivar el proyecto')
+      toast.error('Error al eliminar el proyecto')
+    }
+  }
+
+  const handleRestore = async (projectId: number) => {
+    if (!confirm('¿Estás seguro de que quieres restaurar este proyecto?')) {
+      return
+    }
+
+    try {
+      await restoreProject(projectId)
+      toast.success('Proyecto restaurado exitosamente')
+    } catch (error) {
+      toast.error('Error al restaurar el proyecto')
     }
   }
 
@@ -211,14 +235,26 @@ export default function ProyectosPage() {
             </Button>
           )}
 
-          {/* Botón crear */}
           <Button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            variant={showTrash ? "secondary" : "outline"}
+            onClick={() => setShowTrash(!showTrash)}
+            className={`flex items-center gap-2 ${showTrash ? 'bg-red-900/30 text-red-400 border-red-500/50' : 'border-slate-600 text-slate-400 hover:text-red-400 hover:border-red-500/50'}`}
+            title={showTrash ? "Ver activos" : "Ver papelera"}
           >
-            <Plus className="w-5 h-5" />
-            Nuevo Proyecto
+            <Trash2 className="w-4 h-4" />
+            {showTrash ? 'Salir de Papelera' : 'Papelera'}
           </Button>
+
+          {/* Botón crear */}
+          {!showTrash && (
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-5 h-5" />
+              Nuevo Proyecto
+            </Button>
+          )}
         </div>
       </div>
 
@@ -467,6 +503,21 @@ export default function ProyectosPage() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+
+                          {showTrash && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRestore(project.id)
+                              }}
+                              className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                              title="Restaurar"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>

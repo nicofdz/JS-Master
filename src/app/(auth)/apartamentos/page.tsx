@@ -1,7 +1,8 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useApartments } from '@/hooks'
+import { useTowers } from '@/hooks/useTowers'
 import { useTasksV2 } from '@/hooks/useTasks_v2'
 import { useProjectFilter } from '@/hooks/useProjectFilter'
 import { Button } from '@/components/ui/Button'
@@ -10,7 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ApartmentFormModalV2 } from '@/components/apartments/ApartmentFormModalV2'
 import { ApartmentTasksModal } from '@/components/projects/ApartmentTasksModal'
 import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTemplatesModal'
-import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock, Layers, Eye, Circle, CheckCircle2, AlertTriangle, XCircle, FileText } from 'lucide-react'
+import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock, Layers, Eye, Circle, CheckCircle2, AlertTriangle, XCircle, FileText, RotateCcw } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { formatDate, getStatusColor, getStatusEmoji, getStatusText, formatApartmentNumber } from '@/lib/utils'
 import { APARTMENT_STATUSES } from '@/lib/constants'
@@ -37,7 +38,8 @@ const getStatusIcon = (status: string | null | undefined) => {
 }
 
 export default function ApartamentosPage() {
-  const { apartments, floors, projects, loading, error, createApartment, updateApartment, deleteApartment } = useApartments()
+  const { apartments, floors, projects, loading, error, createApartment, updateApartment, deleteApartment, hardDeleteApartment, restoreApartment, refresh } = useApartments()
+  const { restoreTower } = useTowers()
   const { tasks, loading: tasksLoading, createTask } = useTasksV2()
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
   const [searchTerm, setSearchTerm] = useState('')
@@ -55,7 +57,13 @@ export default function ApartamentosPage() {
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set())
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
   const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
+  const [showTrash, setShowTrash] = useState(false)
+  useEffect(() => {
+    refresh(showTrash)
+  }, [showTrash])
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false)
+  const [showHardDeleteApartmentConfirm, setShowHardDeleteApartmentConfirm] = useState(false)
+  const [apartmentToHardDelete, setApartmentToHardDelete] = useState<{ id: number; number: string } | null>(null)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
 
   // Resetear filtros dependientes
@@ -163,7 +171,13 @@ export default function ApartamentosPage() {
     const matchesTower = towerFilter === 'all' || ((apartment as any).tower_id && (apartment as any).tower_id.toString() === towerFilter)
     const matchesFloor = floorFilter === 'all' || (apartment.floor_id && apartment.floor_id.toString() === floorFilter)
 
-    return matchesSearch && matchesStatus && matchesProject && matchesTower && matchesFloor
+    // Filtro de papelera (torres eliminadas)
+    // Filtro de papelera
+    const matchesTrash = showTrash
+      ? (apartment as any).is_active === false
+      : (apartment as any).is_active !== false
+
+    return matchesSearch && matchesStatus && matchesProject && matchesTower && matchesFloor && matchesTrash
   })
 
   // Obtener proyectos únicos para el filtro (igual que en pisos)
@@ -288,11 +302,11 @@ export default function ApartamentosPage() {
     if (currentStatus === 'blocked') {
       // Desbloquear: restaurar el estado anterior
       const apartment = apartments.find(a => a.id === apartmentId)
-      console.log('🔓 Desbloqueando apartamento:', apartment)
-      console.log('📋 previous_status en memoria:', (apartment as any)?.previous_status)
+      console.log('ðŸ”“ Desbloqueando apartamento:', apartment)
+      console.log('ðŸ“‹ previous_status en memoria:', (apartment as any)?.previous_status)
 
       const previousStatus = (apartment as any)?.previous_status || 'pending'
-      console.log('✅ Estado a restaurar:', previousStatus)
+      console.log('âœ… Estado a restaurar:', previousStatus)
 
       updateData = {
         status: previousStatus,
@@ -301,7 +315,7 @@ export default function ApartamentosPage() {
       action = 'desbloquear'
     } else {
       // Bloquear: guardar el estado actual antes de bloquear
-      console.log('🔒 Bloqueando apartamento - Estado actual:', currentStatus)
+      console.log('ðŸ”’ Bloqueando apartamento - Estado actual:', currentStatus)
       updateData = {
         status: 'blocked',
         previous_status: currentStatus
@@ -321,9 +335,58 @@ export default function ApartamentosPage() {
     }
   }
 
+  const handleRestoreTower = async (towerId: number, towerName: string) => {
+    if (!confirm(`¿Estás seguro de que quieres restaurar la ${towerName}?`)) {
+      return
+    }
+    try {
+      await restoreTower(towerId)
+      toast.success('Torre restaurada exitosamente')
+      refresh(showTrash)
+    } catch (error) {
+      console.error('Error al restaurar torre:', error)
+      toast.error('Error al restaurar torre')
+    }
+  }
+
+  const handleRestoreApartment = async (apartmentId: number) => {
+    if (!confirm('¿Estás seguro de que quieres restaurar este apartamento?')) {
+      return
+    }
+    try {
+      await restoreApartment(apartmentId)
+      toast.success('Apartamento restaurado exitosamente')
+      refresh(showTrash)
+    } catch (error) {
+      console.error('Error al restaurar apartamento:', error)
+      toast.error('Error al restaurar apartamento')
+    }
+  }
+
+  const handleHardDeleteApartment = (apartmentId: number, apartmentNumber: string) => {
+    setApartmentToHardDelete({ id: apartmentId, number: apartmentNumber })
+    setShowHardDeleteApartmentConfirm(true)
+  }
+
+  const confirmHardDeleteApartment = async () => {
+    if (!apartmentToHardDelete) return
+
+    try {
+      await hardDeleteApartment(apartmentToHardDelete.id)
+      toast.success('Apartamento eliminado definitivamente. Las tareas completadas se mantienen en el sistema.')
+      refresh(showTrash)
+      setShowHardDeleteApartmentConfirm(false)
+      setApartmentToHardDelete(null)
+    } catch (err: any) {
+      console.error('Error completo al eliminar apartamento definitivamente:', err)
+      const errorMessage = err?.message || 'Error desconocido al eliminar el apartamento'
+      toast.error(`Error al eliminar el apartamento: ${errorMessage}`)
+    }
+  }
+
   const handleCreateApartment = async (data: any) => {
     try {
-      console.log('📝 Creando apartamento con tareas:', data)
+      console.log('ðŸ“ Creando apartamento con tareas:', data)
 
       // Extraer las tareas seleccionadas antes de crear el apartamento
       const { selectedTasks, ...apartmentData } = data
@@ -423,10 +486,10 @@ export default function ApartamentosPage() {
       apartment.apartment_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apartment.apartment_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       apartment.project_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      // Búsqueda por torre
+      // BÃºsqueda por torre
       (apartment as any).tower_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (apartment as any).tower_number?.toString().includes(searchTerm.toLowerCase()) ||
-      // Búsqueda por piso
+      // BÃºsqueda por piso
       apartment.floor_number?.toString().includes(searchTerm.toLowerCase())
     // Si hay un filtro local de proyecto, usarlo; si no, usar el filtro global
     const projectToMatch = projectFilter !== 'all' ? projectFilter : (selectedProjectId ? selectedProjectId.toString() : null)
@@ -532,6 +595,15 @@ export default function ApartamentosPage() {
           <Button onClick={() => setShowTemplatesModal(true)} variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             Plantillas
+          </Button>
+          <Button
+            variant={showTrash ? "secondary" : "outline"}
+            onClick={() => setShowTrash(!showTrash)}
+            className={`flex items-center gap-2 ${showTrash ? 'bg-red-900/30 text-red-400 border-red-500/50' : 'border-slate-600 text-slate-200 hover:text-white hover:border-slate-500'}`}
+            title={showTrash ? "Ver activos" : "Ver papelera"}
+          >
+            <Trash2 className="w-4 h-4" />
+            {showTrash ? 'Salir de la papelera' : 'Papelera'}
           </Button>
           <Button onClick={() => {
             setSelectedFloorForApartment(null)
@@ -804,6 +876,21 @@ export default function ApartamentosPage() {
                                     <p className="text-xs font-medium text-slate-300">
                                       {towerGroup.towerName}
                                     </p>
+                                    {showTrash && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleRestoreTower(towerGroup.towerId, towerGroup.towerName)
+                                        }}
+                                        className="h-6 px-2 text-green-400 hover:text-green-300 hover:bg-green-900/30 ml-2"
+                                        title="Restaurar Torre"
+                                      >
+                                        <RotateCcw className="w-3 h-3 mr-1" />
+                                        Restaurar
+                                      </Button>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-3 text-xs">
                                     <div className="flex items-center gap-1">
@@ -997,52 +1084,77 @@ export default function ApartamentosPage() {
 
                                                         {/* Acciones */}
                                                         <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                                                          <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => setEditingApartment(apartment)}
-                                                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-                                                            title="Editar"
-                                                          >
-                                                            <Edit className="w-4 h-4" />
-                                                          </Button>
-                                                          <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleBlockApartment(apartment.id, apartment.status)}
-                                                            className={`${apartment.status === 'blocked'
-                                                              ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30'
-                                                              : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
-                                                              }`}
-                                                            title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
-                                                          >
-                                                            {apartment.status === 'blocked' ? (
-                                                              <Unlock className="w-4 h-4" />
-                                                            ) : (
-                                                              <Lock className="w-4 h-4" />
-                                                            )}
-                                                          </Button>
-                                                          <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleDelete(apartment.id)}
-                                                            className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                                                            title="Eliminar"
-                                                          >
-                                                            <Trash2 className="w-4 h-4" />
-                                                          </Button>
-                                                          <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                              e.stopPropagation()
-                                                              setSelectedApartmentForTasks(apartment)
-                                                            }}
-                                                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
-                                                            title="Ver detalles del departamento"
-                                                          >
-                                                            <Eye className="w-4 h-4" />
-                                                          </Button>
+                                                          {showTrash ? (
+                                                            <>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleRestoreApartment(apartment.id)}
+                                                                className="text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                                                                title="Restaurar"
+                                                              >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                              </Button>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleHardDeleteApartment(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
+                                                                className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                                                                title="Eliminar Definitivamente"
+                                                              >
+                                                                <Trash2 className="w-4 h-4" />
+                                                              </Button>
+                                                            </>
+                                                          ) : (
+                                                            <>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setEditingApartment(apartment)}
+                                                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                                                                title="Editar"
+                                                              >
+                                                                <Edit className="w-4 h-4" />
+                                                              </Button>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleBlockApartment(apartment.id, apartment.status)}
+                                                                className={`${apartment.status === 'blocked'
+                                                                  ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30'
+                                                                  : 'text-orange-400 hover:text-orange-300 hover:bg-orange-900/30'
+                                                                  }`}
+                                                                title={apartment.status === 'blocked' ? 'Desbloquear' : 'Bloquear'}
+                                                              >
+                                                                {apartment.status === 'blocked' ? (
+                                                                  <Unlock className="w-4 h-4" />
+                                                                ) : (
+                                                                  <Lock className="w-4 h-4" />
+                                                                )}
+                                                              </Button>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleDelete(apartment.id)}
+                                                                className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                                                                title="Eliminar"
+                                                              >
+                                                                <Trash2 className="w-4 h-4" />
+                                                              </Button>
+                                                              <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                  e.stopPropagation()
+                                                                  setSelectedApartmentForTasks(apartment)
+                                                                }}
+                                                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                                                                title="Ver detalles del departamento"
+                                                              >
+                                                                <Eye className="w-4 h-4" />
+                                                              </Button>
+                                                            </>
+                                                          )}
                                                         </div>
                                                       </div>
                                                     </div>
@@ -1070,9 +1182,10 @@ export default function ApartamentosPage() {
 
       {/* Modal de Creación de Departamento */}
       <ApartmentFormModalV2
-        isOpen={showCreateModal}
+        isOpen={showCreateModal || !!editingApartment}
         onClose={() => {
           setShowCreateModal(false)
+          setEditingApartment(null)
           setSelectedFloorForApartment(null)
         }}
         onSuccess={() => {
@@ -1082,6 +1195,7 @@ export default function ApartamentosPage() {
         initialFloorId={selectedFloorForApartment?.floorId}
         initialTowerId={selectedFloorForApartment?.towerId}
         initialProjectId={selectedFloorForApartment?.projectId}
+        apartmentToEdit={editingApartment}
       />
 
       {/* Modal de Tareas del Apartamento */}
@@ -1099,6 +1213,57 @@ export default function ApartamentosPage() {
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}
       />
+
+      {/* Modal de confirmación para eliminación definitiva de apartamento */}
+      <Modal
+        isOpen={showHardDeleteApartmentConfirm}
+        onClose={() => {
+          setShowHardDeleteApartmentConfirm(false)
+          setApartmentToHardDelete(null)
+        }}
+        title="Confirmar Eliminación Definitiva de Apartamento"
+        size="md"
+      >
+        {apartmentToHardDelete && (
+          <div className="space-y-4">
+            <div className="bg-red-900/30 border-2 border-red-500 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <p className="text-red-300 font-semibold">¡Advertencia!</p>
+              </div>
+              <p className="text-slate-300 mb-2">
+                Estás a punto de eliminar <strong>definitivamente</strong> el apartamento <strong>{apartmentToHardDelete.number}</strong>.
+              </p>
+              <p className="text-sm text-slate-400">
+                Esta acción es <strong>irreversible</strong> y tendrá las siguientes consecuencias:
+              </p>
+              <ul className="list-disc list-inside text-sm text-slate-400 mt-2 space-y-1">
+                <li>El apartamento será eliminado permanentemente de la base de datos</li>
+                <li>Las tareas no completadas serán eliminadas definitivamente</li>
+                <li>Las tareas completadas se mantendrán, pero quedarán sin asignar a ningún departamento</li>
+              </ul>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowHardDeleteApartmentConfirm(false)
+                  setApartmentToHardDelete(null)
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={confirmHardDeleteApartment}
+                className="bg-red-700 hover:bg-red-800 text-white border-red-700"
+              >
+                Eliminar Definitivamente
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

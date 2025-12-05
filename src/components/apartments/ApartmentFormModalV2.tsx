@@ -22,17 +22,19 @@ interface ApartmentFormModalV2Props {
   initialFloorId?: number
   initialTowerId?: number
   initialProjectId?: number
+  apartmentToEdit?: any // Nuevo prop para edición
 }
 
-export function ApartmentFormModalV2({ 
-  isOpen, 
-  onClose, 
+export function ApartmentFormModalV2({
+  isOpen,
+  onClose,
   onSuccess,
   initialFloorId,
   initialTowerId,
-  initialProjectId
+  initialProjectId,
+  apartmentToEdit
 }: ApartmentFormModalV2Props) {
-  const { createApartment, getNextApartmentNumber } = useApartments()
+  const { createApartment, updateApartment, getNextApartmentNumber } = useApartments()
   const [projects, setProjects] = useState<any[]>([])
   const [towers, setTowers] = useState<any[]>([])
   const [floors, setFloors] = useState<any[]>([])
@@ -42,6 +44,9 @@ export function ApartmentFormModalV2({
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const [existingApartmentTypes, setExistingApartmentTypes] = useState<string[]>([])
+
+  // Determinar si es modo edición
+  const isEditing = !!apartmentToEdit
 
   // Determinar si los campos están bloqueados (viene del botón del piso)
   const isFromFloorButton = !!initialFloorId && !!initialTowerId
@@ -70,10 +75,32 @@ export function ApartmentFormModalV2({
   const projectIdForTemplates = formData.project_id ? parseInt(formData.project_id) : undefined
   const { templates } = useApartmentTemplates(projectIdForTemplates)
 
+  // Cargar datos iniciales para edición
+  useEffect(() => {
+    if (isOpen && apartmentToEdit) {
+      setFormData({
+        project_id: apartmentToEdit.project_id?.toString() || '',
+        tower_id: apartmentToEdit.tower_id?.toString() || '',
+        floor_id: apartmentToEdit.floor_id?.toString() || '',
+        apartment_code: apartmentToEdit.apartment_code || '',
+        apartment_number: apartmentToEdit.apartment_number || '',
+        apartment_type: apartmentToEdit.apartment_type || 'Departamento',
+        status: apartmentToEdit.status || 'pending',
+        area: apartmentToEdit.area?.toString() || '0',
+        floor_area: apartmentToEdit.floor_area?.toString() || '',
+        balcony_area: apartmentToEdit.balcony_area?.toString() || '',
+        bedrooms: apartmentToEdit.bedrooms?.toString() || '0',
+        bathrooms: apartmentToEdit.bathrooms?.toString() || '0',
+        notes: apartmentToEdit.notes || ''
+      })
+      setShowDetails(!!(apartmentToEdit.area || apartmentToEdit.bedrooms || apartmentToEdit.bathrooms || apartmentToEdit.notes))
+    }
+  }, [isOpen, apartmentToEdit])
+
   // Cargar proyectos y tipos de departamento existentes
   useEffect(() => {
     if (!isOpen) return
-    
+
     const fetchProjects = async () => {
       try {
         const { data, error } = await supabase
@@ -99,11 +126,11 @@ export function ApartmentFormModalV2({
           .not('apartment_type', 'is', null)
 
         if (error) throw error
-        
+
         // Obtener tipos únicos y ordenarlos
         const uniqueTypes = Array.from(new Set((data || []).map((apt: any) => apt.apartment_type).filter(Boolean)))
           .sort() as string[]
-        
+
         setExistingApartmentTypes(uniqueTypes)
       } catch (err) {
         console.error('Error fetching apartment types:', err)
@@ -117,8 +144,10 @@ export function ApartmentFormModalV2({
   // Cargar torres cuando se selecciona un proyecto
   useEffect(() => {
     if (!isOpen || !formData.project_id) {
-      setTowers([])
-      setFloors([])
+      if (!isEditing) {
+        setTowers([])
+        setFloors([])
+      }
       return
     }
 
@@ -139,12 +168,12 @@ export function ApartmentFormModalV2({
     }
 
     fetchTowers()
-  }, [formData.project_id, isOpen])
+  }, [formData.project_id, isOpen, isEditing])
 
   // Cargar pisos cuando se selecciona una torre
   useEffect(() => {
     if (!isOpen || !formData.tower_id) {
-      setFloors([])
+      if (!isEditing) setFloors([])
       return
     }
 
@@ -165,7 +194,7 @@ export function ApartmentFormModalV2({
     }
 
     fetchFloors()
-  }, [formData.tower_id, isOpen])
+  }, [formData.tower_id, isOpen, isEditing])
 
   // Cargar departamentos existentes cuando se selecciona un piso
   useEffect(() => {
@@ -184,18 +213,22 @@ export function ApartmentFormModalV2({
           .order('apartment_number', { ascending: true })
 
         if (error) throw error
-        setExistingApartments(data || [])
+        // Excluir el departamento actual si estamos editando
+        const filtered = isEditing
+          ? (data || []).filter((apt: any) => apt.id !== apartmentToEdit.id)
+          : (data || [])
+        setExistingApartments(filtered)
       } catch (err) {
         console.error('Error fetching existing apartments:', err)
       }
     }
 
     fetchExistingApartments()
-  }, [formData.floor_id, isOpen])
+  }, [formData.floor_id, isOpen, isEditing, apartmentToEdit])
 
   // Calcular siguiente número disponible cuando se selecciona un piso
   useEffect(() => {
-    if (!isOpen || !formData.floor_id) return
+    if (!isOpen || !formData.floor_id || isEditing) return // No calcular si estamos editando
 
     const calculateNextNumber = async () => {
       try {
@@ -207,11 +240,11 @@ export function ApartmentFormModalV2({
     }
 
     calculateNextNumber()
-  }, [formData.floor_id, isOpen])
+  }, [formData.floor_id, isOpen, isEditing])
 
   // Inicializar valores cuando viene del botón del piso
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || isEditing) return // No sobrescribir si estamos editando
 
     if (isFromFloorButton && initialFloorId && initialTowerId && initialProjectId) {
       // Cargar datos del piso para obtener project_id y tower_id
@@ -260,7 +293,7 @@ export function ApartmentFormModalV2({
 
       loadInitialData()
     } else {
-      // Resetear formulario si no viene del botón
+      // Resetear formulario si no viene del botón y no es edición
       setFormData({
         project_id: '',
         tower_id: '',
@@ -278,7 +311,7 @@ export function ApartmentFormModalV2({
       })
       setExistingApartments([])
     }
-  }, [isOpen, isFromFloorButton, initialFloorId, initialTowerId, initialProjectId])
+  }, [isOpen, isFromFloorButton, initialFloorId, initialTowerId, initialProjectId, isEditing])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -332,9 +365,14 @@ export function ApartmentFormModalV2({
         notes: formData.notes.trim() || null
       }
 
-      await createApartment(apartmentData)
-      toast.success('Departamento creado exitosamente')
-      
+      if (isEditing && apartmentToEdit) {
+        await updateApartment(apartmentToEdit.id, apartmentData)
+        toast.success('Departamento actualizado exitosamente')
+      } else {
+        await createApartment(apartmentData)
+        toast.success('Departamento creado exitosamente')
+      }
+
       // Resetear formulario
       setFormData({
         project_id: '',
@@ -353,12 +391,12 @@ export function ApartmentFormModalV2({
       })
       setExistingApartments([])
       setErrors({})
-      
+
       onSuccess?.()
       onClose()
     } catch (err: any) {
-      console.error('Error creating apartment:', err)
-      toast.error(err.message || 'Error al crear el departamento')
+      console.error('Error saving apartment:', err)
+      toast.error(err.message || 'Error al guardar el departamento')
     } finally {
       setLoading(false)
     }
@@ -418,11 +456,11 @@ export function ApartmentFormModalV2({
 
   return (
     <>
-    <ModalV2
-      isOpen={isOpen}
-      onClose={handleCancel}
-      title="Crear Nuevo Departamento"
-      size="lg"
+      <ModalV2
+        isOpen={isOpen}
+        onClose={handleCancel}
+        title={isEditing ? "Editar Departamento" : "Crear Nuevo Departamento"}
+        size="lg"
         headerRight={
           <Select
             value={selectedTemplateId}
@@ -438,357 +476,360 @@ export function ApartmentFormModalV2({
             ))}
           </Select>
         }
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Ubicación */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Ubicación</h3>
-          
-          {/* Proyecto */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Proyecto <span className="text-red-400">*</span>
-            </label>
-            <Select
-              value={formData.project_id}
-              onChange={(e) => {
-                setFormData(prev => ({ 
-                  ...prev, 
-                  project_id: e.target.value,
-                  tower_id: '',
-                  floor_id: '',
-                  apartment_number: ''
-                }))
-              }}
-              disabled={isFromFloorButton}
-              className={errors.project_id ? 'border-red-500' : ''}
-            >
-              <option value="">Seleccionar proyecto</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </Select>
-            {errors.project_id && (
-              <p className="text-red-400 text-xs mt-1">{errors.project_id}</p>
-            )}
-          </div>
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Ubicación */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-slate-200 mb-4">Ubicación</h3>
 
-          {/* Torre */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Torre <span className="text-red-400">*</span>
-            </label>
-            <Select
-              value={formData.tower_id}
-              onChange={(e) => {
-                setFormData(prev => ({ 
-                  ...prev, 
-                  tower_id: e.target.value,
-                  floor_id: '',
-                  apartment_number: ''
-                }))
-              }}
-              disabled={isFromFloorButton || !formData.project_id}
-              className={errors.tower_id ? 'border-red-500' : ''}
-            >
-              <option value="">Seleccionar torre</option>
-              {towers.map(tower => {
-                // Si el nombre es igual al número, solo mostrar el número
-                const displayName = tower.name === `Torre ${tower.tower_number}` || tower.name === `Torre${tower.tower_number}` || !tower.name
-                  ? `Torre ${tower.tower_number}` 
-                  : `Torre ${tower.tower_number} - ${tower.name}`
-                return (
-                  <option key={tower.id} value={tower.id}>
-                    {displayName}
+            {/* Proyecto */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Proyecto <span className="text-red-400">*</span>
+              </label>
+              <Select
+                value={formData.project_id}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    project_id: e.target.value,
+                    tower_id: '',
+                    floor_id: '',
+                    apartment_number: ''
+                  }))
+                }}
+                disabled={isFromFloorButton}
+                className={errors.project_id ? 'border-red-500' : ''}
+              >
+                <option value="">Seleccionar proyecto</option>
+                {projects.map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
                   </option>
-                )
-              })}
-            </Select>
-            {errors.tower_id && (
-              <p className="text-red-400 text-xs mt-1">{errors.tower_id}</p>
-            )}
+                ))}
+              </Select>
+              {errors.project_id && (
+                <p className="text-red-400 text-xs mt-1">{errors.project_id}</p>
+              )}
+            </div>
+
+            {/* Torre */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Torre <span className="text-red-400">*</span>
+              </label>
+              <Select
+                value={formData.tower_id}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    tower_id: e.target.value,
+                    floor_id: '',
+                    apartment_number: ''
+                  }))
+                }}
+                disabled={isFromFloorButton || !formData.project_id}
+                className={errors.tower_id ? 'border-red-500' : ''}
+              >
+                <option value="">Seleccionar torre</option>
+                {towers.map(tower => {
+                  // Si el nombre es igual al número, solo mostrar el número
+                  const displayName = tower.name === `Torre ${tower.tower_number}` || tower.name === `Torre${tower.tower_number}` || !tower.name
+                    ? `Torre ${tower.tower_number}`
+                    : `Torre ${tower.tower_number} - ${tower.name}`
+                  return (
+                    <option key={tower.id} value={tower.id}>
+                      {displayName}
+                    </option>
+                  )
+                })}
+              </Select>
+              {errors.tower_id && (
+                <p className="text-red-400 text-xs mt-1">{errors.tower_id}</p>
+              )}
+            </div>
+
+            {/* Piso */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Piso <span className="text-red-400">*</span>
+              </label>
+              <Select
+                value={formData.floor_id}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    floor_id: e.target.value,
+                    apartment_number: ''
+                  }))
+                }}
+                disabled={isFromFloorButton || !formData.tower_id}
+                className={errors.floor_id ? 'border-red-500' : ''}
+              >
+                <option value="">Seleccionar piso</option>
+                {floors.map(floor => (
+                  <option key={floor.id} value={floor.id}>
+                    Piso {floor.floor_number}
+                  </option>
+                ))}
+              </Select>
+              {errors.floor_id && (
+                <p className="text-red-400 text-xs mt-1">{errors.floor_id}</p>
+              )}
+            </div>
           </div>
 
-          {/* Piso */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Piso <span className="text-red-400">*</span>
-            </label>
-            <Select
-              value={formData.floor_id}
-              onChange={(e) => {
-                setFormData(prev => ({ 
-                  ...prev, 
-                  floor_id: e.target.value,
-                  apartment_number: ''
-                }))
-              }}
-              disabled={isFromFloorButton || !formData.tower_id}
-              className={errors.floor_id ? 'border-red-500' : ''}
-            >
-              <option value="">Seleccionar piso</option>
-              {floors.map(floor => (
-                <option key={floor.id} value={floor.id}>
-                  Piso {floor.floor_number}
-                </option>
-              ))}
-            </Select>
-            {errors.floor_id && (
-              <p className="text-red-400 text-xs mt-1">{errors.floor_id}</p>
-            )}
-          </div>
-        </div>
+          {/* Información Básica */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-slate-200 mb-4">Información Básica</h3>
 
-        {/* Información Básica */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-200 mb-4">Información Básica</h3>
-          
-          {/* Código de Departamento (Opcional) */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Código de Departamento (Opcional)
-            </label>
-            <Input
-              type="text"
-              value={formData.apartment_code}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, apartment_code: e.target.value }))
-              }}
-              placeholder="Ej: A1 D, B0 D, F3X D"
-              disabled={!formData.floor_id}
-            />
-            <p className="text-xs text-slate-400 mt-1">
-              Código que se mostrará antes del número (sin guion)
-            </p>
-          </div>
-
-          {/* Número de Departamento */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Número de Departamento <span className="text-red-400">*</span>
-            </label>
-            <Input
-              type="text"
-              value={formData.apartment_number}
-              onChange={(e) => {
-                // Solo permitir números
-                const value = e.target.value.replace(/\D/g, '')
-                setFormData(prev => ({ ...prev, apartment_number: value }))
-              }}
-              placeholder="Ej: 101"
-              disabled={!formData.floor_id}
-              className={errors.apartment_number ? 'border-red-500' : ''}
-            />
-            {errors.apartment_number && (
-              <p className="text-red-400 text-xs mt-1">{errors.apartment_number}</p>
-            )}
-            
-            {/* Vista previa del número completo */}
-            {formData.apartment_code && formData.apartment_number && (
+            {/* Código de Departamento (Opcional) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Código de Departamento (Opcional)
+              </label>
+              <Input
+                type="text"
+                value={formData.apartment_code}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, apartment_code: e.target.value }))
+                }}
+                placeholder="Ej: A1 D, B0 D, F3X D"
+                disabled={!formData.floor_id}
+              />
               <p className="text-xs text-slate-400 mt-1">
-                Se mostrará como: <span className="text-slate-200 font-medium">
-                  {formData.apartment_code}-{formData.apartment_number}
-                </span>
+                Código que se mostrará antes del número (sin guion)
               </p>
-            )}
-            
-            {/* Mostrar departamentos existentes */}
-            {existingApartments.length > 0 && (
-              <div className="mt-2 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
-                <p className="text-xs text-slate-400 mb-2">Departamentos existentes en este piso:</p>
-                <div className="flex flex-wrap gap-2">
-                  {existingApartments.map(apt => {
-                    const displayNumber = apt.apartment_code 
-                      ? `${apt.apartment_code}-${apt.apartment_number}`
-                      : apt.apartment_number
-                    return (
-                      <span
-                        key={apt.id}
-                        className="inline-flex items-center px-2 py-1 rounded text-xs bg-slate-600 text-slate-300"
-                      >
-                        <Home className="w-3 h-3 mr-1" />
-                        {displayNumber}
-                      </span>
-                    )
-                  })}
+            </div>
+
+            {/* Número de Departamento */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Número de Departamento <span className="text-red-400">*</span>
+              </label>
+              <Input
+                type="text"
+                value={formData.apartment_number}
+                onChange={(e) => {
+                  // Solo permitir números
+                  const value = e.target.value.replace(/\D/g, '')
+                  setFormData(prev => ({ ...prev, apartment_number: value }))
+                }}
+                placeholder="Ej: 101"
+                disabled={!formData.floor_id}
+                className={errors.apartment_number ? 'border-red-500' : ''}
+              />
+              {errors.apartment_number && (
+                <p className="text-red-400 text-xs mt-1">{errors.apartment_number}</p>
+              )}
+
+              {/* Vista previa del número completo */}
+              {formData.apartment_code && formData.apartment_number && (
+                <p className="text-xs text-slate-400 mt-1">
+                  Se mostrará como: <span className="text-slate-200 font-medium">
+                    {formData.apartment_code}-{formData.apartment_number}
+                  </span>
+                </p>
+              )}
+
+              {/* Mostrar departamentos existentes */}
+              {existingApartments.length > 0 && (
+                <div className="mt-2 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <p className="text-xs text-slate-400 mb-2">Departamentos existentes en este piso:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {existingApartments.map(apt => {
+                      const displayNumber = apt.apartment_code
+                        ? `${apt.apartment_code}-${apt.apartment_number}`
+                        : apt.apartment_number
+                      return (
+                        <span
+                          key={apt.id}
+                          className="inline-flex items-center px-2 py-1 rounded text-xs bg-slate-600 text-slate-300"
+                        >
+                          <Home className="w-3 h-3 mr-1" />
+                          {displayNumber}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tipo de Departamento */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Tipo de Departamento <span className="text-red-400">*</span>
+              </label>
+              <Input
+                type="text"
+                value={formData.apartment_type}
+                onChange={(e) => setFormData(prev => ({ ...prev, apartment_type: e.target.value }))}
+                placeholder="Ej: Departamento, Local Comercial..."
+                className={errors.apartment_type ? 'border-red-500' : ''}
+              />
+              {errors.apartment_type && (
+                <p className="text-red-400 text-xs mt-1">{errors.apartment_type}</p>
+              )}
+            </div>
+
+            {/* Estado */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Estado <span className="text-red-400">*</span>
+              </label>
+              <Select
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+              >
+                <option value="pending">Pendiente</option>
+                <option value="in-progress">En Progreso</option>
+                <option value="completed">Completado</option>
+                <option value="blocked">Bloqueado</option>
+              </Select>
+            </div>
+          </div>
+
+          {/* Tab Desplegable - Detalles */}
+          <div className="border border-slate-700 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between p-4 bg-slate-700/50 hover:bg-slate-700/70 transition-colors"
+            >
+              <span className="text-sm font-medium text-slate-200">Detalles</span>
+              {showDetails ? (
+                <ChevronDown className="w-5 h-5 text-slate-400" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              )}
+            </button>
+
+            {showDetails && (
+              <div className="p-4 space-y-4 bg-slate-800/50">
+                {/* Área */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Área Total (m²)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.area}
+                    onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Área del Piso */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Área del Piso (m²)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.floor_area}
+                    onChange={(e) => setFormData(prev => ({ ...prev, floor_area: e.target.value }))}
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                {/* Área de Balcón */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Área de Balcón (m²)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.balcony_area}
+                    onChange={(e) => setFormData(prev => ({ ...prev, balcony_area: e.target.value }))}
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                {/* Habitaciones */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Número de Habitaciones
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.bedrooms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Baños */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Número de Baños
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={formData.bathrooms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Notas */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Notas
+                  </label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Notas adicionales sobre el departamento..."
+                    rows={3}
+                  />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Tipo de Departamento */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Tipo de Departamento <span className="text-red-400">*</span>
-            </label>
-            <Input
-              type="text"
-              value={formData.apartment_type}
-              onChange={(e) => setFormData(prev => ({ ...prev, apartment_type: e.target.value }))}
-              placeholder="Ej: Departamento, Local Comercial..."
-              className={errors.apartment_type ? 'border-red-500' : ''}
-            />
-            {errors.apartment_type && (
-              <p className="text-red-400 text-xs mt-1">{errors.apartment_type}</p>
-            )}
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Estado <span className="text-red-400">*</span>
-            </label>
-            <Select
-              value={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+          {/* Botones */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={loading}
             >
-              <option value="pending">Pendiente</option>
-              <option value="in-progress">En Progreso</option>
-              <option value="completed">Completado</option>
-              <option value="blocked">Bloqueado</option>
-            </Select>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+            >
+              {loading
+                ? (isEditing ? 'Guardando...' : 'Creando...')
+                : (isEditing ? 'Guardar Cambios' : 'Crear Departamento')
+              }
+            </Button>
           </div>
-        </div>
+        </form>
+      </ModalV2>
 
-        {/* Tab Desplegable - Detalles */}
-        <div className="border border-slate-700 rounded-lg overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowDetails(!showDetails)}
-            className="w-full flex items-center justify-between p-4 bg-slate-700/50 hover:bg-slate-700/70 transition-colors"
-          >
-            <span className="text-sm font-medium text-slate-200">Detalles</span>
-            {showDetails ? (
-              <ChevronDown className="w-5 h-5 text-slate-400" />
-            ) : (
-              <ChevronRight className="w-5 h-5 text-slate-400" />
-            )}
-          </button>
-          
-          {showDetails && (
-            <div className="p-4 space-y-4 bg-slate-800/50">
-              {/* Área */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Área Total (m²)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Área del Piso */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Área del Piso (m²)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.floor_area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, floor_area: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
-
-              {/* Área de Balcón */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Área de Balcón (m²)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.balcony_area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, balcony_area: e.target.value }))}
-                  placeholder="Opcional"
-                />
-              </div>
-
-              {/* Habitaciones */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Número de Habitaciones
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={formData.bedrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Baños */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Número de Baños
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={formData.bathrooms}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Notas */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Notas
-                </label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Notas adicionales sobre el departamento..."
-                  rows={3}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Botones */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            disabled={loading}
-          >
-            {loading ? 'Creando...' : 'Crear Departamento'}
-          </Button>
-        </div>
-      </form>
-    </ModalV2>
-
-    <ApartmentTemplatesModal
-      isOpen={showTemplatesModal}
-      onClose={() => {
-        setShowTemplatesModal(false)
-        // Refrescar plantillas si se creó/actualizó alguna
-        if (projectIdForTemplates) {
-          // El hook se refrescará automáticamente
-        }
-      }}
-      projectId={projectIdForTemplates}
-    />
+      <ApartmentTemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => {
+          setShowTemplatesModal(false)
+          // Refrescar plantillas si se creó/actualizó alguna
+          if (projectIdForTemplates) {
+            // El hook se refrescará automáticamente
+          }
+        }}
+        projectId={projectIdForTemplates}
+      />
     </>
   )
 }

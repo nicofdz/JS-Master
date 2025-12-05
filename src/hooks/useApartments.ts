@@ -21,7 +21,7 @@ export function useApartments(floorId?: number) {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Obtener la función para actualizar el status del piso
   const { updateFloorStatusFromApartments } = useFloors()
 
@@ -50,9 +50,9 @@ export function useApartments(floorId?: number) {
         console.error('❌ Error en fetchFloors:', error)
         throw error
       }
-      
+
       console.log('✅ Datos de pisos obtenidos:', data?.length, 'pisos')
-      
+
       // Procesar datos para incluir project_id y project_name
       const processedFloors = (data || []).map(floor => {
         const project = floor.projects as any
@@ -62,7 +62,7 @@ export function useApartments(floorId?: number) {
           project_name: project?.name || 'Proyecto Desconocido'
         }
       })
-      
+
       console.log('✅ Pisos procesados:', processedFloors)
       setFloors(processedFloors)
     } catch (err) {
@@ -70,7 +70,7 @@ export function useApartments(floorId?: number) {
     }
   }
 
-  const fetchApartments = async () => {
+  const fetchApartments = async (includeDeleted = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -95,8 +95,11 @@ export function useApartments(floorId?: number) {
           ),
           tasks(id, status, is_deleted)
         `)
-        .eq('is_active', true)
         .order('apartment_number', { ascending: true })
+
+      if (!includeDeleted) {
+        query = query.eq('is_active', true)
+      }
 
       if (floorId) {
         query = query.eq('floor_id', floorId)
@@ -108,7 +111,7 @@ export function useApartments(floorId?: number) {
         console.error('❌ Error en fetchApartments:', error)
         throw error
       }
-      
+
       console.log('✅ Datos de apartamentos obtenidos:', data?.length, 'apartamentos')
 
       // Procesar datos para incluir información adicional
@@ -119,7 +122,7 @@ export function useApartments(floorId?: number) {
         const tasks = (apartment.tasks || []).filter((task: any) => !task.is_deleted) // Filtrar tareas eliminadas
         const completedTasks = tasks.filter((task: any) => task.status === 'completed').length
         const totalTasks = tasks.length
-        
+
         return {
           ...apartment,
           floor_id: floor?.id || 0,
@@ -146,7 +149,7 @@ export function useApartments(floorId?: number) {
   const createApartment = async (apartment: ApartmentInsert) => {
     try {
       console.log('🔍 Intentando crear apartamento:', apartment)
-      
+
       const { data, error } = await supabase
         .from('apartments')
         .insert(apartment)
@@ -160,9 +163,9 @@ export function useApartments(floorId?: number) {
         console.error('❌ Error de Supabase:', error)
         throw new Error(`Error de Supabase: ${error.message} (Código: ${error.code})`)
       }
-      
+
       console.log('✅ Apartamento creado exitosamente:', data)
-      
+
       // Actualizar la lista local
       const newApartment = {
         ...data,
@@ -171,7 +174,7 @@ export function useApartments(floorId?: number) {
         tasks_count: 0,
         progress_percentage: 0
       }
-      
+
       setApartments(prev => [...prev, newApartment].sort((a, b) => a.apartment_number.localeCompare(b.apartment_number)))
       return data
     } catch (err) {
@@ -185,7 +188,7 @@ export function useApartments(floorId?: number) {
   const updateApartment = async (id: number, updates: Partial<Apartment>) => {
     try {
       console.log('🔄 useApartments - updateApartment llamado con:', { id, updates })
-      
+
       const { data, error } = await supabase
         .from('apartments')
         .update(updates)
@@ -200,15 +203,15 @@ export function useApartments(floorId?: number) {
         console.error('❌ Error en updateApartment:', error)
         throw error
       }
-      
+
       console.log('✅ updateApartment exitoso:', data)
-      
+
       // Actualizar la lista local - mantener campos calculados y agregar previous_status
       setApartments(prev => {
         const updated = prev.map(a => {
           if (a.id !== id) return a
-          
-          return { 
+
+          return {
             ...a, // Mantener todo el apartamento existente
             ...data, // Sobrescribir con datos actualizados de BD
             floor_number: (data.floors as any)?.floor_number || a.floor_number,
@@ -219,11 +222,11 @@ export function useApartments(floorId?: number) {
             previous_status: data.previous_status // Actualizar el estado anterior
           }
         })
-        
+
         console.log('🔄 Apartamento actualizado:', updated.find(a => a.id === id))
         return updated
       })
-      
+
       // Actualizar el status del piso si se cambió el status del apartamento
       // NO actualizar si es un bloqueo/desbloqueo (se maneja con refresh manual)
       if (updates.status && data.floor_id && updates.status !== 'blocked') {
@@ -233,7 +236,7 @@ export function useApartments(floorId?: number) {
           await updateFloorStatusFromApartments(data.floor_id)
         }
       }
-      
+
       return data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al actualizar apartamentos')
@@ -241,20 +244,7 @@ export function useApartments(floorId?: number) {
     }
   }
 
-  const deleteApartment = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('apartments')
-        .delete()
-        .eq('id', id)
 
-      if (error) throw error
-      setApartments(prev => prev.filter(a => a.id !== id))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al eliminar apartamentos')
-      throw err
-    }
-  }
 
   const hardDeleteApartment = async (id: number) => {
     try {
@@ -264,7 +254,7 @@ export function useApartments(floorId?: number) {
         .select('is_active, apartment_number')
         .eq('id', id)
         .single()
-      
+
       if (fetchError) {
         console.error('Error obteniendo apartamento:', fetchError)
         throw fetchError
@@ -307,7 +297,7 @@ export function useApartments(floorId?: number) {
 
       // Actualizar la lista local
       setApartments(prev => prev.filter(a => a.id !== id))
-      
+
       console.log('✅ Departamento eliminado definitivamente. Las tareas completadas se mantienen con apartment_id = NULL')
       return true
     } catch (err) {
@@ -318,14 +308,14 @@ export function useApartments(floorId?: number) {
     }
   }
 
-  const softDeleteApartment = async (id: number) => {
+  const deleteApartment = async (id: number) => {
     try {
       // Obtener el departamento actual para agregar prefijo al número
       // Esto es necesario porque hay una restricción UNIQUE (floor_id, apartment_number)
       // Si no modificamos el nombre, no podríamos crear otro departamento con el mismo número
       let apartment = apartments.find(a => a.id === id)
       let currentNumber = apartment?.apartment_number || ''
-      
+
       // Si no está en el array local, obtenerlo de la BD
       if (!apartment || !currentNumber) {
         const { data: aptData, error: fetchError } = await supabase
@@ -333,7 +323,7 @@ export function useApartments(floorId?: number) {
           .select('apartment_number')
           .eq('id', id)
           .single()
-        
+
         if (fetchError) {
           console.error('Error obteniendo apartamento:', fetchError)
           // Continuar con string vacío si no se puede obtener
@@ -341,7 +331,22 @@ export function useApartments(floorId?: number) {
           currentNumber = aptData.apartment_number || ''
         }
       }
-      
+
+      // Verificar si hay tareas completadas
+      const { data: completedTasks, error: checkTasksError } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('apartment_id', id)
+        .eq('status', 'completed')
+        .eq('is_deleted', false)
+        .limit(1)
+
+      if (checkTasksError) throw checkTasksError
+
+      if (completedTasks && completedTasks.length > 0) {
+        throw new Error('No se puede eliminar el departamento porque tiene tareas completadas. Elimine las tareas primero.')
+      }
+
       // Agregar prefijo [ELIMINADO] para evitar conflictos de unicidad
       // La columna ahora permite hasta 50 caracteres, suficiente para el prefijo
       const newNumber = currentNumber.startsWith('[ELIMINADO] ')
@@ -352,7 +357,7 @@ export function useApartments(floorId?: number) {
       // Las tareas completadas se mantienen para preservar el historial financiero
       const { error: tasksError } = await supabase
         .from('tasks')
-        .update({ 
+        .update({
           status: 'cancelled',
           updated_at: new Date().toISOString()
         })
@@ -370,7 +375,7 @@ export function useApartments(floorId?: number) {
 
       const { data, error } = await supabase
         .from('apartments')
-        .update({ 
+        .update({
           is_active: false,
           apartment_number: newNumber
         })
@@ -414,18 +419,18 @@ export function useApartments(floorId?: number) {
 
       // Extraer todos los números de cada código y encontrar el más grande
       let maxNumber = 0
-      
+
       data.forEach(apt => {
         const apartmentNumber = apt.apartment_number
-        
+
         // Buscar todos los números en el string
         const allNumbers = apartmentNumber.match(/\d+/g)
-        
+
         if (allNumbers && allNumbers.length > 0) {
           // Convertir todos los números a enteros y encontrar el máximo
           const numbers = allNumbers.map((n: string) => parseInt(n, 10))
           const currentMax = Math.max(...numbers)
-          
+
           // Actualizar el máximo global
           if (currentMax > maxNumber) {
             maxNumber = currentMax
@@ -483,7 +488,7 @@ export function useApartments(floorId?: number) {
         console.error('❌ Error en fetchAllApartments:', error)
         throw error
       }
-      
+
       console.log('✅ Datos de apartamentos obtenidos (incluyendo inactivos):', data?.length, 'apartamentos')
 
       // Procesar datos para incluir información adicional
@@ -494,7 +499,7 @@ export function useApartments(floorId?: number) {
         const tasks = (apartment.tasks || []).filter((task: any) => !task.is_deleted) // Filtrar tareas eliminadas
         const completedTasks = tasks.filter((task: any) => task.status === 'completed').length
         const totalTasks = tasks.length
-        
+
         return {
           ...apartment,
           floor_id: floor?.id || 0,
@@ -526,14 +531,14 @@ export function useApartments(floorId?: number) {
         .select('apartment_number')
         .eq('id', id)
         .single()
-      
+
       if (fetchError) {
         console.error('Error obteniendo apartamento:', fetchError)
         throw fetchError
       }
 
       let currentNumber = aptData?.apartment_number || ''
-      
+
       // Remover el prefijo [ELIMINADO] si existe
       const restoredNumber = currentNumber.startsWith('[ELIMINADO] ')
         ? currentNumber.replace('[ELIMINADO] ', '')
@@ -543,7 +548,7 @@ export function useApartments(floorId?: number) {
       // Solo restaurar las que fueron canceladas por la eliminación del departamento
       const { error: tasksError } = await supabase
         .from('tasks')
-        .update({ 
+        .update({
           status: 'pending',
           updated_at: new Date().toISOString()
         })
@@ -561,7 +566,7 @@ export function useApartments(floorId?: number) {
 
       const { data, error } = await supabase
         .from('apartments')
-        .update({ 
+        .update({
           is_active: true,
           apartment_number: restoredNumber
         })
@@ -585,12 +590,12 @@ export function useApartments(floorId?: number) {
         tasks_count: 0,
         progress_percentage: 0
       }
-      
+
       setApartments(prev => {
         const filtered = prev.filter(a => a.id !== id)
         return [...filtered, restoredApartment].sort((a, b) => a.apartment_number.localeCompare(b.apartment_number))
       })
-      
+
       return data
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al restaurar apartamento'
@@ -660,7 +665,6 @@ export function useApartments(floorId?: number) {
     createApartment,
     updateApartment,
     deleteApartment,
-    softDeleteApartment,
     hardDeleteApartment,
     restoreApartment,
     getNextApartmentNumber,

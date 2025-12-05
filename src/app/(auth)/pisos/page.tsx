@@ -13,18 +13,17 @@ import { ApartmentTasksModal } from '@/components/projects/ApartmentTasksModal'
 import { AddApartmentsModal } from '@/components/projects/AddApartmentsModal'
 import { AddTasksToFloorsModal } from '@/components/projects/AddTasksToFloorsModal'
 import { FloorTasksModal } from '@/components/projects/FloorTasksModal'
-import { ApartmentForm } from '@/components/apartments/ApartmentForm'
+import { ApartmentFormModalV2 } from '@/components/apartments/ApartmentFormModalV2'
 import { Plus, Search, Filter, Edit, Trash2, Building2, Building, AlertTriangle, CheckCircle, Clock, Home, ChevronDown, ChevronRight, Layers, Play, AlertCircle, RotateCcw, XCircle } from 'lucide-react'
 import { formatDate, getStatusColor, getStatusEmoji, formatApartmentNumber } from '@/lib/utils'
 import { FLOOR_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
-
 import { FloorFiltersSidebar } from '@/components/floors/FloorFiltersSidebar'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 
 export default function PisosPage() {
-  const { floors, setFloors, projects, loading, error, createFloor, updateFloor, deleteFloor, refresh } = useFloors()
-  const { updateApartment, deleteApartment, updateApartmentStatusFromTasks, softDeleteApartment, hardDeleteApartment, restoreApartment } = useApartments()
+  const { floors, setFloors, projects, loading, error, createFloor, updateFloor, deleteFloor, hardDeleteFloor, restoreFloor, refresh } = useFloors()
+  const { updateApartment, deleteApartment, updateApartmentStatusFromTasks, hardDeleteApartment, restoreApartment } = useApartments()
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
   const [searchTerm, setSearchTerm] = useState('')
   const [projectFilter, setProjectFilter] = useState<string>('all')
@@ -45,13 +44,21 @@ export default function PisosPage() {
   const [selectedFloorForTasks, setSelectedFloorForTasks] = useState<{ id: number; projectId: number } | null>(null)
   const [showFloorTasksModal, setShowFloorTasksModal] = useState(false)
   const [selectedFloorForViewTasks, setSelectedFloorForViewTasks] = useState<{ id: number; floorNumber: number; projectId: number; towerId: number } | null>(null)
-  const [showEditApartmentModal, setShowEditApartmentModal] = useState(false)
+
   const [selectedApartmentForEdit, setSelectedApartmentForEdit] = useState<any>(null)
   const [showDeleteApartmentConfirm, setShowDeleteApartmentConfirm] = useState(false)
   const [apartmentToDelete, setApartmentToDelete] = useState<{ id: number; number: string } | null>(null)
   const [showHardDeleteApartmentConfirm, setShowHardDeleteApartmentConfirm] = useState(false)
   const [apartmentToHardDelete, setApartmentToHardDelete] = useState<{ id: number; number: string } | null>(null)
+  const [showHardDeleteFloorConfirm, setShowHardDeleteFloorConfirm] = useState(false)
+  const [floorToHardDelete, setFloorToHardDelete] = useState<{ id: number; floorNumber: number } | null>(null)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
+
+  // Recargar pisos cuando cambia el modo papelera
+  useEffect(() => {
+    refresh(showTrash)
+  }, [showTrash])
 
   // Obtener proyectos únicos para el filtro
   const uniqueProjects = Array.from(
@@ -125,20 +132,38 @@ export default function PisosPage() {
     const matchesProject = projectFilter === 'all' || floor.project_id.toString() === projectFilter
     const matchesTower = towerFilter === 'all' || (floor.tower_id && floor.tower_id.toString() === towerFilter)
 
-    return matchesSearch && matchesStatus && matchesProject && matchesTower
+    // Filtro de papelera
+    const matchesTrash = showTrash
+      ? floor.is_active === false
+      : floor.is_active !== false
+
+    return matchesSearch && matchesStatus && matchesProject && matchesTower && matchesTrash
   })
 
 
   const handleDelete = async (floorId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este piso? Esta acción no se puede deshacer.')) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este piso? Se moverá a la papelera.')) {
       return
     }
 
     try {
       await deleteFloor(floorId)
-      toast.success('Piso eliminado exitosamente')
+      toast.success('Piso movido a la papelera')
     } catch (error) {
       toast.error('Error al eliminar el piso')
+    }
+  }
+
+  const handleRestoreFloor = async (floorId: number) => {
+    if (!confirm('¿Estás seguro de que quieres restaurar este piso?')) {
+      return
+    }
+
+    try {
+      await restoreFloor(floorId)
+      toast.success('Piso restaurado exitosamente')
+    } catch (error) {
+      toast.error('Error al restaurar el piso')
     }
   }
 
@@ -158,7 +183,7 @@ export default function PisosPage() {
     if (!apartmentToDelete) return
 
     try {
-      await softDeleteApartment(apartmentToDelete.id)
+      await deleteApartment(apartmentToDelete.id)
       toast.success('Departamento eliminado exitosamente')
       refresh()
       setShowDeleteApartmentConfirm(false)
@@ -183,6 +208,27 @@ export default function PisosPage() {
       console.error('Error completo al eliminar departamento definitivamente:', err)
       const errorMessage = err?.message || 'Error desconocido al eliminar el departamento'
       toast.error(`Error al eliminar el departamento: ${errorMessage}`)
+    }
+  }
+
+  const handleHardDeleteFloor = (floorId: number, floorNumber: number) => {
+    setFloorToHardDelete({ id: floorId, floorNumber })
+    setShowHardDeleteFloorConfirm(true)
+  }
+
+  const confirmHardDeleteFloor = async () => {
+    if (!floorToHardDelete) return
+
+    try {
+      await hardDeleteFloor(floorToHardDelete.id)
+      toast.success('Piso eliminado definitivamente. Las tareas completadas se mantienen en el sistema.')
+      refresh(showTrash)
+      setShowHardDeleteFloorConfirm(false)
+      setFloorToHardDelete(null)
+    } catch (err: any) {
+      console.error('Error completo al eliminar piso definitivamente:', err)
+      const errorMessage = err?.message || 'Error desconocido al eliminar el piso'
+      toast.error(`Error al eliminar el piso: ${errorMessage}`)
     }
   }
 
@@ -548,6 +594,16 @@ export default function PisosPage() {
             <Plus className="mr-2 h-4 w-4" />
             Nuevo Piso
           </Button>
+
+          <Button
+            variant={showTrash ? "secondary" : "outline"}
+            onClick={() => setShowTrash(!showTrash)}
+            className={`flex items-center gap-2 ${showTrash ? 'bg-red-900/30 text-red-400 border-red-500/50' : 'border-slate-600 text-slate-200 hover:text-white hover:border-slate-500'}`}
+            title={showTrash ? "Ver activos" : "Ver papelera"}
+          >
+            <Trash2 className="w-4 h-4" />
+            {showTrash ? 'Salir de la papelera' : 'Papelera'}
+          </Button>
         </div>
       </div>
 
@@ -793,6 +849,49 @@ export default function PisosPage() {
                                                   <span className="text-slate-400">Deptos:</span>
                                                   <span className="text-slate-300 font-medium">{floor.apartments_count || 0}</span>
                                                 </div>
+                                                {showTrash ? (
+                                                  <>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleRestoreFloor(floor.id)
+                                                      }}
+                                                      className="h-6 px-2 text-green-400 hover:text-green-300 hover:bg-green-900/30 ml-2"
+                                                      title="Restaurar Piso"
+                                                    >
+                                                      <RotateCcw className="w-3 h-3 mr-1" />
+                                                      Restaurar
+                                                    </Button>
+                                                    <Button
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        handleHardDeleteFloor(floor.id, floor.floor_number)
+                                                      }}
+                                                      className="h-6 px-2 text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                                                      title="Eliminar Definitivamente"
+                                                    >
+                                                      <Trash2 className="w-3 h-3 mr-1" />
+                                                      Eliminar
+                                                    </Button>
+                                                  </>
+                                                ) : (
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation()
+                                                      handleDelete(floor.id)
+                                                    }}
+                                                    className="h-6 px-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 ml-2"
+                                                    title="Eliminar Piso"
+                                                  >
+                                                    <Trash2 className="w-3 h-3" />
+                                                  </Button>
+                                                )}
                                               </div>
                                             </div>
                                           </div>
@@ -906,9 +1005,9 @@ export default function PisosPage() {
                                                                     area: apartment.area,
                                                                     bedrooms: apartment.bedrooms,
                                                                     bathrooms: apartment.bathrooms,
-                                                                    floor_id: apartment.floor_id
+                                                                    floor_id: apartment.floor_id,
+                                                                    project_id: floor.project_id
                                                                   })
-                                                                  setShowEditApartmentModal(true)
                                                                 }}
                                                                 className="bg-slate-400 hover:bg-slate-300 text-white border-slate-300 text-xs px-1 py-0 h-6"
                                                                 title="Editar"
@@ -1108,39 +1207,15 @@ export default function PisosPage() {
       )}
 
       {/* Modal de Editar Departamento */}
-      <Modal
-        isOpen={showEditApartmentModal}
-        onClose={() => {
-          setShowEditApartmentModal(false)
+      <ApartmentFormModalV2
+        isOpen={!!selectedApartmentForEdit}
+        onClose={() => setSelectedApartmentForEdit(null)}
+        onSuccess={() => {
+          refresh()
           setSelectedApartmentForEdit(null)
         }}
-        title="Editar Departamento"
-        size="md"
-      >
-        {selectedApartmentForEdit && (
-          <ApartmentForm
-            apartment={selectedApartmentForEdit}
-            floors={floors}
-            projects={projects}
-            onSubmit={async (data) => {
-              try {
-                await updateApartment(selectedApartmentForEdit.id, data)
-                toast.success('Departamento actualizado exitosamente')
-                setShowEditApartmentModal(false)
-                setSelectedApartmentForEdit(null)
-                refresh()
-              } catch (err: any) {
-                toast.error(err.message || 'Error al actualizar el departamento')
-                throw err
-              }
-            }}
-            onCancel={() => {
-              setShowEditApartmentModal(false)
-              setSelectedApartmentForEdit(null)
-            }}
-          />
-        )}
-      </Modal>
+        apartmentToEdit={selectedApartmentForEdit}
+      />
 
       {/* Modal de Confirmación de Eliminación de Departamento */}
       <Modal
@@ -1224,6 +1299,58 @@ export default function PisosPage() {
               <Button
                 variant="outline"
                 onClick={confirmHardDeleteApartment}
+                className="bg-red-700 hover:bg-red-800 text-white border-red-700"
+              >
+                Eliminar Definitivamente
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal de confirmación para eliminación definitiva de piso */}
+      <Modal
+        isOpen={showHardDeleteFloorConfirm}
+        onClose={() => {
+          setShowHardDeleteFloorConfirm(false)
+          setFloorToHardDelete(null)
+        }}
+        title="Confirmar Eliminación Definitiva de Piso"
+        size="md"
+      >
+        {floorToHardDelete && (
+          <div className="space-y-4">
+            <div className="bg-red-900/30 border-2 border-red-500 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <p className="text-red-300 font-semibold">¡Advertencia!</p>
+              </div>
+              <p className="text-slate-300 mb-2">
+                Estás a punto de eliminar <strong>definitivamente</strong> el Piso <strong>{floorToHardDelete.floorNumber}</strong>.
+              </p>
+              <p className="text-sm text-slate-400">
+                Esta acción es <strong>irreversible</strong> y tendrá las siguientes consecuencias:
+              </p>
+              <ul className="list-disc list-inside text-sm text-slate-400 mt-2 space-y-1">
+                <li>El piso será eliminado permanentemente de la base de datos</li>
+                <li>Todos los <strong>departamentos</strong> del piso serán eliminados</li>
+                <li>Las tareas no completadas serán eliminadas definitivamente</li>
+                <li>Las tareas completadas se mantendrán, pero quedarán sin asignar a ningún departamento</li>
+              </ul>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowHardDeleteFloorConfirm(false)
+                  setFloorToHardDelete(null)
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={confirmHardDeleteFloor}
                 className="bg-red-700 hover:bg-red-800 text-white border-red-700"
               >
                 Eliminar Definitivamente
