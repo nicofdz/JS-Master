@@ -120,7 +120,7 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
         const materialUnitCost = Number(Array.isArray(delivery.materials) && delivery.materials.length > 0 ? delivery.materials[0]?.unit_cost : 0)
         const movementUnitCost = delivery.unit_cost ? Number(delivery.unit_cost) : null
         const movementTotalCost = delivery.total_cost ? Number(delivery.total_cost) : null
-        
+
         // Usar el costo del movimiento si existe, sino usar el del material
         const finalUnitCost = movementUnitCost ?? materialUnitCost
         const quantity = Number(delivery.quantity || 0)
@@ -185,12 +185,12 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <p className="text-sm text-gray-600">
           Tarea: <span className="font-medium">{task?.task_name || 'Sin nombre'}</span>
         </p>
-        <button 
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+        <button
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
           onClick={() => {
             setShowAssociateModal(true)
           }}
@@ -207,7 +207,7 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
             <Package className="w-4 h-4" />
             Materiales Asociados ({materials.length})
           </h4>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {materials.map((material) => (
               <div key={material.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="mb-3">
@@ -247,7 +247,7 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
                   )}
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button 
+                  <button
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
                     onClick={() => {
                       setSelectedDeliveryId(material.delivery_id)
@@ -257,7 +257,7 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
                     <Eye className="w-3 h-3" />
                     Ver Detalles
                   </button>
-                  <button 
+                  <button
                     className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
                     onClick={() => {
                       setMaterialToDelete(material.id)
@@ -275,7 +275,7 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
         <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
           <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 mb-4">No hay materiales asociados a esta tarea</p>
-          <button 
+          <button
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
             onClick={() => {
               setShowAssociateModal(true)
@@ -325,7 +325,7 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
         }}
         onConfirm={async () => {
           if (materialToDelete === null) return
-          
+
           try {
             const { error } = await supabase
               .from('task_assignment_materials')
