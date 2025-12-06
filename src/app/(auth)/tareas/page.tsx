@@ -30,7 +30,8 @@ export default function TareasPage() {
     refreshTasks,
     fetchDeletedTasks,
     getDeletedTasksCount,
-    restoreTask
+    restoreTask,
+    hardDeleteTask
   } = useTasksV2()
 
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
@@ -581,6 +582,11 @@ export default function TareasPage() {
           deletedTasks={deletedTasks}
           loading={loadingDeleted}
           onRestore={handleRestoreTask}
+          onHardDelete={async (taskId) => {
+            await hardDeleteTask(taskId)
+            await loadDeletedTasks() // Recargar lista
+            await loadDeletedTasksCount() // Actualizar conteo
+          }}
           onRefresh={loadDeletedTasks}
         />
       )}

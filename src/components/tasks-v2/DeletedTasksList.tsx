@@ -32,14 +32,16 @@ interface DeletedTasksListProps {
   deletedTasks: DeletedTask[]
   loading: boolean
   onRestore: (taskId: number) => Promise<void>
+  onHardDelete?: (taskId: number) => Promise<void>
   onRefresh: () => void
 }
 
-export function DeletedTasksList({ deletedTasks, loading, onRestore, onRefresh }: DeletedTasksListProps) {
+export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelete, onRefresh }: DeletedTasksListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedTask, setSelectedTask] = useState<DeletedTask | null>(null)
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
+  const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false) // Nuevo estado
   const [taskToRestore, setTaskToRestore] = useState<number | null>(null)
   const [showAssignmentsModal, setShowAssignmentsModal] = useState(false)
   const [selectedTaskAssignments, setSelectedTaskAssignments] = useState<DeletedTask | null>(null)
@@ -98,116 +100,96 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onRefresh }
           placeholder="Buscar en papelera..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
 
       {/* Lista de tareas eliminadas */}
       {filteredTasks.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-          <Trash2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 text-lg font-medium">
+        <div className="text-center py-12 bg-slate-800/30 rounded-lg border border-slate-700">
+          <Trash2 className="w-12 h-12 text-slate-500 mx-auto mb-4" />
+          <p className="text-slate-400 text-lg font-medium">
             {searchTerm ? 'No se encontraron tareas eliminadas' : 'La papelera está vacía'}
           </p>
-          {searchTerm && (
-            <p className="text-gray-500 text-sm mt-2">
-              Intenta con otros términos de búsqueda
-            </p>
-          )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredTasks.map((task) => (
             <div
               key={task.task_id}
-              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-800/70 hover:border-slate-600 transition-all"
             >
-              <div className="flex items-start justify-between">
+              <div className="p-4 flex items-center justify-between">
+                {/* Información Principal */}
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{task.task_name}</h3>
-                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="text-base font-semibold text-slate-100">{task.task_name}</h3>
+                    <span className="px-2 py-0.5 text-xs font-medium bg-slate-700 text-slate-300 rounded border border-slate-600">
                       {task.task_category}
                     </span>
                   </div>
 
-                  {/* Información de ubicación */}
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                  <div className="flex items-center gap-4 text-xs text-slate-400">
                     {task.project_name && (
                       <div className="flex items-center gap-1">
-                        <Building2 className="w-4 h-4" />
+                        <Building2 className="w-3.5 h-3.5" />
                         <span>{task.project_name}</span>
                       </div>
                     )}
-                    {task.floor_number && (
-                      <span>Piso {task.floor_number}</span>
-                    )}
-                    {task.apartment_number && (
-                      <span>Depto {task.apartment_number}</span>
-                    )}
-                  </div>
-
-                  {/* Información de eliminación */}
-                  <div className="flex items-center gap-4 text-xs text-gray-500 mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>Eliminada: {formatDate(task.deleted_at || '')}</span>
-                    </div>
-                    {task.deleted_by_email && (
+                    {(task.floor_number || task.apartment_number) && (
                       <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        <span>Por: {task.deleted_by_email}</span>
+                        <span>
+                          {task.floor_number ? `Piso ${task.floor_number}` : ''}
+                          {task.floor_number && task.apartment_number ? ' • ' : ''}
+                          {task.apartment_number ? `Depto ${task.apartment_number}` : ''}
+                        </span>
                       </div>
-                    )}
-                    {task.deleted_assignments_count !== undefined && task.deleted_assignments_count > 0 && (
-                      <button
-                        onClick={() => {
-                          setSelectedTaskAssignments(task)
-                          setShowAssignmentsModal(true)
-                        }}
-                        className="flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
-                      >
-                        <Users className="w-3 h-3" />
-                        <span>{task.deleted_assignments_count} asignación(es)</span>
-                      </button>
                     )}
                   </div>
 
-                  {/* Razón de eliminación */}
-                  {task.deletion_reason && (
-                    <div className="mt-2 p-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-200">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-yellow-400" />
-                        <span><strong className="text-slate-100">Razón:</strong> {task.deletion_reason}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Presupuesto */}
-                  {task.total_budget && (
-                    <div className="mt-2 text-sm">
-                      <span className="text-gray-600">Presupuesto: </span>
-                      <span className="font-semibold text-gray-900">{formatCurrency(task.total_budget)}</span>
-                    </div>
-                  )}
+                  {/* Detalles de eliminación */}
+                  <div className="mt-2 flex items-center gap-3 text-xs">
+                    <span className="text-red-400 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      Eliminada: {formatDate(task.deleted_at || '')}
+                    </span>
+                    {task.deleted_by_email && (
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {task.deleted_by_email}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Acciones */}
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleViewDetails(task)}
-                    className="p-2 hover:bg-blue-50 rounded-md transition-colors text-blue-600 hover:text-blue-700"
+                    className="p-2 hover:bg-blue-900/30 rounded-md transition-colors text-blue-400 hover:text-blue-300"
                     title="Ver detalles"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleRestoreClick(task.task_id)}
-                    className="p-2 hover:bg-green-50 rounded-md transition-colors text-green-600 hover:text-green-700"
+                    className="p-2 hover:bg-green-900/30 rounded-md transition-colors text-green-400 hover:text-green-300"
                     title="Restaurar tarea"
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
+                  {onHardDelete && (
+                    <button
+                      onClick={() => {
+                        setTaskToRestore(task.task_id) // Reutilizamos state para ID
+                        setShowHardDeleteConfirm(true)
+                      }}
+                      className="p-2 hover:bg-red-900/30 rounded-md transition-colors text-red-400 hover:text-red-300"
+                      title="Eliminar definitivamente"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -215,7 +197,7 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onRefresh }
         </div>
       )}
 
-      {/* Modal de detalles (simplificado para tareas eliminadas) */}
+      {/* Modals and other components remain mostly the same, implemented below or reused */}
       {selectedTask && (
         <ModalV2
           isOpen={showDetailModal}
@@ -226,6 +208,7 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onRefresh }
           title={`Detalles: ${selectedTask.task_name}`}
           size="lg"
         >
+          {/* Detail content reused/adapted for dark mode */}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -298,60 +281,27 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onRefresh }
         variant="info"
       />
 
-      {/* Modal de asignaciones */}
-      {selectedTaskAssignments && (
-        <ModalV2
-          isOpen={showAssignmentsModal}
-          onClose={() => {
-            setShowAssignmentsModal(false)
-            setSelectedTaskAssignments(null)
-          }}
-          title={`Asignaciones: ${selectedTaskAssignments.task_name}`}
-          size="lg"
-        >
-          <div className="space-y-4">
-            {selectedTaskAssignments.assigned_workers && selectedTaskAssignments.assigned_workers.length > 0 ? (
-              <div className="space-y-3">
-                {selectedTaskAssignments.assigned_workers.map((worker, index) => (
-                  <div key={index} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <User className="w-4 h-4 text-slate-400" />
-                          <h4 className="text-slate-100 font-medium">{worker.worker_name}</h4>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 mt-3">
-                          <div>
-                            <label className="text-xs text-slate-400 mb-1 block">Monto Asignado</label>
-                            <p className="text-slate-100 font-semibold">{formatCurrency(worker.amount)}</p>
-                          </div>
-                          <div>
-                            <label className="text-xs text-slate-400 mb-1 block">Estado de Pago</label>
-                            {worker.was_paid ? (
-                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-900/50 text-green-300 rounded">
-                                Pagado
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-900/50 text-yellow-300 rounded">
-                                Pendiente
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-slate-400">
-                <Users className="w-12 h-12 mx-auto mb-3 text-slate-500" />
-                <p>No hay asignaciones registradas para esta tarea</p>
-              </div>
-            )}
-          </div>
-        </ModalV2>
-      )}
+      {/* Modal de confirmación de Hard Delete */}
+      <ConfirmModalV2
+        isOpen={showHardDeleteConfirm}
+        onClose={() => {
+          setShowHardDeleteConfirm(false)
+          setTaskToRestore(null)
+        }}
+        onConfirm={async () => {
+          if (taskToRestore && onHardDelete) {
+            await onHardDelete(taskToRestore)
+            setShowHardDeleteConfirm(false)
+            setTaskToRestore(null)
+            onRefresh()
+          }
+        }}
+        title="Eliminar Definitivamente"
+        message="¿Estás seguro de que deseas eliminar esta tarea permanentemente? Esta acción NO se puede deshacer."
+        confirmText="Eliminar Definitivamente"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

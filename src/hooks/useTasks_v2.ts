@@ -370,6 +370,37 @@ export function useTasksV2() {
     }
   }
 
+  // Hard delete task (permanent deletion)
+  const hardDeleteTask = async (taskId: number) => {
+    try {
+      // Primero eliminar asignaciones asociadas (aunque debería ser CASCADE, es más seguro explícito)
+      const { error: assignmentsError } = await supabase
+        .from('task_assignments')
+        .delete()
+        .eq('task_id', taskId)
+
+      if (assignmentsError) {
+        console.error('Error deleting assignments for hard delete:', assignmentsError)
+      }
+
+      // Eliminar la tarea permanentemente
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+
+      if (error) throw error
+
+      toast.success('Tarea eliminada definitivamente')
+      await fetchTasks()
+      await fetchTaskStats()
+    } catch (err: any) {
+      console.error('Error hard deleting task:', err)
+      toast.error(`Error al eliminar definitivamente la tarea: ${err.message}`)
+      throw err
+    }
+  }
+
   // Fetch deleted tasks
   const fetchDeletedTasks = async () => {
     try {
@@ -620,6 +651,7 @@ export function useTasksV2() {
     createTask,
     updateTask,
     deleteTask,
+    hardDeleteTask,
     assignWorkerToTask,
     adjustPaymentDistribution,
     removeWorkerFromTask,
