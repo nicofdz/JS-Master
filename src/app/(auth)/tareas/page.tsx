@@ -50,6 +50,8 @@ export default function TareasPage() {
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [deletedTasksCount, setDeletedTasksCount] = useState(0)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+  const [initialTaskData, setInitialTaskData] = useState<{ projectId: number; towerId: number; floorId: number; apartmentId: number } | null>(null)
+  const [massCreateData, setMassCreateData] = useState<{ projectId: number; towerId: number } | null>(null)
 
   // Cargar conteo de tareas eliminadas al iniciar
   useEffect(() => {
@@ -102,6 +104,16 @@ export default function TareasPage() {
     if (activeTab === 'trash') {
       await loadDeletedTasks()
     }
+  }
+
+  const handleAddTask = (projectId: number, towerId: number, floorId: number, apartmentId: number) => {
+    setInitialTaskData({ projectId, towerId, floorId, apartmentId })
+    setShowCreateModal(true)
+  }
+
+  const handleMassAddTask = (projectId: number, towerId: number) => {
+    setMassCreateData({ projectId, towerId })
+    setShowCreateModal(true)
   }
 
   // Cargar filtros desde localStorage al iniciar
@@ -532,15 +544,6 @@ export default function TareasPage() {
                 activeBorder: 'emerald-500'
               },
               {
-                value: 'blocked',
-                label: 'Bloqueadas',
-                icon: Lock,
-                count: taskStats.blocked,
-                activeColor: 'red-400',
-                activeBg: 'red-900/30',
-                activeBorder: 'red-500'
-              },
-              {
                 value: 'delayed',
                 label: 'Atrasadas',
                 icon: AlertCircle,
@@ -568,6 +571,8 @@ export default function TareasPage() {
                 // Actualizar conteo de tareas eliminadas
                 await handleTaskDeleted()
               }}
+              onAddTask={handleAddTask}
+              onAddMassTask={handleMassAddTask}
             />
           </div>
         </>
@@ -583,8 +588,18 @@ export default function TareasPage() {
       {/* Modal de Crear Tarea */}
       <TaskFormModalV2
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false)
+          setInitialTaskData(null)
+          setMassCreateData(null)
+        }}
         mode="create"
+        initialProjectId={initialTaskData?.projectId || massCreateData?.projectId}
+        initialTowerId={initialTaskData?.towerId || massCreateData?.towerId}
+        initialFloorId={initialTaskData?.floorId}
+        initialApartmentId={initialTaskData?.apartmentId}
+        isMassCreate={!!massCreateData}
+        massCreateData={massCreateData || undefined}
         onSuccess={() => {
           if (refreshTasks) {
             refreshTasks()

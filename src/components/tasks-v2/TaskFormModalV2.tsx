@@ -21,9 +21,26 @@ interface TaskFormModalV2Props {
   initialTowerId?: number
   initialFloorId?: number
   initialApartmentId?: number
+  isMassCreate?: boolean
+  massCreateData?: {
+    projectId: number
+    towerId: number
+  }
 }
 
-export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSuccess, initialProjectId, initialTowerId, initialFloorId, initialApartmentId }: TaskFormModalV2Props) {
+export function TaskFormModalV2({
+  isOpen,
+  onClose,
+  task,
+  mode = 'create',
+  onSuccess,
+  initialProjectId,
+  initialTowerId,
+  initialFloorId,
+  initialApartmentId,
+  isMassCreate,
+  massCreateData
+}: TaskFormModalV2Props) {
   const { projects, createTask, updateTask, assignWorkerToTask, removeWorkerFromTask, getWorkersForProject, refreshTasks } = useTasksV2()
   const { templates } = useTaskTemplates()
 
@@ -49,7 +66,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
   const projectIdForHooks = formData.project_id ? parseInt(formData.project_id) : undefined
   const { towers } = useTowers(projectIdForHooks)
   const { floors } = useFloors(projectIdForHooks)
-  
+
   // Use apartments hook with floorId
   const floorIdForHooks = formData.floor_id ? parseInt(formData.floor_id) : undefined
   const { apartments } = useApartments(floorIdForHooks)
@@ -103,11 +120,11 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
   const { workersPorDia, workersATrato } = useMemo(() => {
     const porDia: any[] = []
     const aTrato: any[] = []
-    
-    const workersToFilter = mode === 'edit' 
+
+    const workersToFilter = mode === 'edit'
       ? (activeWorkerTab === 'assigned' ? assignedWorkers : availableWorkersForEdit)
       : availableWorkers
-    
+
     workersToFilter.forEach((worker: any) => {
       const contractType = worker.contract_type || 'a_trato'
       if (contractType === 'por_dia') {
@@ -116,7 +133,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
         aTrato.push(worker)
       }
     })
-    
+
     return { workersPorDia: porDia, workersATrato: aTrato }
   }, [mode, activeWorkerTab, assignedWorkers, availableWorkersForEdit, availableWorkers])
 
@@ -124,7 +141,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
   const { hasPorDiaSelected, hasATratoSelected } = useMemo(() => {
     let porDia = false
     let aTrato = false
-    
+
     selectedWorkers.forEach(workerId => {
       const worker = [...availableWorkers, ...assignedWorkers, ...availableWorkersForEdit]
         .find((w: any) => w.id === workerId)
@@ -137,7 +154,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
         }
       }
     })
-    
+
     return { hasPorDiaSelected: porDia, hasATratoSelected: aTrato }
   }, [selectedWorkers, availableWorkers, assignedWorkers, availableWorkersForEdit])
 
@@ -202,7 +219,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
         setSelectedWorkers(activeWorkers)
         // Los removidos no se seleccionan inicialmente, pero el usuario puede seleccionarlos para reactivarlos
         // NOTA: En modo editar, NO cargamos materiales (solo se ven en la sección de materiales)
-        
+
         // Cargar timestamps de las asignaciones
         const timestamps: Record<number, { started_at: string; completed_at: string }> = {}
         task.workers?.forEach((w: any) => {
@@ -263,11 +280,11 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
         const loadProjectData = async () => {
           await loadTowersForProject(initialProjectId)
           await loadWorkersForProject(initialProjectId)
-          
+
           // After towers are loaded, load floors if towerId is provided
           if (initialTowerId) {
             await loadFloorsForTower(initialTowerId)
-            
+
             // After floors are loaded, load apartments if floorId is provided
             if (initialFloorId) {
               await loadApartmentsForFloor(initialFloorId)
@@ -299,7 +316,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       }
 
       setTaskCategories(categories)
-      
+
       // No establecer categoría por defecto - el usuario debe seleccionar una
     } catch (err) {
       console.error('Error loading task categories:', err)
@@ -384,7 +401,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       if (error) throw error
 
       setAvailableTowers(towersData || [])
-      
+
       // If editing and tower_id is set, keep it
       if (mode === 'edit' && task?.tower_id) {
         setFormData(prev => ({ ...prev, tower_id: task.tower_id.toString() }))
@@ -433,7 +450,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       if (error) throw error
 
       setAvailableFloors(floorsData || [])
-      
+
       // If editing and floor_id is set, keep it
       if (mode === 'edit' && task?.floor_id) {
         setFormData(prev => ({ ...prev, floor_id: task.floor_id.toString() }))
@@ -482,7 +499,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       if (error) throw error
 
       setAvailableApartments(apartmentsData || [])
-      
+
       // If editing and apartment_id is set, keep it
       if (mode === 'edit' && task?.apartment_id) {
         setFormData(prev => ({ ...prev, apartment_id: task.apartment_id.toString() }))
@@ -605,7 +622,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       apartment_id: ''
     }))
     setSelectedWorkers([])
-    
+
     if (projectId) {
       loadTowersForProject(parseInt(projectId))
       loadWorkersForProject(parseInt(projectId))
@@ -625,7 +642,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       floor_id: '',
       apartment_id: ''
     }))
-    
+
     if (towerId) {
       loadFloorsForTower(parseInt(towerId))
     } else {
@@ -641,7 +658,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       floor_id: floorId,
       apartment_id: ''
     }))
-    
+
     if (floorId) {
       loadApartmentsForFloor(parseInt(floorId))
     } else {
@@ -666,7 +683,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
       toast.error('El proyecto es requerido')
       return
     }
-    if (!formData.apartment_id) {
+    if (!isMassCreate && !formData.apartment_id) {
       toast.error('El departamento es requerido')
       return
     }
@@ -674,7 +691,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
     const selectedWorkersData = availableWorkers.filter(w => selectedWorkers.includes(w.id))
     const hasOnlyPorDia = selectedWorkersData.length > 0 && selectedWorkersData.every(w => w.contract_type === 'por_dia')
     const hasATrato = selectedWorkersData.some(w => w.contract_type === 'a_trato')
-    
+
     // Si está permitido mezclar, siempre se puede ingresar presupuesto (aunque haya por_dia)
     if (!allowMixedContracts && hasOnlyPorDia) {
       // Si solo hay trabajadores "por_dia" y NO está permitido mezclar, el presupuesto debe ser 0
@@ -694,8 +711,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
     setSubmitting(true)
 
     try {
-      const taskPayload = {
-        apartment_id: parseInt(formData.apartment_id),
+      const taskPayloadBase = {
         task_name: formData.task_name.trim(),
         task_description: formData.task_description.trim() || null,
         task_category: formData.task_category,
@@ -708,117 +724,175 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
         status: mode === 'edit' ? task?.status || 'pending' : 'pending'
       }
 
-      let taskId: number
+      if (isMassCreate && massCreateData) {
+        // Mass Create Logic
+        toast.loading('Creando tareas masivas...', { id: 'mass-create' })
 
-      if (mode === 'create') {
-        // Create task
-        const newTask = await createTask(taskPayload)
-        taskId = newTask.id
+        // Fetch apartments with their floor_id
+        // Alternative safe fetch:
+        const { data: floorsInTower, error: floorsError } = await supabase
+          .from('floors')
+          .select('id')
+          .eq('tower_id', massCreateData.towerId)
 
-        // Assign workers (opcional - solo si hay seleccionados)
-        if (selectedWorkers.length > 0) {
-          for (const workerId of selectedWorkers) {
-            await assignWorkerToTask(taskId, workerId)
-            
-            // Get the assignment_id that was just created
-            const { data: assignment, error: assignmentError } = await supabase
-              .from('task_assignments')
-              .select('id')
-              .eq('task_id', taskId)
-              .eq('worker_id', workerId)
-              .eq('is_deleted', false)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single()
+        if (floorsError) throw floorsError
+        const floorIds = floorsInTower.map(f => f.id)
 
-            // Link material deliveries if selected for this worker
-            const deliveryIds = workerMaterialDeliveries[workerId] || []
-            if (deliveryIds.length > 0 && assignment?.id) {
-              try {
-                const materialInserts = deliveryIds.map(deliveryId => ({
-                  task_assignment_id: assignment.id,
-                  delivery_id: deliveryId
-                }))
+        if (floorIds.length === 0) throw new Error('No se encontraron pisos')
 
-                const { error: materialError } = await supabase
-                  .from('task_assignment_materials')
-                  .insert(materialInserts)
+        const { data: apartments, error: aptError } = await supabase
+          .from('apartments')
+          .select('id, floor_id')
+          .in('floor_id', floorIds)
+          .eq('is_active', true)
 
-                if (materialError) {
-                  console.error('Error linking material deliveries:', materialError)
-                  // No mostrar error al usuario, solo log
-                }
-              } catch (err) {
-                console.error('Error linking material deliveries:', err)
-              }
+        if (aptError) throw aptError
+        if (!apartments || apartments.length === 0) throw new Error('No se encontraron departamentos')
+
+        let createdCount = 0
+
+        for (const apt of apartments) {
+          const taskPayload = {
+            ...taskPayloadBase,
+            project_id: parseInt(formData.project_id),
+            tower_id: massCreateData.towerId,
+            floor_id: apt.floor_id,
+            apartment_id: apt.id
+          }
+
+          const newTask = await createTask(taskPayload)
+
+          if (selectedWorkers.length > 0) {
+            for (const workerId of selectedWorkers) {
+              await assignWorkerToTask(newTask.id, workerId)
             }
           }
+          createdCount++
         }
+
+        toast.dismiss('mass-create')
+        toast.success(`${createdCount} tareas creadas masivamente`)
       } else {
-        // Update task
-        await updateTask(task!.id, taskPayload)
-        taskId = task!.id
+        // Single Create/Edit Logic
+        const taskPayload = {
+          ...taskPayloadBase,
+          project_id: parseInt(formData.project_id),
+          tower_id: parseInt(formData.tower_id),
+          floor_id: parseInt(formData.floor_id),
+          apartment_id: parseInt(formData.apartment_id)
+        }
 
-        // Get current assigned workers (solo activos)
-        const currentActiveWorkerIds = task.workers
-          ?.filter((w: any) => w.assignment_status !== 'removed')
-          ?.map((w: any) => w.id) || []
-        
-        // Get all workers (including removed ones) to check for reactivation
-        const allWorkerIds = task.workers?.map((w: any) => w.id) || []
-        
-        // IMPORTANTE: Solo procesar cambios reales
-        // 1. Remover trabajadores que ya no están seleccionados (solo los que estaban activos)
-        for (const workerId of currentActiveWorkerIds) {
-          if (!selectedWorkers.includes(workerId)) {
-            // Find assignment_id and remove
-            const assignment = task.workers?.find((w: any) => w.id === workerId && w.assignment_status !== 'removed')
-            if (assignment?.assignment_id) {
-              try {
-                // Remover trabajador con razón automática
-                await removeWorkerFromTask(assignment.assignment_id, `Removido al editar tarea - ${new Date().toLocaleString('es-CL')}`)
-              } catch (err: any) {
-                console.error(`Error removiendo trabajador ${workerId}:`, err)
-                // Continuar con otros trabajadores aunque falle uno
-                toast.error(`No se pudo remover trabajador: ${err.message || 'Error desconocido'}`)
+        let taskId: number
+
+        if (mode === 'create') {
+          // Create task
+          const newTask = await createTask(taskPayload)
+          taskId = newTask.id
+
+          // Assign workers (opcional - solo si hay seleccionados)
+          if (selectedWorkers.length > 0) {
+            for (const workerId of selectedWorkers) {
+              await assignWorkerToTask(taskId, workerId)
+
+              // Get the assignment_id that was just created
+              const { data: assignment, error: assignmentError } = await supabase
+                .from('task_assignments')
+                .select('id')
+                .eq('task_id', taskId)
+                .eq('worker_id', workerId)
+                .eq('is_deleted', false)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
+
+              // Link material deliveries if selected for this worker
+              const deliveryIds = workerMaterialDeliveries[workerId] || []
+              if (deliveryIds.length > 0 && assignment?.id) {
+                try {
+                  const materialInserts = deliveryIds.map(deliveryId => ({
+                    task_assignment_id: assignment.id,
+                    delivery_id: deliveryId
+                  }))
+
+                  const { error: materialError } = await supabase
+                    .from('task_assignment_materials')
+                    .insert(materialInserts)
+
+                  if (materialError) {
+                    console.error('Error linking material deliveries:', materialError)
+                    // No mostrar error al usuario, solo log
+                  }
+                } catch (err) {
+                  console.error('Error linking material deliveries:', err)
+                }
               }
             }
           }
+        } else {
+          // Update task
+          await updateTask(task!.id, taskPayload)
+          taskId = task!.id
+
+          // Get current assigned workers (solo activos)
+          const currentActiveWorkerIds = task.workers
+            ?.filter((w: any) => w.assignment_status !== 'removed')
+            ?.map((w: any) => w.id) || []
+
+          // Get all workers (including removed ones) to check for reactivation
+          const allWorkerIds = task.workers?.map((w: any) => w.id) || []
+
+          // IMPORTANTE: Solo procesar cambios reales
+          // 1. Remover trabajadores que ya no están seleccionados (solo los que estaban activos)
+          for (const workerId of currentActiveWorkerIds) {
+            if (!selectedWorkers.includes(workerId)) {
+              // Find assignment_id and remove
+              const assignment = task.workers?.find((w: any) => w.id === workerId && w.assignment_status !== 'removed')
+              if (assignment?.assignment_id) {
+                try {
+                  // Remover trabajador con razón automática
+                  await removeWorkerFromTask(assignment.assignment_id, `Removido al editar tarea - ${new Date().toLocaleString('es-CL')}`)
+                } catch (err: any) {
+                  console.error(`Error removiendo trabajador ${workerId}:`, err)
+                  // Continuar con otros trabajadores aunque falle uno
+                  toast.error(`No se pudo remover trabajador: ${err.message || 'Error desconocido'}`)
+                }
+              }
+            }
+          }
+
+          // 2. Agregar o reactivar trabajadores que están seleccionados pero NO estaban activos
+          // IMPORTANTE: NO hacer nada con trabajadores que ya están activos y seleccionados
+          // NOTA: En modo editar, NO guardamos materiales aquí (solo se gestionan en la sección de materiales)
+          for (const workerId of selectedWorkers) {
+            // Solo procesar si NO está en los activos actuales
+            // Esto significa que es un trabajador nuevo o uno removido que se está reactivando
+            if (!currentActiveWorkerIds.includes(workerId)) {
+              // assignWorkerToTask ya maneja la reactivación si el trabajador tiene una asignación removida
+              await assignWorkerToTask(taskId, workerId)
+            }
+          }
+
+          // 3. Actualizar timestamps de las asignaciones
+          for (const [assignmentIdStr, timestamps] of Object.entries(workerTimestamps)) {
+            const assignmentId = parseInt(assignmentIdStr)
+            if (isNaN(assignmentId)) continue
+
+            const { error: updateError } = await supabase
+              .from('task_assignments')
+              .update({
+                started_at: timestamps.started_at || null,
+                completed_at: timestamps.completed_at || null
+              })
+              .eq('id', assignmentId)
+
+            if (updateError) {
+              console.error(`Error actualizando timestamps para asignación ${assignmentId}:`, updateError)
+              toast.error(`Error al actualizar tiempos de trabajo: ${updateError.message}`)
+            }
+          }
         }
-
-         // 2. Agregar o reactivar trabajadores que están seleccionados pero NO estaban activos
-         // IMPORTANTE: NO hacer nada con trabajadores que ya están activos y seleccionados
-         // NOTA: En modo editar, NO guardamos materiales aquí (solo se gestionan en la sección de materiales)
-         for (const workerId of selectedWorkers) {
-           // Solo procesar si NO está en los activos actuales
-           // Esto significa que es un trabajador nuevo o uno removido que se está reactivando
-           if (!currentActiveWorkerIds.includes(workerId)) {
-             // assignWorkerToTask ya maneja la reactivación si el trabajador tiene una asignación removida
-             await assignWorkerToTask(taskId, workerId)
-           }
-         }
-
-         // 3. Actualizar timestamps de las asignaciones
-         for (const [assignmentIdStr, timestamps] of Object.entries(workerTimestamps)) {
-           const assignmentId = parseInt(assignmentIdStr)
-           if (isNaN(assignmentId)) continue
-
-           const { error: updateError } = await supabase
-             .from('task_assignments')
-             .update({
-               started_at: timestamps.started_at || null,
-               completed_at: timestamps.completed_at || null
-             })
-             .eq('id', assignmentId)
-
-           if (updateError) {
-             console.error(`Error actualizando timestamps para asignación ${assignmentId}:`, updateError)
-             toast.error(`Error al actualizar tiempos de trabajo: ${updateError.message}`)
-           }
-         }
       }
 
-      // Llamar al callback de éxito si existe (para refrescar la lista en la página)
       if (onSuccess) {
         onSuccess()
       } else {
@@ -855,8 +929,8 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
               <option value="">Seleccionar plantilla...</option>
               {templates.map(template => {
                 const priorityLabel = template.priority === 'urgent' ? 'Urgente' :
-                                     template.priority === 'high' ? 'Alta' :
-                                     template.priority === 'low' ? 'Baja' : 'Media'
+                  template.priority === 'high' ? 'Alta' :
+                    template.priority === 'low' ? 'Baja' : 'Media'
                 return (
                   <option key={template.id} value={template.id.toString()}>
                     {template.name} - {priorityLabel} - {template.estimated_hours}h
@@ -982,86 +1056,105 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
           {(() => {
             const hasInitialValues = mode === 'create' && (initialProjectId || initialTowerId || initialFloorId || initialApartmentId)
             const isLocationDisabled = Boolean(hasInitialValues)
-            
+
             return (
-              <>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Proyecto *
-                    </label>
-                    <select
-                      value={formData.project_id}
-                      onChange={(e) => handleProjectChange(e.target.value)}
-                      disabled={isLocationDisabled}
-                      className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                      required
-                    >
-                      <option value="">Seleccionar proyecto</option>
-                      {projects.map(project => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Torre
-                    </label>
-                    <select
-                      value={formData.tower_id}
-                      onChange={(e) => handleTowerChange(e.target.value)}
-                      disabled={isLocationDisabled || !formData.project_id || loadingTowers}
-                      className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">{loadingTowers ? 'Cargando...' : 'Seleccionar torre'}</option>
-                      {availableTowers.map(tower => (
-                        <option key={tower.id} value={tower.id}>
-                          Torre {tower.tower_number}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Piso
-                    </label>
-                    <select
-                      value={formData.floor_id}
-                      onChange={(e) => handleFloorChange(e.target.value)}
-                      disabled={isLocationDisabled || !formData.tower_id || loadingFloors}
-                      className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">{loadingFloors ? 'Cargando...' : 'Seleccionar piso'}</option>
-                      {availableFloors.map(floor => (
-                        <option key={floor.id} value={floor.id}>
-                          Piso {floor.floor_number}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Departamento *
+              /* Selectores en Cascada */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Proyecto - Siempre visible, deshabilitado si viene pre-seleccionado */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Proyecto *
                   </label>
                   <select
-                    value={formData.apartment_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, apartment_id: e.target.value }))}
-                    disabled={isLocationDisabled || !formData.floor_id || loadingApartments}
-                    className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    value={formData.project_id}
+                    onChange={(e) => handleProjectChange(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!!initialProjectId || isMassCreate}
                     required
                   >
-                    <option value="">{loadingApartments ? 'Cargando...' : 'Seleccionar departamento'}</option>
-                    {availableApartments.map(apartment => (
-                      <option key={apartment.id} value={apartment.id}>
-                        {apartment.apartment_number}
+                    <option value="">Seleccionar Proyecto</option>
+                    {projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
                       </option>
                     ))}
                   </select>
                 </div>
-              </>
+
+                {isMassCreate ? (
+                  <div className="md:col-span-3 bg-blue-900/20 border border-blue-800 rounded-lg p-4 flex items-center justify-center">
+                    <p className="text-blue-200 font-medium flex items-center gap-2 text-sm">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                      Modo Masivo: Se creará esta tarea para TODOS los departamentos de la torre seleccionada.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Torre */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">
+                        Torre *
+                      </label>
+                      <select
+                        value={formData.tower_id}
+                        onChange={(e) => handleTowerChange(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!formData.project_id || loadingTowers || !!initialTowerId}
+                        required
+                      >
+                        <option value="">Seleccionar Torre</option>
+                        {towers.map(tower => (
+                          <option key={tower.id} value={tower.id}>
+                            Torre {tower.tower_number}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Piso */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">
+                        Piso *
+                      </label>
+                      <select
+                        value={formData.floor_id}
+                        onChange={(e) => handleFloorChange(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!formData.tower_id || loadingFloors || !!initialFloorId}
+                        required
+                      >
+                        <option value="">Seleccionar Piso</option>
+                        {floors.map(floor => (
+                          <option key={floor.id} value={floor.id}>
+                            Piso {floor.floor_number}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Apartamento */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">
+                        Apartamento *
+                      </label>
+                      <select
+                        value={formData.apartment_id}
+                        onChange={(e) => setFormData(prev => ({ ...prev, apartment_id: e.target.value }))}
+                        className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={!formData.floor_id || loadingApartments || !!initialApartmentId}
+                        required
+                      >
+                        <option value="">Seleccionar Depto</option>
+                        {apartments.map(apt => (
+                          <option key={apt.id} value={apt.id}>
+                            {apt.number}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
             )
           })()}
         </div>
@@ -1090,7 +1183,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          
+
           {workersSectionExpanded && (
             <div className="p-4 bg-slate-800 border-t border-slate-600">
               {/* Toggle para anular restricciones de contrato - Solo en modo crear */}
@@ -1134,22 +1227,20 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                   <button
                     type="button"
                     onClick={() => setActiveWorkerTab('assigned')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeWorkerTab === 'assigned'
-                        ? 'text-blue-400 border-b-2 border-blue-400'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${activeWorkerTab === 'assigned'
+                      ? 'text-blue-400 border-b-2 border-blue-400'
+                      : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     Asignados ({assignedWorkers.length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveWorkerTab('available')}
-                    className={`px-4 py-2 text-sm font-medium transition-colors ${
-                      activeWorkerTab === 'available'
-                        ? 'text-blue-400 border-b-2 border-blue-400'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${activeWorkerTab === 'available'
+                      ? 'text-blue-400 border-b-2 border-blue-400'
+                      : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     Disponibles ({availableWorkersForEdit.length})
                   </button>
@@ -1183,27 +1274,27 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                   (worker.contract_type === 'por_dia' && hasATratoSelected) ||
                                   (worker.contract_type === 'a_trato' && hasPorDiaSelected)
                                 )}
-                                 onChange={(e) => {
-                                   if (e.target.checked) {
-                                     // Validar bloqueo mutuo (solo si no está permitido mezclar)
-                                     if (!allowMixedContracts) {
-                                       if (worker.contract_type === 'por_dia' && hasATratoSelected) {
-                                         toast.error('No puedes seleccionar trabajadores "Por Día" si ya tienes trabajadores "A Trato" seleccionados. Activa la opción "Permitir mezclar" si necesitas ambos tipos.')
-                                         return
-                                       }
-                                       if (worker.contract_type === 'a_trato' && hasPorDiaSelected) {
-                                         toast.error('No puedes seleccionar trabajadores "A Trato" si ya tienes trabajadores "Por Día" seleccionados. Activa la opción "Permitir mezclar" si necesitas ambos tipos.')
-                                         return
-                                       }
-                                     }
-                                     // Permitir seleccionar trabajadores removidos para reactivarlos
-                                     setSelectedWorkers(prev => [...prev, worker.id])
-                                     // En modo editar, NO cargamos entregas (solo se ven en la sección de materiales)
-                                   } else {
-                                     setSelectedWorkers(prev => prev.filter(id => id !== worker.id))
-                                     // En modo editar, NO limpiamos materiales aquí
-                                   }
-                                 }}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // Validar bloqueo mutuo (solo si no está permitido mezclar)
+                                    if (!allowMixedContracts) {
+                                      if (worker.contract_type === 'por_dia' && hasATratoSelected) {
+                                        toast.error('No puedes seleccionar trabajadores "Por Día" si ya tienes trabajadores "A Trato" seleccionados. Activa la opción "Permitir mezclar" si necesitas ambos tipos.')
+                                        return
+                                      }
+                                      if (worker.contract_type === 'a_trato' && hasPorDiaSelected) {
+                                        toast.error('No puedes seleccionar trabajadores "A Trato" si ya tienes trabajadores "Por Día" seleccionados. Activa la opción "Permitir mezclar" si necesitas ambos tipos.')
+                                        return
+                                      }
+                                    }
+                                    // Permitir seleccionar trabajadores removidos para reactivarlos
+                                    setSelectedWorkers(prev => [...prev, worker.id])
+                                    // En modo editar, NO cargamos entregas (solo se ven en la sección de materiales)
+                                  } else {
+                                    setSelectedWorkers(prev => prev.filter(id => id !== worker.id))
+                                    // En modo editar, NO limpiamos materiales aquí
+                                  }
+                                }}
                                 className="mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               />
                               <div className="flex-1">
@@ -1212,11 +1303,10 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                     {worker.full_name}
                                   </span>
                                   {worker.contract_type && (
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                      worker.contract_type === 'por_dia' 
-                                        ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30' 
-                                        : 'bg-green-600/20 text-green-400 border border-green-600/30'
-                                    }`}>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${worker.contract_type === 'por_dia'
+                                      ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30'
+                                      : 'bg-green-600/20 text-green-400 border border-green-600/30'
+                                      }`}>
                                       {worker.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
                                     </span>
                                   )}
@@ -1226,7 +1316,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                 )}
                               </div>
                             </label>
-                            
+
                             {/* Campos para editar timestamps (solo en modo editar y si está seleccionado) */}
                             {isSelected && !isRemoved && worker.assignment_id && (
                               <div className="p-3 bg-slate-800 border-t border-slate-600 space-y-3">
@@ -1321,7 +1411,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                 </div>
                               </div>
                             )}
-                            
+
                             {/* En modo editar, NO mostramos la sección de materiales aquí (solo en la sección de materiales) */}
                           </div>
                         )
@@ -1352,41 +1442,40 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                   (worker.contract_type === 'por_dia' && hasATratoSelected) ||
                                   (worker.contract_type === 'a_trato' && hasPorDiaSelected)
                                 )}
-                                 onChange={(e) => {
-                                   if (e.target.checked) {
-                                     // Validar bloqueo mutuo
-                                     if (worker.contract_type === 'por_dia' && hasATratoSelected) {
-                                       toast.error('No puedes seleccionar trabajadores "Por Día" si ya tienes trabajadores "A Trato" seleccionados')
-                                       return
-                                     }
-                                     if (worker.contract_type === 'a_trato' && hasPorDiaSelected) {
-                                       toast.error('No puedes seleccionar trabajadores "A Trato" si ya tienes trabajadores "Por Día" seleccionados')
-                                       return
-                                     }
-                                     setSelectedWorkers(prev => [...prev, worker.id])
-                                     // En modo editar, NO cargamos entregas (solo se ven en la sección de materiales)
-                                   } else {
-                                     setSelectedWorkers(prev => prev.filter(id => id !== worker.id))
-                                     // En modo editar, NO limpiamos materiales aquí
-                                   }
-                                 }}
-                                 className="mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                               />
-                               <div className="flex-1 flex items-center gap-2">
-                                 <span className="text-sm font-medium text-slate-100">{worker.full_name}</span>
-                                 {worker.contract_type && (
-                                   <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                     worker.contract_type === 'por_dia' 
-                                       ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30' 
-                                       : 'bg-green-600/20 text-green-400 border border-green-600/30'
-                                   }`}>
-                                     {worker.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
-                                   </span>
-                                 )}
-                               </div>
-                             </label>
-                             
-                             {/* En modo editar, NO mostramos la sección de materiales aquí (solo en la sección de materiales) */}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // Validar bloqueo mutuo
+                                    if (worker.contract_type === 'por_dia' && hasATratoSelected) {
+                                      toast.error('No puedes seleccionar trabajadores "Por Día" si ya tienes trabajadores "A Trato" seleccionados')
+                                      return
+                                    }
+                                    if (worker.contract_type === 'a_trato' && hasPorDiaSelected) {
+                                      toast.error('No puedes seleccionar trabajadores "A Trato" si ya tienes trabajadores "Por Día" seleccionados')
+                                      return
+                                    }
+                                    setSelectedWorkers(prev => [...prev, worker.id])
+                                    // En modo editar, NO cargamos entregas (solo se ven en la sección de materiales)
+                                  } else {
+                                    setSelectedWorkers(prev => prev.filter(id => id !== worker.id))
+                                    // En modo editar, NO limpiamos materiales aquí
+                                  }
+                                }}
+                                className="mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              />
+                              <div className="flex-1 flex items-center gap-2">
+                                <span className="text-sm font-medium text-slate-100">{worker.full_name}</span>
+                                {worker.contract_type && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${worker.contract_type === 'por_dia'
+                                    ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30'
+                                    : 'bg-green-600/20 text-green-400 border border-green-600/30'
+                                    }`}>
+                                    {worker.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
+                                  </span>
+                                )}
+                              </div>
+                            </label>
+
+                            {/* En modo editar, NO mostramos la sección de materiales aquí (solo en la sección de materiales) */}
                           </div>
                         )
                       })}
@@ -1410,13 +1499,12 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                         }
                       }}
                       disabled={!allowMixedContracts && hasATratoSelected}
-                      className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        activeContractTypeTab === 'por_dia'
-                          ? 'text-yellow-400 border-b-2 border-yellow-400'
-                          : !allowMixedContracts && hasATratoSelected
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${activeContractTypeTab === 'por_dia'
+                        ? 'text-yellow-400 border-b-2 border-yellow-400'
+                        : !allowMixedContracts && hasATratoSelected
                           ? 'text-slate-500 cursor-not-allowed opacity-50'
                           : 'text-slate-400 hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       Por Día ({workersPorDia.length})
                       {!allowMixedContracts && hasATratoSelected && (
@@ -1431,13 +1519,12 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                         }
                       }}
                       disabled={!allowMixedContracts && hasPorDiaSelected}
-                      className={`px-4 py-2 text-sm font-medium transition-colors ${
-                        activeContractTypeTab === 'a_trato'
-                          ? 'text-green-400 border-b-2 border-green-400'
-                          : !allowMixedContracts && hasPorDiaSelected
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${activeContractTypeTab === 'a_trato'
+                        ? 'text-green-400 border-b-2 border-green-400'
+                        : !allowMixedContracts && hasPorDiaSelected
                           ? 'text-slate-500 cursor-not-allowed opacity-50'
                           : 'text-slate-400 hover:text-slate-200'
-                      }`}
+                        }`}
                     >
                       A Trato ({workersATrato.length})
                       {!allowMixedContracts && hasPorDiaSelected && (
@@ -1453,8 +1540,8 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                         {hasPorDiaSelected && hasATratoSelected
                           ? '⚠️ No puedes seleccionar trabajadores "Por Día" y "A Trato" al mismo tiempo. Deselecciona uno de los tipos para continuar.'
                           : hasPorDiaSelected
-                          ? '⚠️ Tienes trabajadores "Por Día" seleccionados. Deselecciónalos para poder seleccionar trabajadores "A Trato".'
-                          : '⚠️ Tienes trabajadores "A Trato" seleccionados. Deselecciónalos para poder seleccionar trabajadores "Por Día".'}
+                            ? '⚠️ Tienes trabajadores "Por Día" seleccionados. Deselecciónalos para poder seleccionar trabajadores "A Trato".'
+                            : '⚠️ Tienes trabajadores "A Trato" seleccionados. Deselecciónalos para poder seleccionar trabajadores "Por Día".'}
                       </p>
                     </div>
                   )}
@@ -1507,7 +1594,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                   </span>
                                 </div>
                               </label>
-                              
+
                               {isSelected && (
                                 <div className="p-3 bg-slate-800 border-t border-slate-600">
                                   <button
@@ -1648,7 +1735,7 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                                   </span>
                                 </div>
                               </label>
-                              
+
                               {isSelected && (
                                 <div className="p-3 bg-slate-800 border-t border-slate-600">
                                   <button
@@ -1811,9 +1898,8 @@ export function TaskFormModalV2({ isOpen, onClose, task, mode = 'create', onSucc
                   }
                 }}
                 disabled={!allowMixedContracts && hasOnlyPorDia}
-                className={`w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  !allowMixedContracts && hasOnlyPorDia ? 'opacity-50 cursor-not-allowed bg-slate-800' : ''
-                }`}
+                className={`w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${!allowMixedContracts && hasOnlyPorDia ? 'opacity-50 cursor-not-allowed bg-slate-800' : ''
+                  }`}
                 placeholder="0"
                 required
               />

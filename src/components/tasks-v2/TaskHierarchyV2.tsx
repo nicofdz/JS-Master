@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { ChevronDown, ChevronRight, Building, Layers, Building2, Home } from 'lucide-react'
+import { ChevronDown, ChevronRight, Building, Layers, Building2, Home, Plus } from 'lucide-react'
 import { TaskRowV2 } from './TaskRowV2'
 import { formatApartmentNumber } from '@/lib/utils'
 import type { TaskV2 } from '@/hooks/useTasks_v2'
@@ -23,9 +23,14 @@ interface TaskHierarchyV2Props {
   tasks: Task[]
   floors: Floor[]
   onTaskUpdate?: () => void
+  onAddTask?: (projectId: number, towerId: number, floorId: number, apartmentId: number) => void
+  onAddMassTask?: (projectId: number, towerId: number) => void
 }
 
-export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2Props) {
+export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddMassTask }: TaskHierarchyV2Props) {
+  // ... (existing code)
+
+  // ... (inside the tower map)
   // Inicializar estado expandido desde localStorage (solo una vez)
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(() => {
     try {
@@ -387,6 +392,18 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
                             <p className="text-xs font-medium text-slate-300">
                               Torre {tower.number}
                             </p>
+                            {onAddMassTask && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onAddMassTask(projectId, towerId)
+                                }}
+                                className="ml-2 p-1 hover:bg-slate-600 rounded-full text-purple-400 hover:text-purple-300 transition-colors border border-transparent hover:border-slate-500"
+                                title="Agregar Tarea Masiva a Torre"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                           <div className="flex items-center gap-3 text-xs">
                             <div className="flex items-center gap-1">
@@ -505,9 +522,23 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
                                                 <Home className="w-3 h-3 text-blue-400" />
                                                 <span className="text-xs font-medium text-slate-300">Depto {apartment.number}</span>
                                               </div>
-                                              <div className="flex items-center gap-2 text-xs">
-                                                <span className="text-slate-400">Tareas:</span>
-                                                <span className="text-slate-300 font-medium">{completedApartmentTasks}/{apartment.tasks.length}</span>
+                                              <div className="flex items-center gap-3 text-xs">
+                                                {onAddTask && (
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation()
+                                                      onAddTask(projectId, towerId, floorId, apartmentId)
+                                                    }}
+                                                    className="p-1 hover:bg-slate-700/80 rounded-full text-blue-400 hover:text-blue-300 transition-colors border border-transparent hover:border-slate-600"
+                                                    title="Agregar Tarea"
+                                                  >
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                  </button>
+                                                )}
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-slate-400">Tareas:</span>
+                                                  <span className="text-slate-300 font-medium">{completedApartmentTasks}/{apartment.tasks.length}</span>
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
