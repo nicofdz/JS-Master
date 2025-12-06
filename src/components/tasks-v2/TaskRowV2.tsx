@@ -177,7 +177,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
     try {
       await updateTask(task.id, { status: newStatus })
       setTaskStatusOpen(false)
-      
+
       // Actualizar estados de asignaciones según el nuevo estado de la tarea
       if (newStatus === 'pending') {
         // Si la tarea vuelve a pendiente, todas las asignaciones activas vuelven a 'assigned'
@@ -190,9 +190,9 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         await updateAllAssignmentsStatus(task.id, 'assigned')
       }
       // Si es 'completed', complete_task_manually ya actualiza todas las asignaciones
-      
+
       if (onTaskUpdate) onTaskUpdate()
-      
+
       const statusMessages: Record<string, string> = {
         'completed': 'completada',
         'in_progress': 'iniciada',
@@ -201,7 +201,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         'cancelled': 'cancelada',
         'on_hold': 'pausada'
       }
-      
+
       toast.success(`Tarea ${statusMessages[newStatus] || 'actualizada'}`)
     } catch (err: any) {
       toast.error(`Error al actualizar estado: ${err.message}`)
@@ -213,13 +213,13 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
       await updateAllAssignmentsStatus(task.id, newStatus)
       setAllAssignmentsStatusOpen(false)
       if (onTaskUpdate) onTaskUpdate()
-      
+
       const statusMessages: Record<string, string> = {
         'assigned': 'asignadas',
         'working': 'en trabajo',
         'completed': 'completadas'
       }
-      
+
       toast.success(`Todas las asignaciones ${statusMessages[newStatus] || 'actualizadas'}`)
     } catch (err: any) {
       toast.error(`Error al actualizar estados: ${err.message}`)
@@ -231,13 +231,13 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
       await updateAssignmentStatus(assignmentId, newStatus)
       setAssignmentStatusOpen(null)
       if (onTaskUpdate) onTaskUpdate()
-      
+
       const statusMessages: Record<string, string> = {
         'assigned': 'asignada',
         'working': 'en trabajo',
         'completed': 'completada'
       }
-      
+
       toast.success(`Asignación ${statusMessages[newStatus] || 'actualizada'}`)
     } catch (err: any) {
       toast.error(`Error al actualizar estado: ${err.message}`)
@@ -334,17 +334,17 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
   const getPriorityBadge = (priority?: string, showChevron: boolean = false) => {
     if (!priority) return null
-    
+
     const priorityConfig = {
       urgent: { label: 'Urgente', bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200', icon: AlertCircle },
       high: { label: 'Alta', bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200', icon: AlertCircle },
       medium: { label: 'Media', bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200', icon: Clock },
       low: { label: 'Baja', bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200', icon: CheckCircle }
     }
-    
+
     const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium
     const Icon = config.icon
-    
+
     return (
       <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} border ${config.border} ${showChevron ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}>
         <Icon className="w-3 h-3" />
@@ -359,11 +359,10 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
   const progress = getProgressPercentage()
 
   return (
-    <div className={`bg-white rounded-lg border shadow-sm hover:shadow-md transition-all overflow-hidden ${
-      task.is_delayed ? 'border-red-300 border-l-4' : 'border-gray-200'
-    }`}>
+    <div className={`bg-white rounded-lg border shadow-sm hover:shadow-md transition-all overflow-hidden ${task.is_delayed ? 'border-red-300 border-l-4' : 'border-gray-200'
+      }`}>
       {/* Fila principal (compacta) - Toda clickeable */}
-      <div 
+      <div
         onClick={onToggleExpand}
         className="grid grid-cols-12 gap-4 px-4 py-4 items-center text-sm cursor-pointer hover:bg-gray-50 transition-colors"
       >
@@ -405,7 +404,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                 </span>
               )}
             </button>
-            
+
             {priorityOpen && (
               <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
                 {getPriorityOptions(task.priority).map((option) => {
@@ -453,7 +452,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         {task.is_delayed && (
           <div className="col-span-1">
             <DelayTooltip delayReason={task.delay_reason}>
-              <span 
+              <span
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-600 border border-red-500/40 cursor-help"
                 title={task.delay_reason || 'Tarea atrasada'}
               >
@@ -467,7 +466,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         {/* Badge de Tiempo Transcurrido - Solo mostrar si está completada */}
         {task.status === 'completed' && taskDuration && (
           <div className="col-span-1">
-            <span 
+            <span
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/40"
               title="Tiempo promedio que se demoró en completar la tarea"
             >
@@ -547,7 +546,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
               {getStatusText(task.status)}
               <ChevronDown className={`w-3 h-3 transition-transform ${taskStatusOpen ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {taskStatusOpen && (
               <div className="absolute z-50 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
                 {getTaskStatusOptions(task.status).map((option) => (
@@ -574,12 +573,11 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
           {/* Barra de progreso mini */}
           <div className="mt-1 w-full bg-gray-200 rounded-full h-1">
             <div
-              className={`h-1 rounded-full ${
-                task.status === 'completed' ? 'bg-green-500' :
-                task.status === 'in_progress' ? 'bg-blue-500' :
-                task.status === 'blocked' ? 'bg-red-500' :
-                'bg-gray-400'
-              }`}
+              className={`h-1 rounded-full ${task.status === 'completed' ? 'bg-green-500' :
+                  task.status === 'in_progress' ? 'bg-blue-500' :
+                    task.status === 'blocked' ? 'bg-red-500' :
+                      'bg-gray-400'
+                }`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -597,7 +595,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
         {/* Acciones */}
         <div className="col-span-1 flex items-center justify-end gap-1">
-          <button 
+          <button
             className="p-1.5 hover:bg-blue-50 rounded-md transition-colors text-blue-600 hover:text-blue-700"
             title="Ver detalles"
             onClick={(e) => {
@@ -608,7 +606,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
           >
             <Eye className="w-4 h-4" />
           </button>
-          <button 
+          <button
             className="p-1.5 hover:bg-gray-100 rounded-md transition-colors text-gray-600 hover:text-gray-700"
             title="Editar"
             onClick={(e) => {
@@ -618,7 +616,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
           >
             <Edit className="w-4 h-4" />
           </button>
-          <button 
+          <button
             className="p-1.5 hover:bg-red-50 rounded-md transition-colors text-red-600 hover:text-red-700"
             title="Eliminar"
             onClick={(e) => {
@@ -655,7 +653,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                       Cambiar todos
                       <ChevronDown className={`w-3 h-3 transition-transform ${allAssignmentsStatusOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    
+
                     {allAssignmentsStatusOpen && (
                       <div className="absolute z-50 right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
                         {getAssignmentStatusOptions('').map((option) => {
@@ -681,7 +679,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                   </div>
                   {/* Solo mostrar botón "Ajustar Distribución" si hay trabajadores "a_trato" */}
                   {task.workers.some(w => w.contract_type === 'a_trato' && w.assignment_status !== 'removed') && (
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation()
                         setShowDistributionModal(true)
@@ -704,146 +702,143 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
             ) : (
               <div className="space-y-2">
                 {task.workers.map((worker, index) => {
-                const isRemoved = worker.assignment_status === 'removed'
-                return (
-                <div
-                  key={worker.assignment_id || `${task.id}-${worker.id}-${index}`}
-                  className={`bg-gray-50 border rounded-lg p-3 transition-colors ${
-                    isRemoved 
-                      ? 'border-red-300 bg-red-50/50 opacity-75' 
-                      : 'border-gray-300 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="grid grid-cols-12 gap-4 items-center">
-                    {/* Avatar + Nombre */}
-                    <div className="col-span-4 flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${
-                        isRemoved 
-                          ? 'bg-gradient-to-br from-red-400 to-red-600' 
-                          : 'bg-gradient-to-br from-blue-500 to-purple-600'
-                      }`}>
-                        {worker.full_name?.charAt(0) || '?'}
-                      </div>
-                      <div>
-                        <div className={`font-medium ${isRemoved ? 'text-red-700 line-through' : 'text-gray-900'}`}>
-                          {worker.full_name || 'Sin nombre'}
-                        </div>
-                        <div className="text-xs text-gray-500">ID: {worker.id}</div>
-                      </div>
-                    </div>
-
-                    {/* Porcentaje - Solo mostrar si no es "por_dia" */}
-                    {worker.contract_type === 'por_dia' ? (
-                      <div className="col-span-4 text-center">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-600 border border-yellow-500/40 rounded-full">
-                          <span className="text-sm font-semibold">Al Día</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">Sin pago por tarea</div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="col-span-2 text-center">
-                          <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-blue-600'}`}>
-                            {isRemoved ? '0%' : `${worker.payment_share_percentage}%`}
-                          </div>
-                          <div className="text-xs text-gray-500">Porcentaje</div>
-                        </div>
-
-                        {/* Monto */}
-                        <div className="col-span-2 text-center">
-                          <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-green-600'}`}>
-                            {isRemoved ? '$0K' : `$${(worker.worker_payment / 1000).toFixed(0)}K`}
-                          </div>
-                          <div className="text-xs text-gray-500">Monto</div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Estado */}
-                    <div 
-                      className="col-span-3"
-                      ref={(el) => {
-                        if (worker.assignment_id) {
-                          assignmentStatusRefs.current[worker.assignment_id] = el
-                        }
-                      }}
+                  const isRemoved = worker.assignment_status === 'removed'
+                  return (
+                    <div
+                      key={worker.assignment_id || `${task.id}-${worker.id}-${index}`}
+                      className={`bg-gray-50 border rounded-lg p-3 transition-colors ${isRemoved
+                          ? 'border-red-300 bg-red-50/50 opacity-75'
+                          : 'border-gray-300 hover:bg-gray-100'
+                        }`}
                     >
-                      {worker.assignment_status === 'removed' ? (
-                        getAssignmentStatusBadge(worker.assignment_status)
-                      ) : (
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (worker.assignment_id) {
-                                setAssignmentStatusOpen(
-                                  assignmentStatusOpen === worker.assignment_id ? null : worker.assignment_id
-                                )
-                              }
-                            }}
-                            className="inline-flex items-center gap-1"
-                          >
-                            {getAssignmentStatusBadge(worker.assignment_status)}
-                            <ChevronDown 
-                              className={`w-3 h-3 text-gray-500 transition-transform ${
-                                assignmentStatusOpen === worker.assignment_id ? 'rotate-180' : ''
-                              }`} 
-                            />
-                          </button>
-                          
-                          {assignmentStatusOpen === worker.assignment_id && worker.assignment_id && (
-                            <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                              {getAssignmentStatusOptions(worker.assignment_status).map((option) => {
-                                const Icon = option.icon
-                                return (
-                                  <button
-                                    key={option.value}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleAssignmentStatusChange(worker.assignment_id!, option.value)
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 flex items-center gap-2"
-                                  >
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${option.color}`}>
-                                      <Icon className="w-3 h-3" />
-                                      {option.label}
-                                    </span>
-                                  </button>
-                                )
-                              })}
+                      <div className="grid grid-cols-12 gap-4 items-center">
+                        {/* Avatar + Nombre */}
+                        <div className="col-span-4 flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${isRemoved
+                              ? 'bg-gradient-to-br from-red-400 to-red-600'
+                              : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                            }`}>
+                            {worker.full_name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className={`font-medium ${isRemoved ? 'text-red-700 line-through' : 'text-gray-900'}`}>
+                              {worker.full_name || 'Sin nombre'}
+                            </div>
+                            <div className="text-xs text-gray-500">ID: {worker.id}</div>
+                          </div>
+                        </div>
+
+                        {/* Porcentaje - Solo mostrar si no es "por_dia" */}
+                        {worker.contract_type === 'por_dia' ? (
+                          <div className="col-span-4 text-center">
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-600 border border-yellow-500/40 rounded-full">
+                              <span className="text-sm font-semibold">Al Día</span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">Sin pago por tarea</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="col-span-2 text-center">
+                              <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-blue-600'}`}>
+                                {isRemoved ? '0%' : `${worker.payment_share_percentage}%`}
+                              </div>
+                              <div className="text-xs text-gray-500">Porcentaje</div>
+                            </div>
+
+                            {/* Monto */}
+                            <div className="col-span-2 text-center">
+                              <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-green-600'}`}>
+                                {isRemoved ? '$0K' : `$${(worker.worker_payment / 1000).toFixed(0)}K`}
+                              </div>
+                              <div className="text-xs text-gray-500">Monto</div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Estado */}
+                        <div
+                          className="col-span-3"
+                          ref={(el) => {
+                            if (worker.assignment_id) {
+                              assignmentStatusRefs.current[worker.assignment_id] = el
+                            }
+                          }}
+                        >
+                          {worker.assignment_status === 'removed' ? (
+                            getAssignmentStatusBadge(worker.assignment_status)
+                          ) : (
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (worker.assignment_id) {
+                                    setAssignmentStatusOpen(
+                                      assignmentStatusOpen === worker.assignment_id ? null : worker.assignment_id
+                                    )
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1"
+                              >
+                                {getAssignmentStatusBadge(worker.assignment_status)}
+                                <ChevronDown
+                                  className={`w-3 h-3 text-gray-500 transition-transform ${assignmentStatusOpen === worker.assignment_id ? 'rotate-180' : ''
+                                    }`}
+                                />
+                              </button>
+
+                              {assignmentStatusOpen === worker.assignment_id && worker.assignment_id && (
+                                <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                                  {getAssignmentStatusOptions(worker.assignment_status).map((option) => {
+                                    const Icon = option.icon
+                                    return (
+                                      <button
+                                        key={option.value}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleAssignmentStatusChange(worker.assignment_id!, option.value)
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 flex items-center gap-2"
+                                      >
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${option.color}`}>
+                                          <Icon className="w-3 h-3" />
+                                          {option.label}
+                                        </span>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
 
-                    {/* Acciones */}
-                    <div className="col-span-1 text-right">
-                      {!isRemoved && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedWorkerId(worker.id)
-                            setSelectedWorkerName(worker.full_name || 'Sin nombre')
-                            setShowWorkerDetailModal(true)
-                          }}
-                          className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
-                          title="Ver detalles del trabajador"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-400" />
-                        </button>
-                      )}
+                        {/* Acciones */}
+                        <div className="col-span-1 text-right">
+                          {!isRemoved && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedWorkerId(worker.id)
+                                setSelectedWorkerName(worker.full_name || 'Sin nombre')
+                                setShowWorkerDetailModal(true)
+                              }}
+                              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+                              title="Ver detalles del trabajador"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-400" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                )
-              })}
+                  )
+                })}
               </div>
             )}
 
             {/* Tabs adicionales */}
             <div className="mt-4 flex gap-2">
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation()
                   setDetailModalTab('photos')
@@ -854,7 +849,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                 <Image className="w-4 h-4" />
                 Fotos de Progreso
               </button>
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation()
                   setDetailModalTab('materials')
@@ -865,7 +860,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                 <Package className="w-4 h-4" />
                 Materiales
               </button>
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation()
                   setDetailModalTab('history')

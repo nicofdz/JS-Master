@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle } from 'lucide-react'
+import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -12,6 +12,7 @@ import { ReceiptModal } from '@/components/expenses/ReceiptModal'
 import { ExpensePreviewModal } from '@/components/expenses/ExpensePreviewModal'
 import { ExpenseChart } from '@/components/expenses/ExpenseChart'
 import { ExpenseFiltersSidebar } from '@/components/expenses/ExpenseFiltersSidebar'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { useExpenses, Expense } from '@/hooks/useExpenses'
 import { useProjects } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
@@ -100,6 +101,7 @@ export default function GastosPage() {
   const [previewReceiptFile, setPreviewReceiptFile] = useState<File | null>(null)
   const [ivaFilter, setIvaFilter] = useState(false)
   const [showChart, setShowChart] = useState(true)
+  const [confirmDeleteExpenseState, setConfirmDeleteExpenseState] = useState<{ isOpen: boolean, expenseId: number | null }>({ isOpen: false, expenseId: null })
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -473,17 +475,22 @@ export default function GastosPage() {
     }
   }
 
-  const handleCancelExpense = async (expenseId: number) => {
-    if (confirm('¿Estás seguro de que quieres anular este gasto?')) {
-      try {
-        await cancelExpense(expenseId)
-        toast.success('Gasto anulado exitosamente')
-        // Actualizar gráficos
-        setRefreshKey((k) => k + 1)
-      } catch (error) {
-        console.error('Error cancelling expense:', error)
-        toast.error('Error al anular el gasto')
-      }
+  const handleCancelExpense = (expenseId: number) => {
+    setConfirmDeleteExpenseState({ isOpen: true, expenseId })
+  }
+
+  const executeCancelExpense = async () => {
+    if (!confirmDeleteExpenseState.expenseId) return
+
+    try {
+      await cancelExpense(confirmDeleteExpenseState.expenseId)
+      toast.success('Gasto anulado exitosamente')
+      setConfirmDeleteExpenseState({ isOpen: false, expenseId: null })
+      // Actualizar gráficos
+      setRefreshKey((k) => k + 1)
+    } catch (error) {
+      console.error('Error cancelling expense:', error)
+      toast.error('Error al anular el gasto')
     }
   }
 
@@ -1066,7 +1073,7 @@ export default function GastosPage() {
                           className="bg-red-600 hover:bg-red-700 text-white p-2"
                           title="Anular"
                         >
-                          <X className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
                     </div>
@@ -1130,6 +1137,17 @@ export default function GastosPage() {
         ivaFilter={ivaFilter}
         onIvaChange={setIvaFilter}
         projects={projects}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmDeleteExpenseState.isOpen}
+        onClose={() => setConfirmDeleteExpenseState({ isOpen: false, expenseId: null })}
+        onConfirm={executeCancelExpense}
+        title="Anular Gasto"
+        message="¿Estás seguro de que quieres anular este gasto?"
+        confirmText="Anular"
+        type="danger"
       />
     </div>
   )

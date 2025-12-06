@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/Card'
 import { Building2, TrendingUp, Layers, Home } from 'lucide-react'
+import Link from 'next/link'
 
 interface DashboardStatsProps {
   totalProjects: number
@@ -44,17 +45,19 @@ export function DashboardStats({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-      <Card className="h-full bg-slate-700/30 border-2 border-slate-600">
-        <CardContent className="p-6 h-full flex items-center">
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-sm font-medium text-slate-300">Proyectos Activos</p>
-              <p className="text-2xl font-bold text-slate-100">{activeProjects}</p>
+      <Link href="/proyectos" className="block h-full group">
+        <Card className="h-full bg-slate-700/30 border-2 border-slate-600 group-hover:border-blue-500/50 group-hover:bg-slate-700/50 transition-all cursor-pointer">
+          <CardContent className="p-6 h-full flex items-center">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <p className="text-sm font-medium text-slate-300 group-hover:text-blue-300 transition-colors">Proyectos Activos</p>
+                <p className="text-2xl font-bold text-slate-100">{activeProjects}</p>
+              </div>
+              <Building2 className="w-10 h-10 text-blue-400 group-hover:scale-110 transition-transform" />
             </div>
-            <Building2 className="w-10 h-10 text-blue-400" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       <Card className="h-full bg-slate-700/30 border-2 border-slate-600">
         <CardContent className="p-6 h-full flex items-center">
@@ -68,29 +71,33 @@ export function DashboardStats({
         </CardContent>
       </Card>
 
-      <Card className="h-full bg-slate-700/30 border-2 border-slate-600">
-        <CardContent className="p-6 h-full flex items-center">
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-sm font-medium text-slate-300">Total Pisos</p>
-              <p className="text-2xl font-bold text-slate-100">{totalFloors}</p>
+      <Link href="/pisos" className="block h-full group">
+        <Card className="h-full bg-slate-700/30 border-2 border-slate-600 group-hover:border-orange-500/50 group-hover:bg-slate-700/50 transition-all cursor-pointer">
+          <CardContent className="p-6 h-full flex items-center">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <p className="text-sm font-medium text-slate-300 group-hover:text-orange-300 transition-colors">Total Pisos</p>
+                <p className="text-2xl font-bold text-slate-100">{totalFloors}</p>
+              </div>
+              <Layers className="w-10 h-10 text-orange-400 group-hover:scale-110 transition-transform" />
             </div>
-            <Layers className="w-10 h-10 text-orange-400" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
-      <Card className="h-full bg-slate-700/30 border-2 border-slate-600">
-        <CardContent className="p-6 h-full flex items-center">
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-sm font-medium text-slate-300">Total Departamentos</p>
-              <p className="text-2xl font-bold text-slate-100">{totalApartments}</p>
+      <Link href="/apartamentos" className="block h-full group">
+        <Card className="h-full bg-slate-700/30 border-2 border-slate-600 group-hover:border-purple-500/50 group-hover:bg-slate-700/50 transition-all cursor-pointer">
+          <CardContent className="p-6 h-full flex items-center">
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <p className="text-sm font-medium text-slate-300 group-hover:text-purple-300 transition-colors">Total Departamentos</p>
+                <p className="text-2xl font-bold text-slate-100">{totalApartments}</p>
+              </div>
+              <Home className="w-10 h-10 text-purple-400 group-hover:scale-110 transition-transform" />
             </div>
-            <Home className="w-10 h-10 text-purple-400" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       <Card className="h-full bg-slate-700/30 border-2 border-slate-600">
         <CardContent className="p-6 h-full flex items-center">

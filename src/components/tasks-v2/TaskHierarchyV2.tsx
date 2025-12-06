@@ -136,11 +136,11 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
     tasks.forEach(task => {
       // Validar que la tarea tenga los datos necesarios
       if (!task.project_id || !task.tower_id || !task.floor_id || !task.apartment_id) {
-        console.warn('⚠️ Tarea sin IDs completos:', { 
-          taskId: task.id, 
+        console.warn('⚠️ Tarea sin IDs completos:', {
+          taskId: task.id,
           taskName: task.task_name,
           project_id: task.project_id,
-          tower_id: task.tower_id, 
+          tower_id: task.tower_id,
           floor_id: task.floor_id,
           apartment_id: task.apartment_id
         })
@@ -282,30 +282,30 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
         const projectData = hierarchy[projectId]
         const project = projectData.project
         const isProjectExpanded = expandedProjects.has(projectId)
-        
+
         // Calcular total de tareas del proyecto
-        const totalProjectTasks = Object.values(projectData.towers).reduce((sum, towerData) => 
-          sum + Object.values(towerData.floors).reduce((floorSum, floorData) => 
+        const totalProjectTasks = Object.values(projectData.towers).reduce((sum, towerData) =>
+          sum + Object.values(towerData.floors).reduce((floorSum, floorData) =>
             floorSum + Object.values(floorData.apartments).reduce((aptSum, apt) => aptSum + apt.tasks.length, 0)
+            , 0)
           , 0)
-        , 0)
-        
+
         // Calcular tareas completadas del proyecto
-        const completedProjectTasks = Object.values(projectData.towers).reduce((sum, towerData) => 
-          sum + Object.values(towerData.floors).reduce((floorSum, floorData) => 
-            floorSum + Object.values(floorData.apartments).reduce((aptSum, apt) => 
+        const completedProjectTasks = Object.values(projectData.towers).reduce((sum, towerData) =>
+          sum + Object.values(towerData.floors).reduce((floorSum, floorData) =>
+            floorSum + Object.values(floorData.apartments).reduce((aptSum, apt) =>
               aptSum + apt.tasks.filter(t => t.status === 'completed').length, 0)
+            , 0)
           , 0)
-        , 0)
-        
-        const projectProgress = totalProjectTasks > 0 
+
+        const projectProgress = totalProjectTasks > 0
           ? Math.round((completedProjectTasks / totalProjectTasks) * 100)
           : 0
 
         return (
           <div key={projectId} className={`space-y-4 ${projectIndex > 0 ? 'mt-8 pt-6 border-t-2 border-slate-600' : ''}`}>
             {/* Proyecto Header */}
-            <div 
+            <div
               className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
               onClick={() => toggleProject(projectId)}
             >
@@ -355,24 +355,24 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
                   const towerData = projectData.towers[towerId]
                   const tower = towerData.tower
                   const isTowerExpanded = expandedTowers.has(towerId)
-                  
-                  const totalTasks = Object.values(towerData.floors).reduce((sum, floorData) => 
+
+                  const totalTasks = Object.values(towerData.floors).reduce((sum, floorData) =>
                     sum + Object.values(floorData.apartments).reduce((aptSum, apt) => aptSum + apt.tasks.length, 0)
-                  , 0)
-                  
-                  const completedTasks = Object.values(towerData.floors).reduce((sum, floorData) => 
-                    sum + Object.values(floorData.apartments).reduce((aptSum, apt) => 
+                    , 0)
+
+                  const completedTasks = Object.values(towerData.floors).reduce((sum, floorData) =>
+                    sum + Object.values(floorData.apartments).reduce((aptSum, apt) =>
                       aptSum + apt.tasks.filter(t => t.status === 'completed').length, 0)
-                  , 0)
-                  
-                  const towerProgress = totalTasks > 0 
+                    , 0)
+
+                  const towerProgress = totalTasks > 0
                     ? Math.round((completedTasks / totalTasks) * 100)
                     : 0
 
                   return (
                     <div key={towerId} className="space-y-3">
                       {/* Torre Header */}
-                      <div 
+                      <div
                         className="bg-slate-700/40 rounded-lg border border-slate-600 px-4 py-2 cursor-pointer hover:bg-slate-700/60 transition-colors"
                         onClick={() => toggleTower(towerId)}
                       >
@@ -413,19 +413,19 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
                           }).map(floorId => {
                             const floorData = towerData.floors[floorId]
                             const isFloorExpanded = expandedFloors.has(floorId)
-                            
+
                             const floorTaskCount = Object.values(floorData.apartments).reduce((sum, apt) => sum + apt.tasks.length, 0)
-                            const floorCompletedTasks = Object.values(floorData.apartments).reduce((sum, apt) => 
+                            const floorCompletedTasks = Object.values(floorData.apartments).reduce((sum, apt) =>
                               sum + apt.tasks.filter(t => t.status === 'completed').length, 0)
-                            
-                            const floorProgress = floorTaskCount > 0 
+
+                            const floorProgress = floorTaskCount > 0
                               ? Math.round((floorCompletedTasks / floorTaskCount) * 100)
                               : 0
 
                             return (
                               <div key={floorId} className="space-y-3">
                                 {/* Piso Header */}
-                                <div 
+                                <div
                                   className="bg-slate-700/30 rounded-lg border border-slate-600 px-3 py-2 cursor-pointer hover:bg-slate-700/50 transition-colors"
                                   onClick={() => toggleFloor(floorId)}
                                 >
@@ -467,7 +467,7 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
                                       // Ordenar por el número original del departamento (extraer número del string)
                                       const aptA = floorData.apartments[a]
                                       const aptB = floorData.apartments[b]
-                                      
+
                                       const extractNumber = (str: string): number => {
                                         if (!str) return 0
                                         const numbers = str.match(/\d+/g)
@@ -475,16 +475,16 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate }: TaskHierarchyV2
                                         // Usar el último número encontrado
                                         return parseInt(numbers[numbers.length - 1], 10) || 0
                                       }
-                                      
+
                                       const numA = extractNumber(aptA.originalNumber || '')
                                       const numB = extractNumber(aptB.originalNumber || '')
                                       return numA - numB
                                     }).map(apartmentId => {
                                       const apartment = floorData.apartments[apartmentId]
                                       const isApartmentExpanded = expandedApartments.has(apartmentId)
-                                      
+
                                       const completedApartmentTasks = apartment.tasks.filter(t => t.status === 'completed').length
-                                      const apartmentProgress = apartment.tasks.length > 0 
+                                      const apartmentProgress = apartment.tasks.length > 0
                                         ? Math.round((completedApartmentTasks / apartment.tasks.length) * 100)
                                         : 0
 

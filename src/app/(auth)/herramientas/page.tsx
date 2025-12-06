@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth'
 import toast from 'react-hot-toast'
 import { ToolFiltersSidebar } from '@/components/tools/ToolFiltersSidebar'
 import { LoanHistoryFiltersSidebar } from '@/components/tools/LoanHistoryFiltersSidebar'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 
 export default function HerramientasPage() {
   const [activeTab, setActiveTab] = useState<'tools' | 'history'>('tools')
@@ -24,6 +25,7 @@ export default function HerramientasPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'disponible' | 'prestada'>('all')
   const [activeFilter, setActiveFilter] = useState('active')
+  const [confirmDeleteToolState, setConfirmDeleteToolState] = useState<{ isOpen: boolean, toolId: number | null }>({ isOpen: false, toolId: null })
 
   // Sidebar filters
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
@@ -84,14 +86,19 @@ export default function HerramientasPage() {
     }
   }
 
-  const handleDeleteTool = async (toolId: number) => {
-    if (confirm('¿Estás seguro de que quieres deshabilitar esta herramienta?')) {
-      try {
-        await deleteTool(toolId)
-        toast.success('Herramienta deshabilitada exitosamente')
-      } catch (error) {
-        toast.error('Error al deshabilitar la herramienta')
-      }
+  const handleDeleteTool = (toolId: number) => {
+    setConfirmDeleteToolState({ isOpen: true, toolId })
+  }
+
+  const executeDeleteTool = async () => {
+    if (!confirmDeleteToolState.toolId) return
+
+    try {
+      await deleteTool(confirmDeleteToolState.toolId)
+      toast.success('Herramienta deshabilitada exitosamente')
+      setConfirmDeleteToolState({ isOpen: false, toolId: null })
+    } catch (error) {
+      toast.error('Error al deshabilitar la herramienta')
     }
   }
 
@@ -503,6 +510,17 @@ export default function HerramientasPage() {
           activeLoanId={selectedTool ? getActiveLoanId(selectedTool.id) : undefined}
         />
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmDeleteToolState.isOpen}
+        onClose={() => setConfirmDeleteToolState({ isOpen: false, toolId: null })}
+        onConfirm={executeDeleteTool}
+        title="Deshabilitar Herramienta"
+        message="¿Estás seguro de que quieres deshabilitar esta herramienta?"
+        confirmText="Deshabilitar"
+        type="danger"
+      />
     </div>
   )
 }

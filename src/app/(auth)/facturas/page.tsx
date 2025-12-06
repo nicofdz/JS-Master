@@ -9,7 +9,7 @@ import { InvoiceStats } from '@/components/invoices/InvoiceStats'
 import { InvoiceChart } from '@/components/invoices/InvoiceChart'
 import { InvoiceEditModal } from '@/components/invoices/InvoiceEditModal'
 import { InvoiceFiltersSidebar } from '@/components/invoices/InvoiceFiltersSidebar'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { Filter, X, XCircle } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
 import { useInvoices } from '@/hooks/useInvoices'
@@ -510,15 +510,15 @@ export default function FacturasPage() {
       />
 
       {/* Diálogo de Confirmación de Eliminación */}
-      <ConfirmDialog
+      {/* Modal de Confirmación de Eliminación */}
+      <ConfirmationModal
         isOpen={showDeleteConfirm}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
         title="Eliminar Factura"
         message="¿Estás seguro de que quieres eliminar esta factura? Esta acción no se puede deshacer."
         confirmText="Eliminar"
-        cancelText="Cancelar"
-        onConfirm={confirmDelete}
-        onCancel={cancelDelete}
-        variant="danger"
+        type="danger"
       />
     </div >
   )

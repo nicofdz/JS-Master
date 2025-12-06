@@ -15,6 +15,7 @@ import { ProjectWorkersModal } from '@/components/projects/ProjectWorkersModal'
 import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTemplatesModal'
 import { Plus, Search, Filter, Edit, Trash2, Eye, ChevronDown, ChevronRight, Building2, CheckCircle, Calendar, AlertCircle, FileText, Info, DollarSign, Users, UserCheck, FileSignature, Play, Layers, XCircle, Clock, RotateCcw } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { formatDate, getStatusColor, getStatusEmoji } from '@/lib/utils'
 import { PROJECT_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
@@ -42,7 +43,10 @@ export default function ProyectosPage() {
   const [selectedProjectForWorkers, setSelectedProjectForWorkers] = useState<any>(null)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [selectedProjectForTemplates, setSelectedProjectForTemplates] = useState<number | null>(null)
+
   const [showTrash, setShowTrash] = useState(false)
+  const [confirmDeleteProjectState, setConfirmDeleteProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
+  const [confirmRestoreProjectState, setConfirmRestoreProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
 
   // Recargar proyectos cuando cambia el modo papelera
   React.useEffect(() => {
@@ -66,27 +70,33 @@ export default function ProyectosPage() {
     return matchesSearch && matchesCardFilter && matchesTrash
   })
 
-  const handleDelete = async (projectId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este proyecto? Se moverá a la papelera.')) {
-      return
-    }
+  const handleDelete = (projectId: number) => {
+    setConfirmDeleteProjectState({ isOpen: true, projectId })
+  }
+
+  const executeDeleteProject = async () => {
+    if (!confirmDeleteProjectState.projectId) return
 
     try {
-      await deleteProject(projectId)
+      await deleteProject(confirmDeleteProjectState.projectId)
       toast.success('Proyecto movido a la papelera')
+      setConfirmDeleteProjectState({ isOpen: false, projectId: null })
     } catch (error) {
       toast.error('Error al eliminar el proyecto')
     }
   }
 
-  const handleRestore = async (projectId: number) => {
-    if (!confirm('¿Estás seguro de que quieres restaurar este proyecto?')) {
-      return
-    }
+  const handleRestore = (projectId: number) => {
+    setConfirmRestoreProjectState({ isOpen: true, projectId })
+  }
+
+  const executeRestoreProject = async () => {
+    if (!confirmRestoreProjectState.projectId) return
 
     try {
-      await restoreProject(projectId)
+      await restoreProject(confirmRestoreProjectState.projectId)
       toast.success('Proyecto restaurado exitosamente')
+      setConfirmRestoreProjectState({ isOpen: false, projectId: null })
     } catch (error) {
       toast.error('Error al restaurar el proyecto')
     }
@@ -974,6 +984,27 @@ export default function ProyectosPage() {
           />
         )
       }
+
+      {/* Modales de Confirmación */}
+      <ConfirmationModal
+        isOpen={confirmDeleteProjectState.isOpen}
+        onClose={() => setConfirmDeleteProjectState({ isOpen: false, projectId: null })}
+        onConfirm={executeDeleteProject}
+        title="Eliminar Proyecto"
+        message="¿Estás seguro de que quieres eliminar este proyecto? Se moverá a la papelera."
+        confirmText="Eliminar"
+        type="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={confirmRestoreProjectState.isOpen}
+        onClose={() => setConfirmRestoreProjectState({ isOpen: false, projectId: null })}
+        onConfirm={executeRestoreProject}
+        title="Restaurar Proyecto"
+        message="¿Estás seguro de que quieres restaurar este proyecto?"
+        confirmText="Restaurar"
+        type="info"
+      />
 
     </div >
   )

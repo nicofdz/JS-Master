@@ -7,10 +7,10 @@ import toast from 'react-hot-toast'
 // Helper function to calculate days delayed
 function calculateDaysDelayed(task: any): number {
   if (!task.is_delayed) return 0
-  
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  
+
   // Si está en progreso y tiene end_date, calcular desde end_date
   if (task.status === 'in_progress' && task.end_date) {
     const endDate = new Date(task.end_date)
@@ -18,7 +18,7 @@ function calculateDaysDelayed(task: any): number {
     const diff = Math.floor((today.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
     return Math.max(0, diff)
   }
-  
+
   // Si está completada y tiene end_date, calcular desde end_date usando completed_at
   if (task.status === 'completed' && task.end_date && task.completed_at) {
     const endDate = new Date(task.end_date)
@@ -28,7 +28,7 @@ function calculateDaysDelayed(task: any): number {
     const diff = Math.floor((completedDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24))
     return Math.max(0, diff)
   }
-  
+
   // Si no está iniciada y tiene start_date, calcular desde start_date
   if (task.start_date) {
     const startDate = new Date(task.start_date)
@@ -36,7 +36,7 @@ function calculateDaysDelayed(task: any): number {
     const diff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     return Math.max(0, diff)
   }
-  
+
   return 0
 }
 
@@ -127,10 +127,10 @@ export function useTasksV2() {
         if (task.workers) {
           try {
             // If workers is a string, parse it
-            const parsedWorkers = typeof task.workers === 'string' 
-              ? JSON.parse(task.workers) 
+            const parsedWorkers = typeof task.workers === 'string'
+              ? JSON.parse(task.workers)
               : task.workers
-            
+
             // Ensure workers is an array and has valid data
             if (Array.isArray(parsedWorkers)) {
               workers = parsedWorkers.map((w: any) => ({
@@ -160,12 +160,12 @@ export function useTasksV2() {
           id: task.task_id || task.id, // Mapear task_id → id
           workers: Array.isArray(workers) ? workers : []
         }
-        
+
         // Calcular days_delayed si la tarea está retrasada
         if (processedTask.is_delayed) {
           processedTask.days_delayed = calculateDaysDelayed(processedTask)
         }
-        
+
         return processedTask
       })
 
@@ -529,7 +529,7 @@ export function useTasksV2() {
       }, [])
 
       // Sort by full_name in the frontend
-      return uniqueWorkers.sort((a, b) => 
+      return uniqueWorkers.sort((a, b) =>
         (a.full_name || '').localeCompare(b.full_name || '')
       )
     } catch (err: any) {

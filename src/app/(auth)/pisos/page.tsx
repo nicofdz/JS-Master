@@ -20,6 +20,7 @@ import { FLOOR_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
 import { FloorFiltersSidebar } from '@/components/floors/FloorFiltersSidebar'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 
 export default function PisosPage() {
   const { floors, setFloors, projects, loading, error, createFloor, updateFloor, deleteFloor, hardDeleteFloor, restoreFloor, refresh } = useFloors()
@@ -54,6 +55,11 @@ export default function PisosPage() {
   const [floorToHardDelete, setFloorToHardDelete] = useState<{ id: number; floorNumber: number } | null>(null)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
+
+  // Estados para modales de confirmación
+  const [confirmDeleteFloorState, setConfirmDeleteFloorState] = useState<{ isOpen: boolean; floorId: number | null }>({ isOpen: false, floorId: null })
+  const [confirmRestoreFloorState, setConfirmRestoreFloorState] = useState<{ isOpen: boolean; floorId: number | null }>({ isOpen: false, floorId: null })
+  const [confirmRestoreApartmentState, setConfirmRestoreApartmentState] = useState<{ isOpen: boolean; apartmentId: number | null; apartmentNumber: string }>({ isOpen: false, apartmentId: null, apartmentNumber: '' })
 
   // Recargar pisos cuando cambia el modo papelera
   useEffect(() => {
@@ -141,37 +147,51 @@ export default function PisosPage() {
   })
 
 
-  const handleDelete = async (floorId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este piso? Se moverá a la papelera.')) {
-      return
-    }
+  const handleDelete = (floorId: number) => {
+    setConfirmDeleteFloorState({ isOpen: true, floorId })
+  }
+
+  const executeDeleteFloor = async () => {
+    if (!confirmDeleteFloorState.floorId) return
 
     try {
-      await deleteFloor(floorId)
+      await deleteFloor(confirmDeleteFloorState.floorId)
       toast.success('Piso movido a la papelera')
+      setConfirmDeleteFloorState({ isOpen: false, floorId: null })
     } catch (error) {
       toast.error('Error al eliminar el piso')
     }
   }
 
-  const handleRestoreFloor = async (floorId: number) => {
-    if (!confirm('¿Estás seguro de que quieres restaurar este piso?')) {
-      return
-    }
+  const handleRestoreFloor = (floorId: number) => {
+    setConfirmRestoreFloorState({ isOpen: true, floorId })
+  }
+
+  const executeRestoreFloor = async () => {
+    if (!confirmRestoreFloorState.floorId) return
 
     try {
-      await restoreFloor(floorId)
+      await restoreFloor(confirmRestoreFloorState.floorId)
       toast.success('Piso restaurado exitosamente')
+      setConfirmRestoreFloorState({ isOpen: false, floorId: null })
     } catch (error) {
       toast.error('Error al restaurar el piso')
     }
   }
 
-  const handleRestoreApartment = async (apartmentId: number, apartmentNumber: string) => {
+  const handleRestoreApartment = (apartmentId: number, apartmentNumber: string) => {
+    setConfirmRestoreApartmentState({ isOpen: true, apartmentId, apartmentNumber })
+  }
+
+  const executeRestoreApartment = async () => {
+    const { apartmentId, apartmentNumber } = confirmRestoreApartmentState
+    if (!apartmentId) return
+
     try {
       await restoreApartment(apartmentId)
       toast.success(`Departamento ${apartmentNumber.replace('[ELIMINADO] ', '')} restaurado exitosamente`)
       refresh()
+      setConfirmRestoreApartmentState({ isOpen: false, apartmentId: null, apartmentNumber: '' })
     } catch (err: any) {
       console.error('Error completo al restaurar departamento:', err)
       const errorMessage = err?.message || 'Error desconocido al restaurar el departamento'
@@ -348,23 +368,7 @@ export default function PisosPage() {
   }, [expandedProjects, expandedTowers, expandedFloors, hasLoadedFromStorage])
 
 
-  const handleDeleteApartment = async (apartmentId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este apartamento?')) {
-      return
-    }
 
-    try {
-      await deleteApartment(apartmentId)
-      toast.success('Apartamento eliminado exitosamente')
-      // Refrescar la lista de pisos para actualizar el conteo
-      setTimeout(() => {
-        refresh()
-      }, 500)
-    } catch (error) {
-      console.error('Error al eliminar apartamento:', error)
-      toast.error('Error al eliminar apartamento')
-    }
-  }
 
   const handleBlockApartment = async (apartmentId: number, currentStatus: string) => {
     try {
@@ -1360,6 +1364,41 @@ export default function PisosPage() {
         )}
       </Modal>
 
-    </div>
+      {/* Modales de Confirmación Reutilizables */}
+
+      {/* Confirmación de Eliminar Piso */}
+      <ConfirmationModal
+        isOpen={confirmDeleteFloorState.isOpen}
+        onClose={() => setConfirmDeleteFloorState({ isOpen: false, floorId: null })}
+        onConfirm={executeDeleteFloor}
+        title="Eliminar Piso"
+        message="¿Estás seguro de que quieres eliminar este piso? Se moverá a la papelera."
+        confirmText="Eliminar"
+        type="danger"
+      />
+
+      {/* Confirmación de Restaurar Piso */}
+      <ConfirmationModal
+        isOpen={confirmRestoreFloorState.isOpen}
+        onClose={() => setConfirmRestoreFloorState({ isOpen: false, floorId: null })}
+        onConfirm={executeRestoreFloor}
+        title="Restaurar Piso"
+        message="¿Estás seguro de que quieres restaurar este piso?"
+        confirmText="Restaurar"
+        type="info"
+      />
+
+      {/* Confirmación de Restaurar Apartamento */}
+      <ConfirmationModal
+        isOpen={confirmRestoreApartmentState.isOpen}
+        onClose={() => setConfirmRestoreApartmentState({ isOpen: false, apartmentId: null, apartmentNumber: '' })}
+        onConfirm={executeRestoreApartment}
+        title="Restaurar Departamento"
+        message={`¿Estás seguro de que quieres restaurar el departamento ${confirmRestoreApartmentState.apartmentNumber.replace('[ELIMINADO] ', '')}?`}
+        confirmText="Restaurar"
+        type="info"
+      />
+
+    </div >
   )
 }

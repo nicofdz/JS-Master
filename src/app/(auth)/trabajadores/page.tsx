@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input'
 import { WorkerForm } from '@/components/workers/WorkerForm'
 import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { ContractFiltersSidebar } from '@/components/workers/ContractFiltersSidebar'
 import { formatDateToChilean } from '@/lib/contracts'
 import { supabase } from '@/lib/supabase'
@@ -70,6 +71,11 @@ export default function TrabajadoresPage() {
     fecha_inicio: '',
     fecha_termino: ''
   })
+
+  // Estados para modales de confirmación
+  const [confirmDeleteWorkerState, setConfirmDeleteWorkerState] = useState<{ isOpen: boolean, workerId: number | null }>({ isOpen: false, workerId: null })
+  const [confirmRestoreWorkerState, setConfirmRestoreWorkerState] = useState<{ isOpen: boolean, workerId: number | null }>({ isOpen: false, workerId: null })
+  const [confirmDeleteContractState, setConfirmDeleteContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
 
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
@@ -250,14 +256,19 @@ export default function TrabajadoresPage() {
     setShowCreateContractModal(true)
   }
 
-  const handleDeleteContract = async (contractId: number) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este contrato?')) {
-      try {
-        await deleteContract(contractId)
-        toast.success('Contrato eliminado correctamente')
-      } catch (error: any) {
-        toast.error(error.message || 'Error al eliminar contrato')
-      }
+  const handleDeleteContract = (contractId: number) => {
+    setConfirmDeleteContractState({ isOpen: true, contractId })
+  }
+
+  const executeDeleteContract = async () => {
+    if (!confirmDeleteContractState.contractId) return
+
+    try {
+      await deleteContract(confirmDeleteContractState.contractId)
+      toast.success('Contrato eliminado correctamente')
+      setConfirmDeleteContractState({ isOpen: false, contractId: null })
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar contrato')
     }
   }
 
@@ -689,15 +700,20 @@ export default function TrabajadoresPage() {
     setCurrentPage(1)
   }
 
-  const handleDelete = async (workerId: number) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este trabajador? Esta acción se puede revertir.')) {
-      try {
-        await deleteWorker(workerId)
-        toast.success('Trabajador eliminado correctamente')
-        refresh()
-      } catch (error) {
-        toast.error('Error al eliminar trabajador')
-      }
+  const handleDelete = (workerId: number) => {
+    setConfirmDeleteWorkerState({ isOpen: true, workerId })
+  }
+
+  const executeDeleteWorker = async () => {
+    if (!confirmDeleteWorkerState.workerId) return
+
+    try {
+      await deleteWorker(confirmDeleteWorkerState.workerId)
+      toast.success('Trabajador eliminado correctamente')
+      refresh()
+      setConfirmDeleteWorkerState({ isOpen: false, workerId: null })
+    } catch (error) {
+      toast.error('Error al eliminar trabajador')
     }
   }
 
@@ -768,15 +784,20 @@ export default function TrabajadoresPage() {
     }
   }
 
-  const handleRestore = async (workerId: number) => {
-    if (confirm('¿Estás seguro de que quieres restaurar este trabajador?')) {
-      try {
-        await restoreWorker(workerId)
-        toast.success('Trabajador restaurado correctamente')
-        refreshAll() // Refrescar para mostrar el trabajador restaurado
-      } catch (error) {
-        toast.error('Error al restaurar trabajador')
-      }
+  const handleRestore = (workerId: number) => {
+    setConfirmRestoreWorkerState({ isOpen: true, workerId })
+  }
+
+  const executeRestoreWorker = async () => {
+    if (!confirmRestoreWorkerState.workerId) return
+
+    try {
+      await restoreWorker(confirmRestoreWorkerState.workerId)
+      toast.success('Trabajador restaurado correctamente')
+      refreshAll() // Refrescar para mostrar el trabajador restaurado
+      setConfirmRestoreWorkerState({ isOpen: false, workerId: null })
+    } catch (error) {
+      toast.error('Error al restaurar trabajador')
     }
   }
 
@@ -2060,6 +2081,37 @@ export default function TrabajadoresPage() {
             </div>
           </Modal>
         )}
+        {/* Modal de creación de contrato */}
+        {/* Modales de Confirmación */}
+        <ConfirmationModal
+          isOpen={confirmDeleteWorkerState.isOpen}
+          onClose={() => setConfirmDeleteWorkerState({ isOpen: false, workerId: null })}
+          onConfirm={executeDeleteWorker}
+          title="Eliminar Trabajador"
+          message="¿Estás seguro de que quieres eliminar este trabajador? Esta acción se puede revertir."
+          confirmText="Eliminar"
+          type="danger"
+        />
+
+        <ConfirmationModal
+          isOpen={confirmRestoreWorkerState.isOpen}
+          onClose={() => setConfirmRestoreWorkerState({ isOpen: false, workerId: null })}
+          onConfirm={executeRestoreWorker}
+          title="Restaurar Trabajador"
+          message="¿Estás seguro de que quieres restaurar este trabajador?"
+          confirmText="Restaurar"
+          type="info"
+        />
+
+        <ConfirmationModal
+          isOpen={confirmDeleteContractState.isOpen}
+          onClose={() => setConfirmDeleteContractState({ isOpen: false, contractId: null })}
+          onConfirm={executeDeleteContract}
+          title="Eliminar Contrato"
+          message="¿Estás seguro de que quieres eliminar este contrato?"
+          confirmText="Eliminar"
+          type="danger"
+        />
       </div>
     </div>
   )

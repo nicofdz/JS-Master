@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ChevronDown, ChevronRight, Building2, Plus, Edit, Trash2, LayoutGrid, ClipboardList, RotateCcw } from 'lucide-react'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { useTowers, useFloors, useApartments } from '@/hooks'
 import { AddTowerModal } from './AddTowerModal'
 import { AddFloorModal } from './AddFloorModal'
@@ -49,6 +50,9 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
   const [showHardDeleteTowerConfirm, setShowHardDeleteTowerConfirm] = useState(false)
   const [towerToHardDelete, setTowerToHardDelete] = useState<{ id: number; name: string } | null>(null)
   const [showTrash, setShowTrash] = useState(false)
+  const [confirmDeleteTowerState, setConfirmDeleteTowerState] = useState<{ isOpen: boolean, towerId: number | null }>({ isOpen: false, towerId: null })
+  const [confirmRestoreTowerState, setConfirmRestoreTowerState] = useState<{ isOpen: boolean, towerId: number | null, towerName: string }>({ isOpen: false, towerId: null, towerName: '' })
+  const [confirmDeleteFloorState, setConfirmDeleteFloorState] = useState<{ isOpen: boolean, floorId: number | null }>({ isOpen: false, floorId: null })
 
   // Recargar torres cuando cambia el modo papelera
   // Recargar datos cuando cambia el modo papelera
@@ -186,33 +190,39 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     setShowEditApartmentModal(true)
   }
 
-  const handleDeleteTower = async (towerId: number) => {
-    if (!confirm('¿Está seguro de que desea eliminar esta torre? Todos sus pisos y departamentos también serán eliminados.')) {
-      return
-    }
+  const handleDeleteTower = (towerId: number) => {
+    setConfirmDeleteTowerState({ isOpen: true, towerId })
+  }
+
+  const executeDeleteTower = async () => {
+    if (!confirmDeleteTowerState.towerId) return
 
     try {
-      await softDeleteTower(towerId)
+      await softDeleteTower(confirmDeleteTowerState.towerId)
       toast.success('Torre eliminada exitosamente')
       refreshTowers()
       refreshFloors()
       refreshApartments()
+      setConfirmDeleteTowerState({ isOpen: false, towerId: null })
     } catch (err) {
       toast.error('Error al eliminar la torre')
       console.error(err)
     }
   }
 
-  const handleDeleteFloor = async (floorId: number) => {
-    if (!confirm('¿Está seguro de que desea eliminar este piso? Todos sus departamentos también serán eliminados.')) {
-      return
-    }
+  const handleDeleteFloor = (floorId: number) => {
+    setConfirmDeleteFloorState({ isOpen: true, floorId })
+  }
+
+  const executeDeleteFloor = async () => {
+    if (!confirmDeleteFloorState.floorId) return
 
     try {
-      await deleteFloor(floorId)
+      await deleteFloor(confirmDeleteFloorState.floorId)
       toast.success('Piso eliminado exitosamente')
       refreshFloors()
       refreshApartments()
+      setConfirmDeleteFloorState({ isOpen: false, floorId: null })
     } catch (err) {
       toast.error('Error al eliminar el piso')
       console.error(err)
@@ -271,15 +281,18 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     setShowHardDeleteApartmentConfirm(true)
   }
 
-  const handleRestoreTower = async (towerId: number, towerName: string) => {
-    if (!confirm(`¿Estás seguro de que quieres restaurar la ${towerName}?`)) {
-      return
-    }
+  const handleRestoreTower = (towerId: number, towerName: string) => {
+    setConfirmRestoreTowerState({ isOpen: true, towerId, towerName })
+  }
+
+  const executeRestoreTower = async () => {
+    if (!confirmRestoreTowerState.towerId) return
 
     try {
-      await restoreTower(towerId)
+      await restoreTower(confirmRestoreTowerState.towerId)
       toast.success('Torre restaurada exitosamente')
       refreshTowers(showTrash)
+      setConfirmRestoreTowerState({ isOpen: false, towerId: null, towerName: '' })
     } catch (err) {
       toast.error('Error al restaurar la torre')
       console.error(err)
@@ -978,6 +991,40 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
           </div>
         </div>
       </Modal>
+      {/* Modales de Confirmación Reutilizables */}
+
+      {/* Confirmación de Eliminar Torre */}
+      <ConfirmationModal
+        isOpen={confirmDeleteTowerState.isOpen}
+        onClose={() => setConfirmDeleteTowerState({ isOpen: false, towerId: null })}
+        onConfirm={executeDeleteTower}
+        title="Eliminar Torre"
+        message="¿Está seguro de que desea eliminar esta torre? Todos sus pisos y departamentos también serán eliminados."
+        confirmText="Eliminar"
+        type="danger"
+      />
+
+      {/* Confirmación de Restaurar Torre */}
+      <ConfirmationModal
+        isOpen={confirmRestoreTowerState.isOpen}
+        onClose={() => setConfirmRestoreTowerState({ isOpen: false, towerId: null, towerName: '' })}
+        onConfirm={executeRestoreTower}
+        title="Restaurar Torre"
+        message={`¿Estás seguro de que quieres restaurar la ${confirmRestoreTowerState.towerName}?`}
+        confirmText="Restaurar"
+        type="info"
+      />
+
+      {/* Confirmación de Eliminar Piso */}
+      <ConfirmationModal
+        isOpen={confirmDeleteFloorState.isOpen}
+        onClose={() => setConfirmDeleteFloorState({ isOpen: false, floorId: null })}
+        onConfirm={executeDeleteFloor}
+        title="Eliminar Piso"
+        message="¿Está seguro de que desea eliminar este piso? Todos sus departamentos también serán eliminados."
+        confirmText="Eliminar"
+        type="danger"
+      />
     </>
   )
 }

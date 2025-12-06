@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { ApartmentFormModalV2 } from '@/components/apartments/ApartmentFormModalV2'
 import { ApartmentTasksModal } from '@/components/projects/ApartmentTasksModal'
+import { ApartmentDetailsModal } from '@/components/apartments/ApartmentDetailsModal' // Added import
 import { ApartmentTemplatesModal } from '@/components/apartments/ApartmentTemplatesModal'
 import { Plus, Search, Filter, Edit, Trash2, Home, Building2, Clock, CheckCircle, ChevronDown, ChevronRight, Play, AlertCircle, Users, Building, Lock, Unlock, Layers, Eye, Circle, CheckCircle2, AlertTriangle, XCircle, FileText, RotateCcw } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
@@ -17,6 +18,7 @@ import { formatDate, getStatusColor, getStatusEmoji, getStatusText, formatApartm
 import { APARTMENT_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
 import { ApartmentFiltersSidebar } from '@/components/apartments/ApartmentFiltersSidebar'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 
 // Función para obtener icono de estado en lugar de emoji
 const getStatusIcon = (status: string | null | undefined) => {
@@ -54,6 +56,7 @@ export default function ApartamentosPage() {
   const [selectedFloorForApartment, setSelectedFloorForApartment] = useState<{ floorId: number; towerId: number; projectId: number } | null>(null)
   const [expandedApartments, setExpandedApartments] = useState<Set<number>>(new Set())
   const [selectedApartmentForTasks, setSelectedApartmentForTasks] = useState<any>(null)
+  const [selectedApartmentForDetails, setSelectedApartmentForDetails] = useState<any>(null) // Added state
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set())
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(new Set())
   const [expandedFloors, setExpandedFloors] = useState<Set<number>>(new Set())
@@ -65,6 +68,12 @@ export default function ApartamentosPage() {
   const [showHardDeleteApartmentConfirm, setShowHardDeleteApartmentConfirm] = useState(false)
   const [apartmentToHardDelete, setApartmentToHardDelete] = useState<{ id: number; number: string } | null>(null)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+
+  // Estados para modales de confirmación
+  const [confirmDeleteState, setConfirmDeleteState] = useState<{ isOpen: boolean; apartmentId: number | null }>({ isOpen: false, apartmentId: null })
+  const [confirmBlockState, setConfirmBlockState] = useState<{ isOpen: boolean; apartmentId: number | null; action: 'block' | 'unblock'; currentStatus: string | null }>({ isOpen: false, apartmentId: null, action: 'block', currentStatus: null })
+  const [confirmRestoreApartmentState, setConfirmRestoreApartmentState] = useState<{ isOpen: boolean; apartmentId: number | null }>({ isOpen: false, apartmentId: null })
+  const [confirmRestoreTowerState, setConfirmRestoreTowerState] = useState<{ isOpen: boolean; towerId: number | null; towerName: string }>({ isOpen: false, towerId: null, towerName: '' })
 
   // Resetear filtros dependientes
   useEffect(() => {
@@ -283,80 +292,84 @@ export default function ApartamentosPage() {
     })
   }
 
-  const handleDelete = async (apartmentId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este apartamento? Esta acción no se puede deshacer.')) {
-      return
-    }
+  const handleDelete = (apartmentId: number) => {
+    setConfirmDeleteState({ isOpen: true, apartmentId })
+  }
+
+  const executeDelete = async () => {
+    if (!confirmDeleteState.apartmentId) return
     try {
-      await deleteApartment(apartmentId)
+      await deleteApartment(confirmDeleteState.apartmentId)
       toast.success('Apartamento eliminado exitosamente')
+      setConfirmDeleteState({ isOpen: false, apartmentId: null })
     } catch (err: any) {
       toast.error(`Error al eliminar apartamento: ${err.message || 'Error desconocido'}`)
     }
   }
 
-  const handleBlockApartment = async (apartmentId: number, currentStatus: string) => {
+  const handleBlockApartment = (apartmentId: number, currentStatus: string) => {
+    const action = currentStatus === 'blocked' ? 'unblock' : 'block'
+    setConfirmBlockState({ isOpen: true, apartmentId, action, currentStatus })
+  }
+
+  const executeBlock = async () => {
+    const { apartmentId, currentStatus, action } = confirmBlockState
+    if (!apartmentId || !currentStatus) return
+
     let updateData: any = {}
-    let action: string
 
-    if (currentStatus === 'blocked') {
-      // Desbloquear: restaurar el estado anterior
+    if (action === 'unblock') {
       const apartment = apartments.find(a => a.id === apartmentId)
-      console.log('ðŸ”“ Desbloqueando apartamento:', apartment)
-      console.log('ðŸ“‹ previous_status en memoria:', (apartment as any)?.previous_status)
-
       const previousStatus = (apartment as any)?.previous_status || 'pending'
-      console.log('âœ… Estado a restaurar:', previousStatus)
 
       updateData = {
         status: previousStatus,
         previous_status: null
       }
-      action = 'desbloquear'
     } else {
-      // Bloquear: guardar el estado actual antes de bloquear
-      console.log('ðŸ”’ Bloqueando apartamento - Estado actual:', currentStatus)
       updateData = {
         status: 'blocked',
         previous_status: currentStatus
       }
-      action = 'bloquear'
-    }
-
-    if (!confirm(`¿Estás seguro de que quieres ${action} este apartamento?`)) {
-      return
     }
 
     try {
       await updateApartment(apartmentId, updateData)
-      toast.success(`Apartamento ${action}do exitosamente`)
+      toast.success(`Apartamento ${action === 'block' ? 'bloqueado' : 'desbloqueado'} exitosamente`)
+      setConfirmBlockState({ isOpen: false, apartmentId: null, action: 'block', currentStatus: null })
     } catch (err: any) {
-      toast.error(`Error al ${action} apartamento: ${err.message || 'Error desconocido'}`)
+      toast.error(`Error al ${action === 'block' ? 'bloquear' : 'desbloquear'} apartamento: ${err.message || 'Error desconocido'}`)
     }
   }
 
-  const handleRestoreTower = async (towerId: number, towerName: string) => {
-    if (!confirm(`¿Estás seguro de que quieres restaurar la ${towerName}?`)) {
-      return
-    }
+  const handleRestoreTower = (towerId: number, towerName: string) => {
+    setConfirmRestoreTowerState({ isOpen: true, towerId, towerName })
+  }
+
+  const executeRestoreTower = async () => {
+    if (!confirmRestoreTowerState.towerId) return
     try {
-      await restoreTower(towerId)
+      await restoreTower(confirmRestoreTowerState.towerId)
       toast.success('Torre restaurada exitosamente')
       refresh(showTrash)
+      setConfirmRestoreTowerState({ isOpen: false, towerId: null, towerName: '' })
     } catch (error) {
       console.error('Error al restaurar torre:', error)
       toast.error('Error al restaurar torre')
     }
   }
 
-  const handleRestoreApartment = async (apartmentId: number) => {
-    if (!confirm('¿Estás seguro de que quieres restaurar este apartamento?')) {
-      return
-    }
+  const handleRestoreApartment = (apartmentId: number) => {
+    setConfirmRestoreApartmentState({ isOpen: true, apartmentId })
+  }
+
+  const executeRestoreApartment = async () => {
+    if (!confirmRestoreApartmentState.apartmentId) return
     try {
-      await restoreApartment(apartmentId)
+      await restoreApartment(confirmRestoreApartmentState.apartmentId)
       toast.success('Apartamento restaurado exitosamente')
       refresh(showTrash)
+      setConfirmRestoreApartmentState({ isOpen: false, apartmentId: null })
     } catch (error) {
       console.error('Error al restaurar apartamento:', error)
       toast.error('Error al restaurar apartamento')
@@ -1146,7 +1159,7 @@ export default function ApartamentosPage() {
                                                                 size="sm"
                                                                 onClick={(e) => {
                                                                   e.stopPropagation()
-                                                                  setSelectedApartmentForTasks(apartment)
+                                                                  setSelectedApartmentForDetails(apartment)
                                                                 }}
                                                                 className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
                                                                 title="Ver detalles del departamento"
@@ -1208,6 +1221,24 @@ export default function ApartamentosPage() {
         />
       )}
 
+      {/* Modal de Detalles del Apartamento */}
+      {selectedApartmentForDetails && (
+        <ApartmentDetailsModal
+          isOpen={!!selectedApartmentForDetails}
+          onClose={() => setSelectedApartmentForDetails(null)}
+          apartment={selectedApartmentForDetails}
+          onViewTasks={() => {
+            const apt = selectedApartmentForDetails
+            setSelectedApartmentForDetails(null)
+            // Pequeño timeout para que la transición sea suave
+            setTimeout(() => {
+              setSelectedApartmentForTasks(apt)
+            }, 100)
+          }}
+          workers={getWorkersForApartment(selectedApartmentForDetails.id)}
+        />
+      )}
+
       {/* Modal de Plantillas de Departamentos */}
       <ApartmentTemplatesModal
         isOpen={showTemplatesModal}
@@ -1264,6 +1295,54 @@ export default function ApartamentosPage() {
           </div>
         )}
       </Modal>
+
+      {/* Modales de Confirmación Reutilizables */}
+
+      {/* Confirmación de Eliminar */}
+      <ConfirmationModal
+        isOpen={confirmDeleteState.isOpen}
+        onClose={() => setConfirmDeleteState({ isOpen: false, apartmentId: null })}
+        onConfirm={executeDelete}
+        title="Eliminar Apartamento"
+        message="¿Estás seguro de que quieres eliminar este apartamento? Esta acción lo moverá a la papelera."
+        confirmText="Eliminar"
+        type="danger"
+      />
+
+      {/* Confirmación de Bloquear/Desbloquear */}
+      <ConfirmationModal
+        isOpen={confirmBlockState.isOpen}
+        onClose={() => setConfirmBlockState({ isOpen: false, apartmentId: null, action: 'block', currentStatus: null })}
+        onConfirm={executeBlock}
+        title={confirmBlockState.action === 'block' ? "Bloquear Apartamento" : "Desbloquear Apartamento"}
+        message={confirmBlockState.action === 'block'
+          ? "¿Estás seguro de que quieres bloquear este apartamento?"
+          : "¿Estás seguro de que quieres desbloquear este apartamento?"}
+        confirmText={confirmBlockState.action === 'block' ? "Bloquear" : "Desbloquear"}
+        type={confirmBlockState.action === 'block' ? "warning" : "info"}
+      />
+
+      {/* Confirmación de Restaurar Torre */}
+      <ConfirmationModal
+        isOpen={confirmRestoreTowerState.isOpen}
+        onClose={() => setConfirmRestoreTowerState({ isOpen: false, towerId: null, towerName: '' })}
+        onConfirm={executeRestoreTower}
+        title="Restaurar Torre"
+        message={`¿Estás seguro de que quieres restaurar la ${confirmRestoreTowerState.towerName}?`}
+        confirmText="Restaurar"
+        type="info"
+      />
+
+      {/* Confirmación de Restaurar Apartamento */}
+      <ConfirmationModal
+        isOpen={confirmRestoreApartmentState.isOpen}
+        onClose={() => setConfirmRestoreApartmentState({ isOpen: false, apartmentId: null })}
+        onConfirm={executeRestoreApartment}
+        title="Restaurar Apartamento"
+        message="¿Estás seguro de que quieres restaurar este apartamento?"
+        confirmText="Restaurar"
+        type="info"
+      />
     </div>
   )
 }
