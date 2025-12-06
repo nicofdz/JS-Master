@@ -18,8 +18,8 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function TrabajadoresPage() {
-  const { workers, loading, error, createWorker, updateWorker, deleteWorker, restoreWorker, toggleWorkerStatus, refresh, refreshAll } = useWorkers()
-  const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, fetchContracts, checkAllContracts } = useContracts()
+  const { workers, loading, error, createWorker, updateWorker, deleteWorker, restoreWorker, hardDeleteWorker, toggleWorkerStatus, refresh, refreshAll } = useWorkers()
+  const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, fetchContracts, checkAllContracts } = useContracts()
   const { projects } = useProjects()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -42,7 +42,9 @@ export default function TrabajadoresPage() {
   const [contractWorkerFilter, setContractWorkerFilter] = useState<string>('all')
   const [contractStatusFilter, setContractStatusFilter] = useState<string>('all')
   const [contractTypeFilterContracts, setContractTypeFilterContracts] = useState<string>('all')
+
   const [contractDateFilter, setContractDateFilter] = useState<string>('')
+  const [showTrash, setShowTrash] = useState(false) // Estado para la papelera de contratos
   const [showCreateContractModal, setShowCreateContractModal] = useState(false)
   const [editingContract, setEditingContract] = useState<Contract | null>(null)
   const [contractFormData, setContractFormData] = useState({
@@ -75,12 +77,34 @@ export default function TrabajadoresPage() {
 
   // Estados para modales de confirmación
   const [confirmDeleteWorkerState, setConfirmDeleteWorkerState] = useState<{ isOpen: boolean, workerId: number | null }>({ isOpen: false, workerId: null })
+
   const [confirmRestoreWorkerState, setConfirmRestoreWorkerState] = useState<{ isOpen: boolean, workerId: number | null }>({ isOpen: false, workerId: null })
+  const [confirmHardDeleteWorkerState, setConfirmHardDeleteWorkerState] = useState<{ isOpen: boolean, workerId: number | null }>({ isOpen: false, workerId: null }) // Nuevo estado para hard delete
+  const [cannotDeleteModalState, setCannotDeleteModalState] = useState({ isOpen: false, message: '' }) // Nuevo modal de alerta
+
+  const [showWorkerTrash, setShowWorkerTrash] = useState(false) // Nuevo estado para papelera de trabajadores
   const [confirmDeleteContractState, setConfirmDeleteContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
+  // Nuevos estados para confirmación de contratos
+  const [confirmRestoreContractState, setConfirmRestoreContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
+  const [confirmHardDeleteContractState, setConfirmHardDeleteContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
 
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(50)
+
+  // Refrescar datos al cambiar vista de papelera de contratos
+  useEffect(() => {
+    fetchContracts()
+  }, [showTrash])
+
+  // Refrescar datos al cambiar vista de papelera de trabajadores
+  useEffect(() => {
+    if (showWorkerTrash) {
+      refreshAll()
+    } else {
+      refresh()
+    }
+  }, [showWorkerTrash])
 
   // Función para validar contratos duplicados/solapados
   const validateContractOverlap = async (
@@ -156,20 +180,32 @@ export default function TrabajadoresPage() {
       contract.worker_id === worker.id && contract.status === 'activo'
     )
 
+    // Filtro de Papelera independiente para trabajadores
+    if (showWorkerTrash) {
+      return worker.is_deleted && matchesSearch
+    }
+
+    // Vista normal: Ocultar eliminados
+    if (worker.is_deleted) return false
+
     const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && worker.is_active && !worker.is_deleted && hasActiveContract) ||
-      (statusFilter === 'inactive' && worker.is_active && !worker.is_deleted && !hasActiveContract) ||
-      (statusFilter === 'deleted' && worker.is_deleted)
+      (statusFilter === 'active' && worker.is_active && hasActiveContract) ||
+      (statusFilter === 'inactive' && worker.is_active && !hasActiveContract) || // Ajustado para lógica de activos/inactivos según contratos
+      (statusFilter === 'deleted' && worker.is_deleted) // Este caso ya no debería ocurrir aquí porsque is_deleted se filtra antes, pero se mantiene por compatibilidad inversa temporal
+
+    // Simplificamos la logica de active/inactive basada en si tiene contratos o no, o si el worker está marcado como inactivo manualmente
+    const isWorkerActive = worker.is_active
+
     const matchesContractType = contractTypeFilter === 'all' ||
       (worker as any).contract_type === contractTypeFilter
 
-    // Filtro de tarjetas
+    // Filtro de tarjetas revisado
     const matchesCardFilter = cardFilter === 'all' ||
-      (cardFilter === 'active' && worker.is_active && !worker.is_deleted) ||
-      (cardFilter === 'inactive' && !worker.is_active && !worker.is_deleted)
+      (cardFilter === 'active' && isWorkerActive) ||
+      (cardFilter === 'inactive' && !isWorkerActive)
 
     return matchesSearch && matchesStatus && matchesContractType && matchesCardFilter
-  }), [workers, searchTerm, statusFilter, contractTypeFilter, cardFilter, contracts])
+  }), [workers, searchTerm, statusFilter, contractTypeFilter, cardFilter, contracts, showWorkerTrash])
 
   // Filtrar contratos con useMemo para performance
   const filteredContracts = useMemo(() => contracts.filter(contract => {
@@ -215,6 +251,15 @@ export default function TrabajadoresPage() {
       return (contractInicio <= filtroFin) && (contractFin >= filtroInicio)
     })()
 
+    // Filtro de Papelera
+    if (showTrash) {
+      // En la papelera mostramos solo lo eliminado (is_active: false)
+      return !contract.is_active && matchesSearch
+    }
+
+    // Vista normal: solo activos (is_active: true) + resto de filtros
+    if (!contract.is_active) return false
+
     return matchesProject && matchesWorker && matchesStatus && matchesType && matchesSearch && matchesContractCardFilter && matchesContractTypeButtonFilter && matchesDateRange
   }).sort((a, b) => {
     // Ordenar: activos primero, inactivos al final
@@ -230,7 +275,8 @@ export default function TrabajadoresPage() {
     contractSearchTerm,
     contractCardFilter,
     contractTypeButtonFilter,
-    contractDateFilter
+    contractDateFilter,
+    showTrash
   ])
 
   // Paginación de contratos
@@ -290,6 +336,24 @@ export default function TrabajadoresPage() {
       await deleteContract(confirmDeleteContractState.contractId)
       toast.success('Contrato eliminado correctamente')
       setConfirmDeleteContractState({ isOpen: false, contractId: null })
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar contrato')
+    }
+  }
+
+  const handleRestoreContract = async (contractId: number) => {
+    try {
+      await restoreContract(contractId)
+      toast.success('Contrato restaurado correctamente')
+    } catch (error: any) {
+      toast.error(error.message || 'Error al restaurar contrato')
+    }
+  }
+
+  const handleHardDeleteContract = async (contractId: number) => {
+    try {
+      await hardDeleteContract(contractId)
+      toast.success('Contrato eliminado permanentemente')
     } catch (error: any) {
       toast.error(error.message || 'Error al eliminar contrato')
     }
@@ -723,8 +787,34 @@ export default function TrabajadoresPage() {
     setCurrentPage(1)
   }
 
-  const handleDelete = (workerId: number) => {
-    setConfirmDeleteWorkerState({ isOpen: true, workerId })
+  const handleDelete = async (workerId: number) => {
+    // Verificar si tiene contratos activos directamente en la base de datos
+    try {
+      const { data: activeContracts, error } = await supabase
+        .from('contract_history')
+        .select('id')
+        .eq('worker_id', workerId)
+        .eq('status', 'activo')
+        .eq('is_active', true)
+        .limit(1)
+
+      if (error) throw error
+
+      const hasActiveContracts = activeContracts && activeContracts.length > 0
+
+      if (hasActiveContracts) {
+        setCannotDeleteModalState({
+          isOpen: true,
+          message: 'No se puede eliminar el trabajador porque tiene uno o más contratos activos. Por favor, finalice o cancele los contratos activos antes de eliminar al trabajador.'
+        })
+        return
+      }
+
+      setConfirmDeleteWorkerState({ isOpen: true, workerId })
+    } catch (error) {
+      console.error('Error checking active contracts:', error)
+      toast.error('Error al verificar contratos')
+    }
   }
 
   const executeDeleteWorker = async () => {
@@ -732,11 +822,24 @@ export default function TrabajadoresPage() {
 
     try {
       await deleteWorker(confirmDeleteWorkerState.workerId)
-      toast.success('Trabajador eliminado correctamente')
+      toast.success('Trabajador movido a la papelera')
       refresh()
       setConfirmDeleteWorkerState({ isOpen: false, workerId: null })
     } catch (error) {
       toast.error('Error al eliminar trabajador')
+    }
+  }
+
+  const executeHardDeleteWorker = async () => {
+    if (!confirmHardDeleteWorkerState.workerId) return
+
+    try {
+      await hardDeleteWorker(confirmHardDeleteWorkerState.workerId)
+      toast.success('Trabajador eliminado permanentemente')
+      refreshAll()
+      setConfirmHardDeleteWorkerState({ isOpen: false, workerId: null })
+    } catch (error) {
+      toast.error('Error al eliminar trabajador permanentemente')
     }
   }
 
@@ -1012,6 +1115,19 @@ export default function TrabajadoresPage() {
                     />
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={showWorkerTrash ? 'danger' : 'outline'}
+                    onClick={() => setShowWorkerTrash(!showWorkerTrash)}
+                    className={`flex items-center gap-2 transition-colors ${showWorkerTrash
+                      ? 'bg-red-900/10 text-red-600 border-red-200 hover:bg-red-900/20'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                      }`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {showWorkerTrash ? 'Salir de Papelera' : 'Papelera'}
+                  </Button>
+                </div>
               </div>
 
             </div>
@@ -1091,38 +1207,47 @@ export default function TrabajadoresPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleEdit(worker)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Editar trabajador"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              {worker.is_deleted ? (
-                                <button
-                                  onClick={() => handleRestore(worker.id)}
-                                  className="text-green-600 hover:text-green-900"
-                                  title="Restaurar trabajador"
-                                >
-                                  <RotateCcw className="h-4 w-4" />
-                                </button>
+                              {!showWorkerTrash ? (
+                                <>
+                                  <button
+                                    onClick={() => handleEdit(worker)}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Editar trabajador"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleShowContractHistory(worker)}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Ver historial de contratos"
+                                  >
+                                    <History className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(worker.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Eliminar trabajador"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
                               ) : (
-                                <button
-                                  onClick={() => handleShowContractHistory(worker)}
-                                  className="text-blue-600 hover:text-blue-900"
-                                  title="Ver historial de contratos"
-                                >
-                                  <History className="h-4 w-4" />
-                                </button>
-                              )}
-                              {!worker.is_deleted && (
-                                <button
-                                  onClick={() => handleDelete(worker.id)}
-                                  className="text-red-600 hover:text-red-900"
-                                  title="Eliminar trabajador"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })}
+                                    className="text-green-600 hover:text-green-900"
+                                    title="Restaurar trabajador"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Eliminar permanentemente"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </td>
@@ -1251,6 +1376,18 @@ export default function TrabajadoresPage() {
                   )}
                 </Button>
 
+                <Button
+                  variant={showTrash ? 'danger' : 'outline'}
+                  onClick={() => setShowTrash(!showTrash)}
+                  className={`flex items-center gap-2 transition-colors ${showTrash
+                    ? 'bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50'
+                    : 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white'
+                    }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {showTrash ? 'Salir de Papelera' : 'Papelera'}
+                </Button>
+
                 {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
                   <Button
                     variant="ghost"
@@ -1370,34 +1507,55 @@ export default function TrabajadoresPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleEditContract(contract)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Editar contrato"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleGenerateDocuments(contract)}
-                                className="text-green-600 hover:text-green-900"
-                                title="Generar documentos completos (Contrato + Pacto de Horas)"
-                              >
-                                <FileText className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleGenerateHoursOnly(contract)}
-                                className="text-purple-600 hover:text-purple-900"
-                                title="Generar solo Pacto de Horas (renovación cada 3 meses)"
-                              >
-                                <Clock className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteContract(contract.id)}
-                                className="text-red-600 hover:text-red-900"
-                                title="Eliminar contrato"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {!showTrash ? (
+                                <>
+                                  <button
+                                    onClick={() => handleEditContract(contract)}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Editar contrato"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleGenerateDocuments(contract)}
+                                    className="text-green-600 hover:text-green-900"
+                                    title="Generar documentos completos (Contrato + Pacto de Horas)"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleGenerateHoursOnly(contract)}
+                                    className="text-purple-600 hover:text-purple-900"
+                                    title="Generar solo Pacto de Horas (renovación cada 3 meses)"
+                                  >
+                                    <Clock className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteContract(contract.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Eliminar contrato"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })}
+                                    className="text-green-600 hover:text-green-900"
+                                    title="Restaurar contrato"
+                                  >
+                                    <RotateCcw className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })}
+                                    className="text-red-600 hover:text-red-900"
+                                    title="Eliminar permanentemente"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -2110,6 +2268,17 @@ export default function TrabajadoresPage() {
         {/* Modal de creación de contrato */}
         {/* Modales de Confirmación */}
         <ConfirmationModal
+          isOpen={cannotDeleteModalState.isOpen}
+          onClose={() => setCannotDeleteModalState({ isOpen: false, message: '' })}
+          onConfirm={() => setCannotDeleteModalState({ isOpen: false, message: '' })}
+          title="No se puede eliminar"
+          message={cannotDeleteModalState.message}
+          confirmText="Entendido"
+          cancelText="Cerrar"
+          type="warning"
+        />
+
+        <ConfirmationModal
           isOpen={confirmDeleteWorkerState.isOpen}
           onClose={() => setConfirmDeleteWorkerState({ isOpen: false, workerId: null })}
           onConfirm={executeDeleteWorker}
@@ -2136,6 +2305,36 @@ export default function TrabajadoresPage() {
           title="Eliminar Contrato"
           message="¿Estás seguro de que quieres eliminar este contrato?"
           confirmText="Eliminar"
+          type="danger"
+        />
+
+        <ConfirmationModal
+          isOpen={confirmRestoreContractState.isOpen}
+          onClose={() => setConfirmRestoreContractState({ isOpen: false, contractId: null })}
+          onConfirm={async () => {
+            if (confirmRestoreContractState.contractId) {
+              await handleRestoreContract(confirmRestoreContractState.contractId)
+              setConfirmRestoreContractState({ isOpen: false, contractId: null })
+            }
+          }}
+          title="Restaurar Contrato"
+          message="¿Estás seguro de que quieres restaurar este contrato?"
+          confirmText="Restaurar"
+          type="info"
+        />
+
+        <ConfirmationModal
+          isOpen={confirmHardDeleteContractState.isOpen}
+          onClose={() => setConfirmHardDeleteContractState({ isOpen: false, contractId: null })}
+          onConfirm={async () => {
+            if (confirmHardDeleteContractState.contractId) {
+              await handleHardDeleteContract(confirmHardDeleteContractState.contractId)
+              setConfirmHardDeleteContractState({ isOpen: false, contractId: null })
+            }
+          }}
+          title="Eliminar Contrato Permanentemente"
+          message="¿Estás seguro de que quieres eliminar este contrato permanentemente? Esta acción NO se puede deshacer."
+          confirmText="Eliminar Permanentemente"
           type="danger"
         />
       </div>

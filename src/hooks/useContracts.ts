@@ -68,7 +68,7 @@ export const useContracts = () => {
       today.setHours(0, 0, 0, 0) // Resetear a medianoche para comparación exacta
 
       const contractsToUpdate: number[] = []
-      
+
       const transformedData = data?.map(contract => {
         // Si is_active = false, el status debe ser 'cancelado'
         if (!contract.is_active && contract.status !== 'cancelado') {
@@ -80,12 +80,12 @@ export const useContracts = () => {
             project_name: contract.projects?.name
           }
         }
-        
+
         // Verificar si el contrato está expirado
         if (contract.fecha_termino && contract.status === 'activo') {
           const endDate = new Date(contract.fecha_termino)
           endDate.setHours(0, 0, 0, 0)
-          
+
           if (endDate < today) {
             contractsToUpdate.push(contract.id)
             return {
@@ -97,7 +97,7 @@ export const useContracts = () => {
             }
           }
         }
-        
+
         return {
           ...contract,
           worker_name: contract.workers?.full_name,
@@ -256,7 +256,7 @@ export const useContracts = () => {
         project_name: data.projects?.name
       }
 
-      setContracts(prev => prev.map(contract => 
+      setContracts(prev => prev.map(contract =>
         contract.id === id ? updatedContract : contract
       ))
 
@@ -283,15 +283,63 @@ export const useContracts = () => {
         throw error
       }
 
-      // Actualizar el contrato en la lista local (no removerlo, solo cambiar status)
-      setContracts(prev => prev.map(contract => 
-        contract.id === id 
+      // Actualizar el contrato en la lista local
+      setContracts(prev => prev.map(contract =>
+        contract.id === id
           ? { ...contract, is_active: false, status: 'cancelado' as 'cancelado' }
           : contract
       ))
     } catch (err: any) {
       console.error('Error deleting contract:', err)
       throw new Error(err.message || 'Error al eliminar contrato')
+    }
+  }
+
+  // Restaurar contrato (restore)
+  const restoreContract = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('contract_history')
+        .update({
+          is_active: true,
+          status: 'activo',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+
+      // Actualizar el contrato en la lista local
+      setContracts(prev => prev.map(contract =>
+        contract.id === id
+          ? { ...contract, is_active: true, status: 'activo' as 'activo' }
+          : contract
+      ))
+    } catch (err: any) {
+      console.error('Error restoring contract:', err)
+      throw new Error(err.message || 'Error al restaurar contrato')
+    }
+  }
+
+  // Eliminar contrato permanentemente (hard delete)
+  const hardDeleteContract = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('contract_history')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+
+      // Eliminar el contrato de la lista local
+      setContracts(prev => prev.filter(contract => contract.id !== id))
+    } catch (err: any) {
+      console.error('Error hard deleting contract:', err)
+      throw new Error(err.message || 'Error al eliminar contrato permanentemente')
     }
   }
 
@@ -322,7 +370,7 @@ export const useContracts = () => {
       const now = new Date()
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       today.setHours(0, 0, 0, 0)
-      
+
       const sevenDaysFromNow = new Date()
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
       sevenDaysFromNow.setHours(23, 59, 59, 999)
@@ -368,7 +416,7 @@ export const useContracts = () => {
         const [year, month, day] = endDateStr.split('-').map(Number)
         const endDate = new Date(year, month - 1, day)
         endDate.setHours(0, 0, 0, 0)
-        
+
         // Calcular días hasta vencimiento (días naturales completos)
         // Si vence mañana = 1 día, si vence hoy = 0 días
         const diffTime = endDate.getTime() - today.getTime()
@@ -384,7 +432,7 @@ export const useContracts = () => {
           try {
             const twentyFourHoursAgo = new Date()
             twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
-            
+
             const { data: existingNotifications, error: checkError } = await supabase
               .from('notifications')
               .select('id, created_at')
@@ -415,7 +463,7 @@ export const useContracts = () => {
             workerName: contract.workers?.full_name || 'Trabajador',
             daysUntilExpiry
           })
-          
+
           if (result.success) {
             notifiedCount++
           }
@@ -479,7 +527,7 @@ export const useContracts = () => {
             try {
               const twentyFourHoursAgo = new Date()
               twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
-              
+
               const { data: existingNotifications, error: checkError } = await supabase
                 .from('notifications')
                 .select('id, created_at')
@@ -509,7 +557,7 @@ export const useContracts = () => {
               contractId: contract.id,
               workerName: contract.workers?.full_name || 'Trabajador'
             })
-            
+
             if (result.success) {
               notifiedCount++
             }
@@ -521,9 +569,9 @@ export const useContracts = () => {
       if (contractsToUpdate.length > 0) {
         const { error: updateError } = await supabase
           .from('contract_history')
-          .update({ 
-            status: 'finalizado', 
-            updated_at: new Date().toISOString() 
+          .update({
+            status: 'finalizado',
+            updated_at: new Date().toISOString()
           })
           .in('id', contractsToUpdate)
 
@@ -532,10 +580,10 @@ export const useContracts = () => {
         }
       }
 
-      return { 
-        checked: contracts.length, 
-        notified: notifiedCount, 
-        updated: contractsToUpdate.length 
+      return {
+        checked: contracts.length,
+        notified: notifiedCount,
+        updated: contractsToUpdate.length
       }
     } catch (err) {
       console.error('Error in checkExpiredContracts:', err)
@@ -547,7 +595,7 @@ export const useContracts = () => {
   const checkAllContracts = async () => {
     const expiring = await checkExpiringContracts()
     const expired = await checkExpiredContracts()
-    
+
     return {
       expiring,
       expired,
@@ -567,6 +615,8 @@ export const useContracts = () => {
     createContract,
     updateContract,
     deleteContract,
+    restoreContract,
+    hardDeleteContract,
     validateContractBeforeCreate,
     getActiveContractsByWorker,
     checkExpiringContracts,

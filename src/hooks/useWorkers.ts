@@ -54,7 +54,7 @@ export function useWorkers() {
     try {
       setLoading(true)
       setError(null)
-      
+
       let query = supabase
         .from('workers')
         .select('*')
@@ -150,7 +150,7 @@ export function useWorkers() {
         throw error
       }
 
-      setWorkers(prev => prev.map(worker => 
+      setWorkers(prev => prev.map(worker =>
         worker.id === id ? data : worker
       ))
       return data
@@ -165,7 +165,7 @@ export function useWorkers() {
     try {
       const { error } = await supabase
         .from('workers')
-        .update({ 
+        .update({
           is_deleted: true,
           updated_at: new Date().toISOString()
         })
@@ -187,7 +187,7 @@ export function useWorkers() {
     try {
       const { error } = await supabase
         .from('workers')
-        .update({ 
+        .update({
           is_deleted: false,
           updated_at: new Date().toISOString()
         })
@@ -197,8 +197,8 @@ export function useWorkers() {
         throw error
       }
 
-      setWorkers(prev => prev.map(worker => 
-        worker.id === id 
+      setWorkers(prev => prev.map(worker =>
+        worker.id === id
           ? { ...worker, is_deleted: false, updated_at: new Date().toISOString() }
           : worker
       ))
@@ -208,12 +208,31 @@ export function useWorkers() {
     }
   }
 
+  // Eliminar trabajador permanentemente
+  const hardDeleteWorker = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('workers')
+        .delete()
+        .eq('id', id)
+
+      if (error) {
+        throw error
+      }
+
+      setWorkers(prev => prev.filter(worker => worker.id !== id))
+    } catch (err: any) {
+      console.error('Error hard deleting worker:', err)
+      throw new Error(err.message || 'Error al eliminar trabajador permanentemente')
+    }
+  }
+
   // Activar/Desactivar trabajador
   const toggleWorkerStatus = async (id: number, isActive: boolean) => {
     try {
       const { error } = await supabase
         .from('workers')
-        .update({ 
+        .update({
           is_active: isActive,
           updated_at: new Date().toISOString()
         })
@@ -223,8 +242,8 @@ export function useWorkers() {
         throw error
       }
 
-      setWorkers(prev => prev.map(worker => 
-        worker.id === id 
+      setWorkers(prev => prev.map(worker =>
+        worker.id === id
           ? { ...worker, is_active: isActive, updated_at: new Date().toISOString() }
           : worker
       ))
@@ -257,6 +276,7 @@ export function useWorkers() {
     updateWorker,
     deleteWorker,
     restoreWorker,
+    hardDeleteWorker,
     toggleWorkerStatus,
     refresh,
     refreshAll
