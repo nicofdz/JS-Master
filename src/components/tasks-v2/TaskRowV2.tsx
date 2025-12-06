@@ -657,13 +657,13 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         <div className="bg-gray-50 border-t border-gray-200">
           <div className="px-4 pb-4 pt-4">
             {/* Encabezado de trabajadores */}
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Desglose de Trabajadores
               </h4>
               {task.workers.filter(w => w.assignment_status !== 'removed').length > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                   {/* Select para cambiar estado de todos los trabajadores */}
                   <div className="relative" ref={allAssignmentsStatusRef}>
                     <button
@@ -734,109 +734,132 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                         : 'border-gray-300 hover:bg-gray-100'
                         }`}
                     >
-                      <div className="grid grid-cols-12 gap-4 items-center">
-                        {/* Avatar + Nombre */}
-                        <div className="col-span-4 flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${isRemoved
-                            ? 'bg-gradient-to-br from-red-400 to-red-600'
-                            : 'bg-gradient-to-br from-blue-500 to-purple-600'
-                            }`}>
-                            {worker.full_name?.charAt(0) || '?'}
-                          </div>
-                          <div>
-                            <div className={`font-medium ${isRemoved ? 'text-red-700 line-through' : 'text-gray-900'}`}>
-                              {worker.full_name || 'Sin nombre'}
+                      <div className="flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 items-start md:items-center">
+                        {/* Avatar + Nombre + ID + Acciones (Móvil) */}
+                        <div className="w-full md:col-span-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm flex-shrink-0 ${isRemoved
+                              ? 'bg-gradient-to-br from-red-400 to-red-600'
+                              : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                              }`}>
+                              {worker.full_name?.charAt(0) || '?'}
                             </div>
-                            <div className="text-xs text-gray-500">ID: {worker.id}</div>
-                          </div>
-                        </div>
-
-                        {/* Porcentaje - Solo mostrar si no es "por_dia" */}
-                        {worker.contract_type === 'por_dia' ? (
-                          <div className="col-span-4 text-center">
-                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-600 border border-yellow-500/40 rounded-full">
-                              <span className="text-sm font-semibold">Al Día</span>
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">Sin pago por tarea</div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="col-span-2 text-center">
-                              <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-blue-600'}`}>
-                                {isRemoved ? '0%' : `${worker.payment_share_percentage}%`}
+                            <div className="min-w-0">
+                              <div className={`font-medium truncate max-w-[150px] sm:max-w-none ${isRemoved ? 'text-red-700 line-through' : 'text-gray-900'}`}>
+                                {worker.full_name || 'Sin nombre'}
                               </div>
-                              <div className="text-xs text-gray-500">Porcentaje</div>
+                              <div className="text-xs text-gray-500">ID: {worker.id}</div>
                             </div>
+                          </div>
 
-                            {/* Monto */}
-                            <div className="col-span-2 text-center">
-                              <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-green-600'}`}>
-                                {isRemoved ? '$0K' : `$${(worker.worker_payment / 1000).toFixed(0)}K`}
-                              </div>
-                              <div className="text-xs text-gray-500">Monto</div>
-                            </div>
-                          </>
-                        )}
-
-                        {/* Estado */}
-                        <div
-                          className="col-span-3"
-                          ref={(el) => {
-                            if (worker.assignment_id) {
-                              assignmentStatusRefs.current[worker.assignment_id] = el
-                            }
-                          }}
-                        >
-                          {worker.assignment_status === 'removed' ? (
-                            getAssignmentStatusBadge(worker.assignment_status)
-                          ) : (
-                            <div className="relative">
+                          {/* Botón de acciones visible en móvil */}
+                          <div className="md:hidden">
+                            {!isRemoved && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  if (worker.assignment_id) {
-                                    setAssignmentStatusOpen(
-                                      assignmentStatusOpen === worker.assignment_id ? null : worker.assignment_id
-                                    )
-                                  }
+                                  setSelectedWorkerId(worker.id)
+                                  setSelectedWorkerName(worker.full_name || 'Sin nombre')
+                                  setShowWorkerDetailModal(true)
                                 }}
-                                className="inline-flex items-center gap-1"
+                                className="p-1.5 hover:bg-gray-200 rounded-md transition-colors"
+                                title="Ver detalles"
                               >
-                                {getAssignmentStatusBadge(worker.assignment_status)}
-                                <ChevronDown
-                                  className={`w-3 h-3 text-gray-500 transition-transform ${assignmentStatusOpen === worker.assignment_id ? 'rotate-180' : ''
-                                    }`}
-                                />
+                                <MoreVertical className="w-4 h-4 text-gray-500" />
                               </button>
-
-                              {assignmentStatusOpen === worker.assignment_id && worker.assignment_id && (
-                                <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                                  {getAssignmentStatusOptions(worker.assignment_status).map((option) => {
-                                    const Icon = option.icon
-                                    return (
-                                      <button
-                                        key={option.value}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleAssignmentStatusChange(worker.assignment_id!, option.value)
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 flex items-center gap-2"
-                                      >
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${option.color}`}>
-                                          <Icon className="w-3 h-3" />
-                                          {option.label}
-                                        </span>
-                                      </button>
-                                    )
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
 
-                        {/* Acciones */}
-                        <div className="col-span-1 text-right">
+                        {/* Porcentaje, Monto y Estado Group Wrapper */}
+                        <div className="w-full md:col-span-7 grid grid-cols-2 md:grid-cols-7 gap-3 md:gap-4 items-center">
+                          {/* Porcentaje - Solo mostrar si no es "por_dia" */}
+                          {worker.contract_type === 'por_dia' ? (
+                            <div className="col-span-2 md:col-span-4 text-left md:text-center pl-12 md:pl-0">
+                              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-600 border border-yellow-500/40 rounded-full">
+                                <span className="text-sm font-semibold">Al Día</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">Sin pago por tarea</div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-left md:text-center pl-12 md:pl-0 md:col-span-2">
+                                <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-blue-600'}`}>
+                                  {isRemoved ? '0%' : `${worker.payment_share_percentage}%`}
+                                </div>
+                                <div className="text-xs text-gray-500">Porcentaje</div>
+                              </div>
+
+                              {/* Monto */}
+                              <div className="text-left md:text-center md:col-span-2">
+                                <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-green-600'}`}>
+                                  {isRemoved ? '$0K' : `$${(worker.worker_payment / 1000).toFixed(0)}K`}
+                                </div>
+                                <div className="text-xs text-gray-500">Monto</div>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Estado */}
+                          <div
+                            className="col-span-2 md:col-span-3 flex justify-start md:justify-center pl-12 md:pl-0"
+                            ref={(el) => {
+                              if (worker.assignment_id) {
+                                assignmentStatusRefs.current[worker.assignment_id] = el
+                              }
+                            }}
+                          >
+                            {worker.assignment_status === 'removed' ? (
+                              getAssignmentStatusBadge(worker.assignment_status)
+                            ) : (
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (worker.assignment_id) {
+                                      setAssignmentStatusOpen(
+                                        assignmentStatusOpen === worker.assignment_id ? null : worker.assignment_id
+                                      )
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1"
+                                >
+                                  {getAssignmentStatusBadge(worker.assignment_status)}
+                                  <ChevronDown
+                                    className={`w-3 h-3 text-gray-500 transition-transform ${assignmentStatusOpen === worker.assignment_id ? 'rotate-180' : ''
+                                      }`}
+                                  />
+                                </button>
+
+                                {assignmentStatusOpen === worker.assignment_id && worker.assignment_id && (
+                                  <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 left-0 md:left-auto">
+                                    {getAssignmentStatusOptions(worker.assignment_status).map((option) => {
+                                      const Icon = option.icon
+                                      return (
+                                        <button
+                                          key={option.value}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleAssignmentStatusChange(worker.assignment_id!, option.value)
+                                          }}
+                                          className="w-full text-left px-3 py-2 text-xs font-medium hover:bg-gray-50 flex items-center gap-2"
+                                        >
+                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${option.color}`}>
+                                            <Icon className="w-3 h-3" />
+                                            {option.label}
+                                          </span>
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Acciones (Desktop) */}
+                        <div className="hidden md:block col-span-1 text-right">
                           {!isRemoved && (
                             <button
                               onClick={(e) => {
@@ -860,14 +883,14 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
             )}
 
             {/* Tabs adicionales */}
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   setDetailModalTab('photos')
                   setShowDetailModal(true)
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors whitespace-nowrap snap-start flex-shrink-0"
               >
                 <Image className="w-4 h-4" />
                 Fotos de Progreso
@@ -878,7 +901,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                   setDetailModalTab('materials')
                   setShowDetailModal(true)
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors whitespace-nowrap snap-start flex-shrink-0"
               >
                 <Package className="w-4 h-4" />
                 Materiales
@@ -889,7 +912,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                   setDetailModalTab('history')
                   setShowDetailModal(true)
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-300 transition-colors whitespace-nowrap snap-start flex-shrink-0"
               >
                 <History className="w-4 h-4" />
                 Historial
