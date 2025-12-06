@@ -996,10 +996,10 @@ export default function TrabajadoresPage() {
   }
 
   return (
-    <div className="w-full h-[calc(100vh-120px)] px-4 sm:px-6 lg:px-8 flex flex-col pb-4">
+    <div className="w-full md:h-[calc(100vh-120px)] h-auto px-4 sm:px-6 lg:px-8 flex flex-col pb-4">
       <div className="space-y-6 flex flex-col h-full">
         {/* Header */}
-        <div className="flex justify-between items-center flex-shrink-0">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center flex-shrink-0 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               {currentView === 'workers' ? 'Gestión de Trabajadores' : 'Gestión de Contratos'}
@@ -1136,7 +1136,7 @@ export default function TrabajadoresPage() {
             <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-transparent sm:bg-white rounded-lg sm:shadow">
 
               {/* VISTA MÓVIL: Tarjetas */}
-              <div className="md:hidden overflow-y-auto h-full space-y-4 pb-20">
+              <div className="md:hidden space-y-4 pb-4">
                 {filteredWorkers.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow p-4">
                     {searchTerm || statusFilter !== 'all'
@@ -1504,7 +1504,7 @@ export default function TrabajadoresPage() {
             <div className="bg-transparent sm:bg-white rounded-lg sm:shadow flex-1 overflow-hidden flex flex-col min-h-0">
 
               {/* VISTA MÓVIL: Tarjetas de Contratos */}
-              <div className="md:hidden overflow-y-auto h-full space-y-4 pb-20">
+              <div className="md:hidden space-y-4 pb-4">
                 {paginatedContracts.length === 0 ? (
                   <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow p-4">
                     No hay contratos registrados
