@@ -42,6 +42,7 @@ export default function TrabajadoresPage() {
   const [contractWorkerFilter, setContractWorkerFilter] = useState<string>('all')
   const [contractStatusFilter, setContractStatusFilter] = useState<string>('all')
   const [contractTypeFilterContracts, setContractTypeFilterContracts] = useState<string>('all')
+  const [contractDateFilter, setContractDateFilter] = useState<string>('')
   const [showCreateContractModal, setShowCreateContractModal] = useState(false)
   const [editingContract, setEditingContract] = useState<Contract | null>(null)
   const [contractFormData, setContractFormData] = useState({
@@ -193,7 +194,28 @@ export default function TrabajadoresPage() {
     // Filtros de botones de tipo de contrato
     const matchesContractTypeButtonFilter = contractTypeButtonFilter === 'all' || contract.contract_type === contractTypeButtonFilter
 
-    return matchesProject && matchesWorker && matchesStatus && matchesType && matchesSearch && matchesContractCardFilter && matchesContractTypeButtonFilter
+    // Filtro por Mes y Año (Solapamiento)
+    const matchesDateRange = (() => {
+      if (!contractDateFilter) return true
+
+      // contractDateFilter viene como "YYYY-MM"
+      const [yearStr, monthStr] = contractDateFilter.split('-')
+      const year = parseInt(yearStr)
+      const month = parseInt(monthStr) - 1 // JS months are 0-indexed
+
+      // Rango del filtro: primer y último día del mes seleccionado
+      const filtroInicio = new Date(year, month, 1)
+      const filtroFin = new Date(year, month + 1, 0) // Último día del mes
+
+      const contractInicio = new Date(contract.fecha_inicio)
+      // Si no tiene fecha de término, asumimos futuro muy lejano
+      const contractFin = contract.fecha_termino ? new Date(contract.fecha_termino) : new Date(8640000000000000)
+
+      // Lógica de solapamiento: (StartA <= EndB) AND (EndA >= StartB)
+      return (contractInicio <= filtroFin) && (contractFin >= filtroInicio)
+    })()
+
+    return matchesProject && matchesWorker && matchesStatus && matchesType && matchesSearch && matchesContractCardFilter && matchesContractTypeButtonFilter && matchesDateRange
   }).sort((a, b) => {
     // Ordenar: activos primero, inactivos al final
     if (a.status === 'activo' && b.status !== 'activo') return -1
@@ -207,7 +229,8 @@ export default function TrabajadoresPage() {
     contractTypeFilterContracts,
     contractSearchTerm,
     contractCardFilter,
-    contractTypeButtonFilter
+    contractTypeButtonFilter,
+    contractDateFilter
   ])
 
   // Paginación de contratos
@@ -1221,14 +1244,14 @@ export default function TrabajadoresPage() {
                 >
                   <Filter className="w-4 h-4" />
                   Filtros
-                  {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all') && (
+                  {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
                     <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
                       !
                     </span>
                   )}
                 </Button>
 
-                {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all') && (
+                {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -1236,6 +1259,7 @@ export default function TrabajadoresPage() {
                       setContractWorkerFilter('all')
                       setContractStatusFilter('all')
                       setContractTypeButtonFilter('all')
+                      setContractDateFilter('')
                     }}
                     className="text-slate-400 hover:text-white hover:bg-slate-800"
                     title="Limpiar filtros"
@@ -1257,6 +1281,8 @@ export default function TrabajadoresPage() {
               onStatusFilterChange={handleContractStatusSelectChange}
               currentTypeFilter={contractTypeButtonFilter as 'all' | 'a_trato' | 'por_dia'}
               onTypeFilterChange={handleContractTypeButtonFilter}
+              currentDateFilter={contractDateFilter}
+              onDateFilterChange={setContractDateFilter}
               projects={projects}
               workers={workers}
             />

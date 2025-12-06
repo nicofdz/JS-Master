@@ -12,6 +12,8 @@ interface ContractFiltersSidebarProps {
     onStatusFilterChange: (filter: string) => void
     currentTypeFilter: 'all' | 'a_trato' | 'por_dia'
     onTypeFilterChange: (filter: 'all' | 'a_trato' | 'por_dia') => void
+    currentDateFilter: string
+    onDateFilterChange: (date: string) => void
     projects: { id: number; name: string }[]
     workers: { id: number; full_name: string }[]
 }
@@ -27,6 +29,8 @@ export function ContractFiltersSidebar({
     onStatusFilterChange,
     currentTypeFilter,
     onTypeFilterChange,
+    currentDateFilter,
+    onDateFilterChange,
     projects,
     workers
 }: ContractFiltersSidebarProps) {
@@ -36,6 +40,7 @@ export function ContractFiltersSidebar({
         onWorkerFilterChange('all')
         onStatusFilterChange('all')
         onTypeFilterChange('all')
+        onDateFilterChange('')
     }
 
     return (
@@ -128,7 +133,25 @@ export function ContractFiltersSidebar({
                                 </div>
                             </div>
 
+                            <div className="h-px bg-slate-800 my-6" />
 
+                            {/* Filtro por Mes y Año */}
+                            <div className="group">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Clock className="w-4 h-4 text-emerald-400" />
+                                    <h3 className="text-sm font-medium text-slate-300">
+                                        Mes y Año
+                                    </h3>
+                                </div>
+                                <div>
+                                    <input
+                                        type="month"
+                                        className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none text-sm hover:border-slate-600"
+                                        value={currentDateFilter}
+                                        onChange={(e) => onDateFilterChange(e.target.value)}
+                                    />
+                                </div>
+                            </div>
 
                             <div className="h-px bg-slate-800 my-6" />
 

@@ -517,17 +517,33 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
           )}
         </div>
 
-        {/* Presupuesto - Solo mostrar si hay trabajadores "a_trato" */}
-        {task.workers.some(w => w.contract_type === 'a_trato' && w.assignment_status !== 'removed') ? (
-          <div className="col-span-1 text-right">
-            <div className="font-semibold text-gray-900">${(task.total_budget / 1000).toFixed(0)}K</div>
-            <div className="text-xs text-gray-500">Total</div>
-          </div>
-        ) : (
-          <div className="col-span-1 text-right">
-            <div className="text-xs text-gray-400">-</div>
-          </div>
-        )}
+        {/* Presupuesto y Estado de Pago */}
+        <div className="col-span-1 text-right flex flex-col items-end justify-center">
+          {task.workers.some(w => w.contract_type === 'a_trato' && w.assignment_status !== 'removed') ? (
+            <>
+              <div className="font-semibold text-gray-900">${(task.total_budget / 1000).toFixed(0)}K</div>
+              {task.workers.length > 0 && task.workers.every(w => w.is_paid) && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200 mt-0.5">
+                  <CheckCircle className="w-3 h-3" />
+                  Pagada
+                </span>
+              )}
+              {!(task.workers.length > 0 && task.workers.every(w => w.is_paid)) && (
+                <div className="text-xs text-gray-500">Total</div>
+              )}
+            </>
+          ) : (
+            /* Si no es a trato, verificamos si igual está pagada (casos raros o por día) */
+            task.workers.length > 0 && task.workers.every(w => w.is_paid) ? (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
+                <CheckCircle className="w-3 h-3" />
+                Pagada
+              </span>
+            ) : (
+              <div className="text-xs text-gray-400">-</div>
+            )
+          )}
+        </div>
 
         {/* Estado */}
         <div className="col-span-1" ref={taskStatusRef}>
@@ -574,9 +590,9 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
           <div className="mt-1 w-full bg-gray-200 rounded-full h-1">
             <div
               className={`h-1 rounded-full ${task.status === 'completed' ? 'bg-green-500' :
-                  task.status === 'in_progress' ? 'bg-blue-500' :
-                    task.status === 'blocked' ? 'bg-red-500' :
-                      'bg-gray-400'
+                task.status === 'in_progress' ? 'bg-blue-500' :
+                  task.status === 'blocked' ? 'bg-red-500' :
+                    'bg-gray-400'
                 }`}
               style={{ width: `${progress}%` }}
             />
@@ -707,16 +723,16 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                     <div
                       key={worker.assignment_id || `${task.id}-${worker.id}-${index}`}
                       className={`bg-gray-50 border rounded-lg p-3 transition-colors ${isRemoved
-                          ? 'border-red-300 bg-red-50/50 opacity-75'
-                          : 'border-gray-300 hover:bg-gray-100'
+                        ? 'border-red-300 bg-red-50/50 opacity-75'
+                        : 'border-gray-300 hover:bg-gray-100'
                         }`}
                     >
                       <div className="grid grid-cols-12 gap-4 items-center">
                         {/* Avatar + Nombre */}
                         <div className="col-span-4 flex items-center gap-3">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shadow-sm ${isRemoved
-                              ? 'bg-gradient-to-br from-red-400 to-red-600'
-                              : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                            ? 'bg-gradient-to-br from-red-400 to-red-600'
+                            : 'bg-gradient-to-br from-blue-500 to-purple-600'
                             }`}>
                             {worker.full_name?.charAt(0) || '?'}
                           </div>
