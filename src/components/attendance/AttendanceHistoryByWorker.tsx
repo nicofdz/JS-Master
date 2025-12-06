@@ -408,10 +408,19 @@ export function AttendanceHistoryByWorker({
                       )}
 
                       {/* Proyectos donde trabajó */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-500">
-                          {projectsToShow.length} proyecto{projectsToShow.length !== 1 ? 's' : ''}
-                        </span>
+                      <div className="flex items-center gap-2 flex-wrap max-w-md">
+                        {projectsToShow.map(projectId => {
+                          const project = projects.find(p => p.id === parseInt(projectId))
+                          return (
+                            <span
+                              key={projectId}
+                              className="text-xs px-2 py-1 rounded-full bg-slate-700 text-slate-300 border border-slate-600 truncate max-w-[150px]"
+                              title={project?.name || 'Sin nombre'}
+                            >
+                              {project?.name || 'Sin nombre'}
+                            </span>
+                          )
+                        })}
                       </div>
                     </div>
                   </div>
