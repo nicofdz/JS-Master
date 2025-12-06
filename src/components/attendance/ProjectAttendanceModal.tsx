@@ -574,7 +574,7 @@ export function ProjectAttendanceModal({
                                 {/* Formulario (solo si está presente) */}
                                 {state.isPresent && (
                                     <div className="ml-0 sm:ml-14 space-y-2">
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {/* Hora de entrada */}
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-300 mb-1">
