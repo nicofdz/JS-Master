@@ -1033,8 +1033,9 @@ export default function PagosPage() {
       // Encabezados de tabla
       doc.setFontSize(9)
       doc.setFont('helvetica', 'bold')
-      const colWidths = [70, 30, 30, 40]
-      const headers = ['Trabajador', 'Tipo', 'Proyecto', 'Monto']
+      // Adjusted widths to fit 5 columns [Trabajador, Tipo, Proyecto, Cant., Monto]
+      const colWidths = [60, 25, 45, 25, 30]
+      const headers = ['Trabajador', 'Tipo', 'Proyecto', 'Cant.', 'Monto']
       let xPos = margin
 
       headers.forEach((header, idx) => {
@@ -1069,10 +1070,19 @@ export default function PagosPage() {
           checkNewPage(15)
           xPos = margin
 
-          const workerName = worker.name.length > 30 ? worker.name.substring(0, 27) + '...' : worker.name
+          const workerName = worker.name.length > 25 ? worker.name.substring(0, 22) + '...' : worker.name
           const workerType = worker.type === 'a_trato' ? 'A Trato' : 'Por Día'
-          const projectName = project.project_name.length > 20 ? project.project_name.substring(0, 17) + '...' : project.project_name
+          const projectName = project.project_name.length > 25 ? project.project_name.substring(0, 22) + '...' : project.project_name
           const amount = worker.totalPending
+
+          // Logic for Quantity column
+          let quantityText = ''
+          if (worker.type === 'a_trato') {
+            quantityText = `${worker.tasksPending} tarea${worker.tasksPending !== 1 ? 's' : ''}`
+          } else {
+            quantityText = `${worker.daysPending} día${worker.daysPending !== 1 ? 's' : ''}`
+          }
+
           totalGeneral += amount
 
           // Fila de datos
@@ -1084,6 +1094,9 @@ export default function PagosPage() {
 
           doc.text(projectName, xPos, yPos)
           xPos += colWidths[2]
+
+          doc.text(quantityText, xPos, yPos)
+          xPos += colWidths[3]
 
           doc.text(`$${amount.toLocaleString('es-CL')}`, xPos, yPos)
 

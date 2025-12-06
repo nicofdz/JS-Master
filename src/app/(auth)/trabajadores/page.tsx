@@ -2299,6 +2299,16 @@ export default function TrabajadoresPage() {
         />
 
         <ConfirmationModal
+          isOpen={confirmHardDeleteWorkerState.isOpen}
+          onClose={() => setConfirmHardDeleteWorkerState({ isOpen: false, workerId: null })}
+          onConfirm={executeHardDeleteWorker}
+          title="Eliminar Trabajador Permanentemente"
+          message="¿Estás seguro de que quieres eliminar este trabajador permanentemente? Esta acción NO se puede deshacer."
+          confirmText="Eliminar Permanentemente"
+          type="danger"
+        />
+
+        <ConfirmationModal
           isOpen={confirmDeleteContractState.isOpen}
           onClose={() => setConfirmDeleteContractState({ isOpen: false, contractId: null })}
           onConfirm={executeDeleteContract}
