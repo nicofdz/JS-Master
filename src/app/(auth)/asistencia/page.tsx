@@ -387,7 +387,7 @@ export default function AsistenciaPage() {
         early_departure: state.isPresent && state.checkOutTime < '18:00',
         departure_reason: (state.isPresent && state.checkOutTime < '18:00') ? state.departureReason : null,
         created_by: user?.id || null
-      })
+      }, { skipToast: true })
 
       // Recargar asistencias
       await fetchAttendances(today, registerProjectId)
@@ -758,9 +758,9 @@ export default function AsistenciaPage() {
                           <div
                             className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 hover:bg-slate-700/70 transition-colors"
                           >
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                               <div
-                                className="flex items-center gap-2 cursor-pointer flex-1"
+                                className="flex items-center gap-2 cursor-pointer w-full md:w-auto"
                                 onClick={() => toggleProjectExpansion(projectGroup.projectId)}
                               >
                                 {isProjectExpanded ? (
@@ -769,12 +769,12 @@ export default function AsistenciaPage() {
                                   <ChevronRight className="w-4 h-4 text-slate-300" />
                                 )}
                                 <Building2 className="w-4 h-4 text-blue-400" />
-                                <p className="text-sm font-medium text-slate-200">
+                                <p className="text-sm font-medium text-slate-200 truncate">
                                   {projectGroup.projectName}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-4 text-xs">
+                              <div className="flex flex-col sm:flex-row w-full md:w-auto items-start sm:items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-4 text-xs w-full sm:w-auto justify-between sm:justify-start">
                                   <div className="flex items-center gap-1">
                                     <span className="text-slate-400">Total:</span>
                                     <span className="text-slate-300 font-medium">{projectStats.total}</span>
@@ -793,7 +793,7 @@ export default function AsistenciaPage() {
                                     e.stopPropagation()
                                     handleOpenAttendanceModal(projectGroup.projectId, projectGroup.projectName)
                                   }}
-                                  className="ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center gap-1.5"
+                                  className="w-full sm:w-auto px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                                   title="Registrar asistencia de todos los trabajadores"
                                 >
                                   <Calendar className="w-3.5 h-3.5" />
@@ -847,33 +847,37 @@ export default function AsistenciaPage() {
                                     <div
                                       className={`bg-slate-700/30 rounded-lg border-2 px-4 py-3 transition-colors ${borderColor}`}
                                     >
-                                      <div className="flex items-center justify-between">
+                                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-1">
                                         {/* Izquierda: Icono, Nombre, RUT */}
-                                        <div className="flex items-center gap-3 flex-1">
-                                          <User className="w-4 h-4 text-purple-400" />
-                                          <p className={`text-sm font-medium ${isPresentFromDB ? 'text-emerald-300' : 'text-red-300'}`}>
-                                            {worker?.full_name}
-                                          </p>
-                                          <span className="text-xs text-slate-400">{worker?.rut}</span>
-                                          <span className={`px-2 py-0.5 rounded text-[10px] ${contract.contract_type === 'por_dia'
-                                            ? 'bg-purple-900/30 text-purple-400'
-                                            : 'bg-orange-900/30 text-orange-400'
-                                            }`}>
-                                            {contract.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
-                                          </span>
+                                        <div className="flex flex-col gap-1 w-full sm:w-auto">
+                                          <div className="flex items-center gap-2">
+                                            <User className="w-4 h-4 text-purple-400 shrink-0" />
+                                            <p className={`text-sm font-medium truncate ${isPresentFromDB ? 'text-emerald-300' : 'text-red-300'}`}>
+                                              {worker?.full_name}
+                                            </p>
+                                          </div>
+                                          <div className="flex items-center gap-2 pl-6">
+                                            <span className="text-xs text-slate-400">{worker?.rut}</span>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] ${contract.contract_type === 'por_dia'
+                                              ? 'bg-purple-900/30 text-purple-400'
+                                              : 'bg-orange-900/30 text-orange-400'
+                                              }`}>
+                                              {contract.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
+                                            </span>
+                                          </div>
                                         </div>
 
                                         {/* Derecha: Estado y Horas */}
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto mt-2 sm:mt-0 gap-2 pl-6 sm:pl-0">
                                           {isPresentFromDB ? (
-                                            <div className="flex items-center gap-3 text-sm">
+                                            <>
                                               <div className="flex items-center gap-1 text-slate-300">
                                                 <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                <span>{checkInTime} - {checkOutTime}</span>
+                                                <span className="text-xs">{checkInTime} - {checkOutTime}</span>
                                               </div>
 
                                               {/* Badges de estado */}
-                                              <div className="flex gap-1">
+                                              <div className="flex gap-1 flex-wrap justify-end">
                                                 {isLateArrival && (
                                                   <span className="px-1.5 py-0.5 bg-yellow-900/30 text-yellow-400 text-[10px] rounded border border-yellow-700/50" title="Llegada Tardía">
                                                     Tarde
@@ -890,7 +894,7 @@ export default function AsistenciaPage() {
                                                   </span>
                                                 )}
                                               </div>
-                                            </div>
+                                            </>
                                           ) : (
                                             <span className="text-sm text-red-400 font-medium">Ausente</span>
                                           )}
@@ -989,6 +993,9 @@ export default function AsistenciaPage() {
               })
 
               // Recargar datos
+              fetchAttendances(today, registerProjectId)
+            }}
+            onAttendanceSaved={() => {
               fetchAttendances(today, registerProjectId)
             }}
           />

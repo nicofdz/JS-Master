@@ -25,6 +25,7 @@ interface ProjectAttendanceModalProps {
     workers: Worker[]
     today: string
     onWorkersChanged?: (changedToAbsent: number[]) => void
+    onAttendanceSaved?: () => void
 }
 
 interface WorkerAttendanceState {
@@ -36,6 +37,8 @@ interface WorkerAttendanceState {
     arrivalReason: string
 }
 
+
+
 export function ProjectAttendanceModal({
     isOpen,
     onClose,
@@ -44,7 +47,8 @@ export function ProjectAttendanceModal({
     contracts,
     workers,
     today,
-    onWorkersChanged
+    onWorkersChanged,
+    onAttendanceSaved
 }: ProjectAttendanceModalProps) {
     const { markAttendance } = useAttendance()
     const { user } = useAuth()
@@ -314,6 +318,7 @@ export function ProjectAttendanceModal({
             toast.error('Error al actualizar asistencia')
         } finally {
             setSaving(false)
+            if (onAttendanceSaved) onAttendanceSaved()
         }
     }
 
@@ -404,7 +409,7 @@ export function ProjectAttendanceModal({
                         late_arrival: state.isPresent && state.checkInTime > '08:00',
                         arrival_reason: (state.isPresent && state.checkInTime > '08:00') ? state.arrivalReason : undefined,
                         created_by: user?.id || undefined
-                    })
+                    }, { skipToast: true })
                     savedCount++
                     savedContractIds.add(contract.id)
                 }
@@ -415,6 +420,10 @@ export function ProjectAttendanceModal({
 
             if (onWorkersChanged && changedToAbsent.length > 0) {
                 onWorkersChanged(changedToAbsent)
+            }
+
+            if (onAttendanceSaved && savedCount > 0) {
+                onAttendanceSaved()
             }
 
             toast.success(`Asistencia ${savedCount > 0 ? 'registrada/actualizada' : 'sin cambios'} para ${savedCount} trabajador(es)`)

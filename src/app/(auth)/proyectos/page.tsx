@@ -376,57 +376,67 @@ export default function ProyectosPage() {
                     className="p-6 cursor-pointer hover:bg-slate-800/50 transition-colors"
                     onClick={() => toggleProjectExpansion(project.id)}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 md:gap-0">
                       {/* Información principal */}
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-start md:items-center gap-4 w-full md:w-auto md:flex-1">
+                        <div className="flex items-center gap-2 mt-1 md:mt-0">
                           {expandedProjects.has(project.id) ? (
                             <ChevronDown className="w-5 h-5 text-slate-400" />
                           ) : (
                             <ChevronRight className="w-5 h-5 text-slate-400" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold text-slate-100">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                            <h3 className="text-lg font-semibold text-slate-100 truncate">
                               {project.name}
                             </h3>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusColor(project.status)}`}>
                               {getStatusEmoji(project.status)} {PROJECT_STATUSES[project.status as keyof typeof PROJECT_STATUSES]}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm text-slate-400 truncate">
                             {project.address || 'Sin dirección'}
                           </p>
                         </div>
                       </div>
 
                       {/* Información secundaria */}
-                      <div className="flex items-center gap-8">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-8 w-full md:w-auto pl-11 md:pl-0">
                         {/* Torres */}
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">
-                            {project.towers_count || 0}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            {project.towers_count === 1 ? 'Torre' : 'Torres'}
+                        <div className="flex items-center sm:block gap-3 sm:gap-0 sm:text-center">
+                          <span className="text-sm text-slate-400 sm:hidden">Torres:</span>
+                          <div className="flex items-baseline gap-1 sm:block">
+                            <div className="text-xl sm:text-2xl font-bold text-blue-400">
+                              {project.towers_count || 0}
+                            </div>
+                            <div className="text-sm sm:text-xs text-slate-400">
+                              {project.towers_count === 1 ? 'Torre' : 'Torres'}
+                            </div>
                           </div>
                         </div>
 
                         {/* Fechas */}
-                        <div className="text-sm">
-                          <div className="text-slate-300 font-medium">
-                            {project.start_date ? formatDate(project.start_date) : 'Sin inicio'}
+                        <div className="flex items-center sm:block gap-3 sm:gap-0 text-sm w-full sm:w-auto justify-between sm:justify-start">
+                          <div className="flex flex-col sm:block">
+                            <span className="text-slate-400 text-xs sm:hidden">Inicio</span>
+                            <div className="text-slate-300 font-medium">
+                              {project.start_date ? formatDate(project.start_date) : 'Sin inicio'}
+                            </div>
                           </div>
                           {project.estimated_completion && (
-                            <div className="text-xs text-slate-400 mt-1">
-                              Fin: {formatDate(project.estimated_completion)}
+                            <div className="flex flex-col sm:block text-right sm:text-left">
+                              <span className="text-slate-400 text-xs sm:hidden mt-0">Fin</span>
+                              <div className="text-slate-300 sm:text-xs sm:text-slate-400 sm:mt-1">
+                                <span className="hidden sm:inline">Fin: </span>
+                                {formatDate(project.estimated_completion)}
+                              </div>
                             </div>
                           )}
                         </div>
 
                         {/* Progreso */}
-                        <div className="w-32">
+                        <div className="w-full sm:w-32">
                           <div className="flex justify-between text-xs text-slate-400 mb-1">
                             <span>Progreso</span>
                             <span className="font-semibold text-slate-300">
@@ -442,7 +452,7 @@ export default function ProyectosPage() {
                               style={{ width: `${project.progress_percentage || project.progress || 0}%` }}
                             ></div>
                           </div>
-                          <div className="text-xs text-slate-400">
+                          <div className="text-xs text-slate-400 text-right sm:text-left">
                             {project.activities_completed || 0}/{project.total_activities || 0} tareas
                           </div>
                         </div>
@@ -536,10 +546,10 @@ export default function ProyectosPage() {
                   {/* Tarjeta anidada con desglose */}
                   {expandedProjects.has(project.id) && (
                     <div className="px-6 pb-6">
-                      <div className="bg-slate-900 rounded-lg border border-slate-700 p-6">
-                        <div className="flex items-center gap-6">
+                      <div className="bg-slate-900 rounded-lg border border-slate-700 p-4 sm:p-6">
+                        <div className="flex flex-col xl:flex-row gap-6">
                           {/* Tarjetas de información */}
-                          <div className="grid grid-cols-3 gap-4 flex-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:flex-1">
                             {/* Tarjeta de Torres */}
                             <div className="bg-slate-800 rounded-lg border border-blue-500/30 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all duration-200 p-4">
                               <div className="flex items-center gap-4">
@@ -589,7 +599,7 @@ export default function ProyectosPage() {
                                     })()}
                                   </div>
                                   <div className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-                                    Dptos/Piso <span className="text-gray-500">(promedio)</span>
+                                    Dptos/Piso <span className="text-gray-500">(prom)</span>
                                   </div>
                                 </div>
                               </div>
@@ -597,7 +607,7 @@ export default function ProyectosPage() {
                           </div>
 
                           {/* Botones de acción a la derecha */}
-                          <div className="flex flex-col gap-3 flex-shrink-0 ml-auto">
+                          <div className="flex flex-col sm:flex-row xl:flex-col gap-3 w-full xl:w-auto xl:ml-auto">
                             <button
                               onClick={() => {
                                 setSelectedProjectForEditStructure(project)

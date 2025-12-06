@@ -143,7 +143,7 @@ export function useAttendance() {
   }, [])
 
   // Crear o actualizar asistencia
-  const markAttendance = useCallback(async (data: AttendanceFormData) => {
+  const markAttendance = useCallback(async (data: AttendanceFormData, options?: { skipToast?: boolean }) => {
     try {
       // Buscar registro existente por contract_id y fecha
       const { data: existingAttendance } = await supabase
@@ -201,7 +201,10 @@ export function useAttendance() {
         setAttendances(prev =>
           prev.map(a => a.id === existingAttendance.id ? transformed : a)
         )
-        toast.success('Asistencia actualizada')
+
+        if (!options?.skipToast) {
+          toast.success('Asistencia actualizada')
+        }
       } else {
         // Crear nueva asistencia (guardamos created_by)
         const insertPayload: any = {
@@ -250,7 +253,10 @@ export function useAttendance() {
         }
 
         setAttendances(prev => [transformed, ...prev])
-        toast.success('Asistencia registrada')
+
+        if (!options?.skipToast) {
+          toast.success('Asistencia registrada')
+        }
       }
     } catch (err: any) {
       console.error('Error marking attendance:', err)
