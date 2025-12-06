@@ -542,8 +542,8 @@ export function ProjectAttendanceModal({
                                     }`}
                             >
                                 {/* Header del trabajador */}
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-3">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+                                    <div className="flex items-center gap-3 w-full sm:w-auto">
                                         <button
                                             onClick={() => handleTogglePresence(contract.id)}
                                             className={`flex-shrink-0 w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all ${state.isPresent
@@ -558,7 +558,7 @@ export function ProjectAttendanceModal({
                                             <p className="text-sm text-slate-400">{worker.rut}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 ml-14 sm:ml-0">
                                         <span className={`px-2 py-1 rounded text-xs ${contract.contract_type === 'por_dia'
                                             ? 'bg-purple-900/30 text-purple-400'
                                             : 'bg-orange-900/30 text-orange-400'
@@ -573,7 +573,7 @@ export function ProjectAttendanceModal({
 
                                 {/* Formulario (solo si está presente) */}
                                 {state.isPresent && (
-                                    <div className="ml-14 space-y-3">
+                                    <div className="ml-0 sm:ml-14 space-y-3">
                                         <div className="grid grid-cols-2 gap-3">
                                             {/* Hora de entrada */}
                                             <div>
