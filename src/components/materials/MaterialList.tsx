@@ -108,8 +108,105 @@ export function MaterialList({
 	return (
 		<div className="space-y-4">
 
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-				<div className="overflow-x-auto">
+			<div className="bg-transparent sm:bg-white rounded-lg sm:shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
+
+				{/* VISTA MÓVIL: Tarjetas */}
+				<div className="md:hidden space-y-4">
+					{loading ? (
+						<div className="bg-white rounded-lg shadow p-8 text-center">
+							<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
+							<p className="mt-2 text-sm text-slate-500">Cargando materiales...</p>
+						</div>
+					) : filteredMaterials.length === 0 ? (
+						<div className="bg-white rounded-lg shadow p-8 text-center text-slate-500">
+							No se encontraron materiales
+						</div>
+					) : (
+						filteredMaterials.map((material) => {
+							const totalStock = getTotalStock(material.id);
+							const isLowStock = totalStock <= (material.stock_min || 0);
+							return (
+								<div key={material.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+									<div className="flex justify-between items-start mb-2">
+										<div>
+											<h3 className="font-medium text-gray-900">{material.name}</h3>
+											<p className="text-sm text-gray-500">{material.category} • {material.unit}</p>
+										</div>
+										{isLowStock && (
+											<span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+												Bajo Stock
+											</span>
+										)}
+									</div>
+
+									<div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+										<div className="bg-slate-50 p-2 rounded">
+											<span className="block text-xs text-gray-500">Stock Actual</span>
+											<span className={`block font-medium ${isLowStock ? "text-red-600" : "text-gray-900"}`}>
+												{totalStock.toLocaleString()}
+											</span>
+										</div>
+										<div className="bg-slate-50 p-2 rounded">
+											<span className="block text-xs text-gray-500">Mínimo</span>
+											<span className="block font-medium text-gray-700">
+												{material.stock_min?.toLocaleString() || 0}
+											</span>
+										</div>
+									</div>
+
+									<div className="text-xs text-gray-500 mb-4">
+										<span className="font-medium">Almacén:</span> {material.default_warehouse?.name || '-'}
+									</div>
+
+									<div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+										<button
+											onClick={() => setViewingDetails(material)}
+											className="p-2 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-md transition-colors"
+											title="Ver detalles"
+										>
+											<Eye className="h-4 w-4" />
+										</button>
+										<button
+											onClick={() => onNewDelivery(material.id)}
+											className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+											title="Registrar entrega"
+										>
+											<Truck className="h-4 w-4" />
+										</button>
+										{canAdjustStock && (
+											<>
+												<button
+													onClick={() => setEditing(material)}
+													className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
+													title="Editar"
+												>
+													<Pencil className="h-4 w-4" />
+												</button>
+												<button
+													onClick={() => onAdjustStock(material.id)}
+													className="p-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+													title="Ajustar stock"
+												>
+													<Wrench className="h-4 w-4" />
+												</button>
+												<button
+													onClick={() => setDeleting(material)}
+													className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+													title="Eliminar"
+												>
+													<Trash2 className="h-4 w-4" />
+												</button>
+											</>
+										)}
+									</div>
+								</div>
+							);
+						})
+					)}
+				</div>
+
+				{/* VISTA DESKTOP: Tabla */}
+				<div className="hidden md:block overflow-x-auto">
 					<table className="min-w-full divide-y divide-gray-200">
 						<thead className="bg-slate-700">
 							<tr>

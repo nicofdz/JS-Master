@@ -119,7 +119,7 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelet
               key={task.task_id}
               className="bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-800/70 hover:border-slate-600 transition-all"
             >
-              <div className="p-4 flex items-center justify-between">
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
                 {/* Información Principal */}
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-1">
@@ -163,7 +163,7 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelet
                 </div>
 
                 {/* Acciones */}
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-4 justify-end w-full sm:w-auto">
                   <button
                     onClick={() => handleViewDetails(task)}
                     className="p-2 hover:bg-blue-900/30 rounded-md transition-colors text-blue-400 hover:text-blue-300"

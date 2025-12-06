@@ -274,8 +274,8 @@ export function ProcessTaskPaymentModal({
                         <button
                             onClick={() => setPaymentMode('all')}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${paymentMode === 'all'
-                                    ? 'bg-blue-600 text-white shadow-md'
-                                    : 'text-slate-400 hover:text-slate-300'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-slate-300'
                                 }`}
                         >
                             Pago Completo
@@ -283,8 +283,8 @@ export function ProcessTaskPaymentModal({
                         <button
                             onClick={() => setPaymentMode('partial')}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${paymentMode === 'partial'
-                                    ? 'bg-blue-600 text-white shadow-md'
-                                    : 'text-slate-400 hover:text-slate-300'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'text-slate-400 hover:text-slate-300'
                                 }`}
                         >
                             Pago Parcial
@@ -311,13 +311,13 @@ export function ProcessTaskPaymentModal({
                     <>
                         {/* Controles de selección */}
                         {paymentMode === 'partial' && (
-                            <div className="flex items-center justify-between">
-                                <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0">
+                                <div className="flex gap-2 w-full sm:w-auto">
                                     <Button
                                         size="sm"
                                         variant="outline"
                                         onClick={selectAllTasks}
-                                        className="bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600"
+                                        className="bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 flex-1 sm:flex-none"
                                     >
                                         Seleccionar Todas
                                     </Button>
@@ -325,7 +325,7 @@ export function ProcessTaskPaymentModal({
                                         size="sm"
                                         variant="outline"
                                         onClick={deselectAllTasks}
-                                        className="bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600"
+                                        className="bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 flex-1 sm:flex-none"
                                     >
                                         Deseleccionar Todas
                                     </Button>
@@ -346,8 +346,8 @@ export function ProcessTaskPaymentModal({
                                     <Card
                                         key={task.id}
                                         className={`transition-all ${isSelected
-                                                ? 'bg-blue-900/30 border-blue-600'
-                                                : 'bg-slate-700/30 border-slate-600'
+                                            ? 'bg-blue-900/30 border-blue-600'
+                                            : 'bg-slate-700/30 border-slate-600'
                                             } ${paymentMode === 'partial'
                                                 ? 'cursor-pointer hover:border-slate-500'
                                                 : 'cursor-default'
@@ -355,13 +355,13 @@ export function ProcessTaskPaymentModal({
                                         onClick={() => canSelect && toggleTaskSelection(task.id)}
                                     >
                                         <CardContent className="p-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex items-start gap-3 flex-1">
+                                            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                                                <div className="flex items-start gap-3 flex-1 w-full">
                                                     {paymentMode === 'partial' ? (
                                                         <div
                                                             className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 flex-shrink-0 cursor-pointer ${isSelected
-                                                                    ? 'bg-blue-600 border-blue-600'
-                                                                    : 'border-slate-500'
+                                                                ? 'bg-blue-600 border-blue-600'
+                                                                : 'border-slate-500'
                                                                 }`}
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
@@ -392,7 +392,7 @@ export function ProcessTaskPaymentModal({
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right flex-shrink-0">
+                                                <div className="text-left sm:text-right flex-shrink-0 w-full sm:w-auto border-t sm:border-t-0 border-slate-600 pt-2 sm:pt-0">
                                                     <div className="text-sm text-slate-400 mb-1">Monto</div>
                                                     <div className="text-lg font-bold text-blue-400">
                                                         {formatCurrency(task.worker_payment)}

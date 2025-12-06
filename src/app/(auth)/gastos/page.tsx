@@ -658,18 +658,18 @@ export default function GastosPage() {
     <div className="min-h-screen bg-slate-900 p-6">
       <div className="w-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 sm:gap-0">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Gestión de Gastos</h1>
             <p className="text-slate-400">Administra los gastos de la empresa por categorías</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
 
 
             <Button
               variant="outline"
               onClick={() => setIsFilterSidebarOpen(true)}
-              className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+              className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors flex-1 sm:flex-none justify-center"
             >
               <Filter className="w-5 h-5" />
               Filtros
@@ -702,17 +702,17 @@ export default function GastosPage() {
               variant="outline"
               size="sm"
               onClick={() => setShowChart(!showChart)}
-              className={`text-xs ${showChart ? 'bg-slate-700' : ''}`}
+              className={`text-xs ${showChart ? 'bg-slate-700' : ''} flex-1 sm:flex-none justify-center`}
             >
-              {showChart ? 'Ocultar Gráfico' : 'Mostrar Gráfico'}
+              {showChart ? 'Ocultar' : 'Gráfico'}
             </Button>
 
             <Button
               onClick={() => setShowExpenseForm(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none justify-center"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Agregar Gasto
+              Agregar
             </Button>
           </div>
         </div>
@@ -982,9 +982,9 @@ export default function GastosPage() {
             filteredExpenses.map((expense) => (
               <Card key={expense.id} className="bg-slate-800 border-slate-700 hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-4">
+                  <div className="flex flex-col sm:flex-row items-start justify-between">
+                    <div className="flex-1 w-full">
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
                         <h3 className="text-xl font-semibold text-white">{expense.name}</h3>
                         <Badge className={getTypeColor(expense.type)}>
                           <span className="flex items-center space-x-1">
@@ -1002,7 +1002,7 @@ export default function GastosPage() {
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 text-slate-400 mr-2" />
                           <div>
@@ -1050,30 +1050,33 @@ export default function GastosPage() {
                       )}
                     </div>
 
-                    <div className="flex space-x-2 ml-4">
+                    <div className="flex gap-2 mt-4 sm:mt-0 sm:ml-4 w-full sm:w-auto justify-end">
                       {expense.receipt_url && (
                         <Button
                           onClick={() => handleViewReceipt(expense)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white p-2"
+                          className="bg-blue-600 hover:bg-blue-700 text-white p-2 flex-1 sm:flex-none justify-center"
                           title="Ver Comprobante"
                         >
                           <FileText className="w-4 h-4" />
+                          <span className="sm:hidden ml-2">Ver</span>
                         </Button>
                       )}
                       <Button
                         onClick={() => handleEdit(expense)}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white p-2"
+                        className="bg-yellow-600 hover:bg-yellow-700 text-white p-2 flex-1 sm:flex-none justify-center"
                         title="Editar"
                       >
                         <Wrench className="w-4 h-4" />
+                        <span className="sm:hidden ml-2">Editar</span>
                       </Button>
                       {expense.status === 'active' && (
                         <Button
                           onClick={() => handleCancelExpense(expense.id)}
-                          className="bg-red-600 hover:bg-red-700 text-white p-2"
+                          className="bg-red-600 hover:bg-red-700 text-white p-2 flex-1 sm:flex-none justify-center"
                           title="Anular"
                         >
                           <Trash2 className="w-4 h-4" />
+                          <span className="sm:hidden ml-2">Anular</span>
                         </Button>
                       )}
                     </div>

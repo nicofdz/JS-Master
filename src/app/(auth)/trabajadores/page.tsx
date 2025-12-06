@@ -1133,8 +1133,84 @@ export default function TrabajadoresPage() {
             </div>
 
             {/* Lista de trabajadores */}
-            <div id="workers-table" className="bg-white rounded-lg shadow flex-1 overflow-hidden flex flex-col min-h-0">
-              <div className="overflow-auto h-full">
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-transparent sm:bg-white rounded-lg sm:shadow">
+
+              {/* VISTA MÓVIL: Tarjetas */}
+              <div className="md:hidden overflow-y-auto h-full space-y-4 pb-20">
+                {filteredWorkers.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow p-4">
+                    {searchTerm || statusFilter !== 'all'
+                      ? 'No se encontraron trabajadores con los filtros aplicados'
+                      : 'No hay trabajadores registrados'
+                    }
+                  </div>
+                ) : (
+                  filteredWorkers.map((worker) => (
+                    <div key={worker.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900">{worker.full_name}</h3>
+                            <p className="text-sm font-mono text-gray-500">{worker.rut}</p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                          }`}>
+                          {worker.is_active ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-sm text-gray-600 mb-4">
+                        {worker.email && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">Email:</span>
+                            <span className="text-blue-600">{worker.email}</span>
+                          </div>
+                        )}
+                        {worker.phone && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400">Tel:</span>
+                            <span>{worker.phone}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                        {!showWorkerTrash ? (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(worker)} className="h-8 w-8 p-0 text-blue-600">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleShowContractHistory(worker)} className="h-8 w-8 p-0 text-blue-600">
+                              <History className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(worker.id)} className="h-8 w-8 p-0 text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-green-600">
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* VISTA DESKTOP: Tabla */}
+              <div id="workers-table" className="hidden md:block overflow-auto h-full">
                 <table className="w-full relative">
                   <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
                     <tr>
@@ -1158,7 +1234,7 @@ export default function TrabajadoresPage() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredWorkers.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                           {searchTerm || statusFilter !== 'all'
                             ? 'No se encontraron trabajadores con los filtros aplicados'
                             : 'No hay trabajadores registrados'
@@ -1425,8 +1501,94 @@ export default function TrabajadoresPage() {
             />
 
             {/* Lista de contratos */}
-            <div id="contracts-table" className="bg-white rounded-lg shadow flex-1 overflow-hidden flex flex-col min-h-0">
-              <div className="overflow-auto h-full">
+            <div className="bg-transparent sm:bg-white rounded-lg sm:shadow flex-1 overflow-hidden flex flex-col min-h-0">
+
+              {/* VISTA MÓVIL: Tarjetas de Contratos */}
+              <div className="md:hidden overflow-y-auto h-full space-y-4 pb-20">
+                {paginatedContracts.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow p-4">
+                    No hay contratos registrados
+                  </div>
+                ) : (
+                  paginatedContracts.map((contract) => (
+                    <div key={contract.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{contract.worker_name || 'Trabajador no encontrado'}</h4>
+                          <p className="text-xs text-blue-600">{contract.project_name || 'Proyecto no encontrado'}</p>
+                        </div>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
+                          ? 'bg-green-100 text-green-800'
+                          : contract.status === 'finalizado'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                          }`}>
+                          {contract.status === 'activo' ? 'Activo' :
+                            contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 text-sm text-gray-600 mb-4">
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-400">Tipo:</span>
+                          <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.contract_type === 'por_dia'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-orange-100 text-orange-800'
+                            }`}>
+                            {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-xs text-gray-400">Categoría:</span>
+                          <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.is_renovacion
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-cyan-100 text-cyan-800'
+                            }`}>
+                            {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-50 p-2 rounded">
+                          <span className="text-xs text-gray-500">Periodo:</span>
+                          <span className="text-xs font-medium">
+                            {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 flex-wrap">
+                        {!showTrash ? (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => handleEditContract(contract)} className="h-8 w-8 p-0 text-blue-600">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleGenerateDocuments(contract)} className="h-8 w-8 p-0 text-green-600">
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-600">
+                              <Clock className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteContract(contract.id)} className="h-8 w-8 p-0 text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-green-600">
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-red-600">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* VISTA DESKTOP: Tabla */}
+              <div id="contracts-table" className="hidden md:block overflow-auto h-full">
                 <table className="w-full relative">
                   <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
                     <tr>

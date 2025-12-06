@@ -333,7 +333,7 @@ export function ProcessDaysPaymentModal({
                 </Card>
 
                 {/* Rango de fechas */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                             Fecha Inicio
@@ -433,8 +433,8 @@ export function ProcessDaysPaymentModal({
                                             }`}
                                     >
                                         <CardContent className="p-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex items-start gap-3 flex-1">
+                                            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                                                <div className="flex items-start gap-3 flex-1 w-full">
                                                     <Calendar className="w-4 h-4 text-green-400 flex-shrink-0 mt-1" />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -481,8 +481,8 @@ export function ProcessDaysPaymentModal({
                                                             ) : (
                                                                 <div className="flex items-center gap-2">
                                                                     <Badge className={`text-xs ${isPartialDay
-                                                                            ? 'bg-yellow-900/30 text-yellow-400 border-yellow-500'
-                                                                            : 'bg-green-900/30 text-green-400 border-green-500'
+                                                                        ? 'bg-yellow-900/30 text-yellow-400 border-yellow-500'
+                                                                        : 'bg-green-900/30 text-green-400 border-green-500'
                                                                         }`}>
                                                                         {dayPercentage}% de pago
                                                                     </Badge>
@@ -542,7 +542,7 @@ export function ProcessDaysPaymentModal({
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="text-right flex-shrink-0">
+                                                <div className="text-left sm:text-right flex-shrink-0 w-full sm:w-auto border-t sm:border-t-0 border-slate-600 pt-2 sm:pt-0">
                                                     <div className="text-sm text-slate-400 mb-1">Monto a Pagar</div>
                                                     <div className={`text-lg font-bold ${isPartialDay ? 'text-yellow-400' : 'text-green-400'}`}>
                                                         {formatCurrency(dayAmount)}

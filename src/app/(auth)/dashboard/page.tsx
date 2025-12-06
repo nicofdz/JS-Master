@@ -72,22 +72,22 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   {projects.map((project) => (
                     <div key={project.id} className="border border-slate-700 rounded-lg p-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                           <h3 className="font-semibold text-slate-100">{project.name}</h3>
                           {project.is_delayed && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-900/30 text-red-400 border border-red-700">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-900/30 text-red-400 border border-red-700 w-fit">
                               ⚠️ Retrasado {project.delay_percentage}% ({project.delayed_tasks} tareas)
                             </span>
                           )}
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)} self-start sm:self-auto`}>
                           {getStatusEmoji(project.status)} {getStatusText(project.status)}
                         </span>
                       </div>
                       <p className="text-sm text-slate-400 mb-3">{project.address || 'Sin dirección'}</p>
 
-                      <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-3">
                         <div>
                           <span className="text-slate-500">Pisos:</span> <span className="text-slate-200">{project.floors_created || 0}</span>
                         </div>
@@ -181,9 +181,9 @@ export default function DashboardPage() {
 
                       {/* Información adicional de apartamentos */}
                       <div className="mt-2 text-xs text-slate-500">
-                        <div className="flex justify-between">
+                        <div className="flex flex-col sm:flex-row justify-between gap-2">
                           <span>Apartamentos:</span>
-                          <div className="flex space-x-2">
+                          <div className="flex flex-wrap gap-2">
                             {floor.completed_apartments > 0 && (
                               <span className="text-green-600">
                                 ✅ {floor.completed_apartments} terminados

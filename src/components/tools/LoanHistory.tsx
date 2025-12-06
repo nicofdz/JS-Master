@@ -208,8 +208,8 @@ export function LoanHistory({
         {filteredLoans.map((loan) => (
           <Card key={loan.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row items-start justify-between">
+                <div className="flex-1 w-full">
                   <div className="flex items-center space-x-3 mb-3">
                     <h3 className="text-lg font-semibold text-gray-900">
                       {loan.tool_name}
@@ -270,9 +270,9 @@ export function LoanHistory({
                 </div>
 
                 {loan.return_date === null && (
-                  <div className="ml-4">
+                  <div className="mt-4 sm:mt-0 sm:ml-4 w-full sm:w-auto">
                     {selectedLoan === loan.id ? (
-                      <div className="space-y-3 min-w-[300px]">
+                      <div className="space-y-3 w-full sm:min-w-[300px]">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Detalles de Devolución
@@ -289,7 +289,7 @@ export function LoanHistory({
                           <Button
                             onClick={() => handleReturn(loan.id)}
                             size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
+                            className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
                             disabled={!returnDetails.trim()}
                           >
                             <ArrowLeft className="w-4 h-4 mr-1" />
@@ -298,7 +298,7 @@ export function LoanHistory({
                           <Button
                             onClick={() => setSelectedLoan(null)}
                             size="sm"
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-700"
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 flex-1 sm:flex-none"
                           >
                             Cancelar
                           </Button>
@@ -308,7 +308,7 @@ export function LoanHistory({
                       <Button
                         onClick={() => setSelectedLoan(loan.id)}
                         size="sm"
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                        className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
                       >
                         <ArrowLeft className="w-4 h-4 mr-1" />
                         Devolver

@@ -96,57 +96,59 @@ export default function MaterialesPage() {
 
 	return (
 		<div className="w-full px-6 space-y-6 py-8">
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Gestión de Materiales</h1>
-					<p className="text-gray-600 mt-1">Administra el catálogo, registra entregas y controla el stock por almacén.</p>
+					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Materiales</h1>
+					<p className="text-sm sm:text-base text-gray-600 mt-1">Administra el catálogo, registra entregas y controla el stock por almacén.</p>
 				</div>
-				<div className="flex items-center gap-4">
+				<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
 					{view === 'materiales' && (
-						<div className="relative w-64">
+						<div className="relative w-full sm:w-64">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
 							<Input
 								placeholder="Buscar material..."
 								value={search}
 								onChange={(e) => setSearch(e.target.value)}
-								className="pl-9 bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50"
+								className="pl-9 bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50 w-full"
 							/>
 						</div>
 					)}
-					<Button
-						onClick={() => setIsFilterSidebarOpen(true)}
-						variant="outline"
-						className="border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white"
-					>
-						<Filter className="w-4 h-4 mr-2" />
-						Filtros
-						{((view === 'materiales' && (category || lowStockOnly)) ||
-							(view === 'historial' && (movementType !== 'todos' || materialId || projectId || workerId || userId || dateFrom || dateTo))) && (
-								<span className="ml-2 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
-									!
-								</span>
-							)}
-					</Button>
+					<div className="flex gap-2 w-full sm:w-auto">
+						<Button
+							onClick={() => setIsFilterSidebarOpen(true)}
+							variant="outline"
+							className="flex-1 sm:flex-none border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white"
+						>
+							<Filter className="w-4 h-4 mr-2" />
+							Filtros
+							{((view === 'materiales' && (category || lowStockOnly)) ||
+								(view === 'historial' && (movementType !== 'todos' || materialId || projectId || workerId || userId || dateFrom || dateTo))) && (
+									<span className="ml-2 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+										!
+									</span>
+								)}
+						</Button>
 
-					<div className="flex bg-slate-700/30 p-1 rounded-lg">
-						<button
-							onClick={() => setView("materiales")}
-							className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${view === "materiales"
+						<div className="flex bg-slate-700/30 p-1 rounded-lg flex-1 sm:flex-none">
+							<button
+								onClick={() => setView("materiales")}
+								className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${view === "materiales"
 									? "bg-blue-600 text-white shadow-md"
 									: "text-slate-400 hover:text-slate-300"
-								}`}
-						>
-							Materiales
-						</button>
-						<button
-							onClick={() => setView("historial")}
-							className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${view === "historial"
+									}`}
+							>
+								Materiales
+							</button>
+							<button
+								onClick={() => setView("historial")}
+								className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${view === "historial"
 									? "bg-blue-600 text-white shadow-md"
 									: "text-slate-400 hover:text-slate-300"
-								}`}
-						>
-							Historial
-						</button>
+									}`}
+							>
+								Historial
+							</button>
+						</div>
 					</div>
 				</div>
 			</div>

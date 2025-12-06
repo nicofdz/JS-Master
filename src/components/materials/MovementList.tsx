@@ -96,8 +96,74 @@ export function MovementList({
 	return (
 		<div className="space-y-4">
 
-			<div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-				<div className="overflow-x-auto">
+			<div className="bg-transparent sm:bg-white rounded-lg sm:shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
+
+				{/* VISTA MÓVIL: Tarjetas */}
+				<div className="md:hidden space-y-4">
+					{loading ? (
+						<div className="bg-white rounded-lg shadow p-8 text-center">
+							<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
+							<p className="mt-2 text-sm text-slate-500">Cargando movimientos...</p>
+						</div>
+					) : filteredMovements.length === 0 ? (
+						<div className="bg-white rounded-lg shadow p-8 text-center text-slate-500">
+							No se encontraron movimientos
+						</div>
+					) : (
+						filteredMovements.map((movement) => {
+							const isNegative = movement.movement_type === 'entrega' || movement.movement_type === 'ajuste_negativo';
+							return (
+								<div key={movement.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+									<div className="flex justify-between items-start mb-2">
+										<p className="text-xs text-gray-500">{formatDate(movement.created_at)}</p>
+										<span className={`text-xs font-semibold px-2 py-1 rounded-full capitalize ${isNegative ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
+											}`}>
+											{movement.movement_type}
+										</span>
+									</div>
+									<h4 className="font-medium text-gray-900 mb-1">{movement.material_name || 'Material desconocido'}</h4>
+
+									<div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded">
+										<span className="text-sm text-gray-600">Cantidad:</span>
+										<span className={`text-lg font-bold ${isNegative ? 'text-red-600' : 'text-emerald-600'}`}>
+											{isNegative ? '-' : '+'}{movement.quantity.toLocaleString()}
+										</span>
+									</div>
+
+									<div className="space-y-1 text-xs text-gray-600">
+										{movement.project_name && (
+											<div className="flex justify-between">
+												<span>Proyecto:</span>
+												<span className="font-medium">{movement.project_name}</span>
+											</div>
+										)}
+										{movement.worker_name && (
+											<div className="flex justify-between">
+												<span>Trabajador:</span>
+												<span className="font-medium">{movement.worker_name}</span>
+											</div>
+										)}
+										{movement.warehouse_name && (
+											<div className="flex justify-between">
+												<span>Almacén:</span>
+												<span className="font-medium">{movement.warehouse_name}</span>
+											</div>
+										)}
+									</div>
+
+									{(movement.notes || movement.reason) && (
+										<div className="mt-3 pt-2 border-t border-gray-100 text-xs italic text-gray-500">
+											&quot;{movement.notes || movement.reason}&quot;
+										</div>
+									)}
+								</div>
+							);
+						})
+					)}
+				</div>
+
+				{/* VISTA DESKTOP: Tabla */}
+				<div className="hidden md:block overflow-x-auto">
 					<table className="min-w-full divide-y divide-gray-200">
 						<thead className="bg-slate-700">
 							<tr>

@@ -88,7 +88,7 @@ export function ToolList({ tools, onEdit, onDelete, onReactivate, onLoan }: Tool
       {tools.map((tool) => (
         <Card key={tool.id} className={`hover:shadow-md transition-shadow ${!tool.is_active ? 'opacity-60 bg-gray-50' : ''}`}>
           <CardContent className="p-6">
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -101,26 +101,26 @@ export function ToolList({ tools, onEdit, onDelete, onReactivate, onLoan }: Tool
                     {getActiveStatusText(tool.is_active)}
                   </Badge>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Marca</p>
                     <p className="text-sm text-gray-900">{tool.brand}</p>
                   </div>
-                  
+
                   <div>
                     <p className="text-sm font-medium text-gray-600">Valor</p>
                     <p className="text-sm text-gray-900 font-semibold">
                       {formatCurrency(tool.value)}
                     </p>
                   </div>
-                  
+
                   <div>
                     <p className="text-sm font-medium text-gray-600">Ubicación</p>
                     <p className="text-sm text-gray-900">{tool.location}</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Detalles</p>
                   <p className="text-sm text-gray-700 line-clamp-2">
@@ -128,52 +128,55 @@ export function ToolList({ tools, onEdit, onDelete, onReactivate, onLoan }: Tool
                   </p>
                 </div>
               </div>
-              
-              <div className="flex space-x-2 ml-4">
+
+              <div className="flex flex-wrap gap-2 mt-4 sm:mt-0 sm:ml-4 sm:flex-nowrap justify-end w-full sm:w-auto">
                 <Button
                   onClick={() => onEdit(tool)}
                   size="sm"
-                  className="bg-blue-100 hover:bg-blue-200 text-blue-700"
+                  className="bg-blue-100 hover:bg-blue-200 text-blue-700 flex-1 sm:flex-none"
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit className="w-4 h-4 sm:mr-1" />
+                  <span className="sm:hidden">Editar</span>
                 </Button>
-                
+
                 {tool.is_active ? (
                   <Button
                     onClick={() => onDelete(tool.id)}
                     size="sm"
-                    className="bg-red-100 hover:bg-red-200 text-red-700"
+                    className="bg-red-100 hover:bg-red-200 text-red-700 flex-1 sm:flex-none"
                     title="Deshabilitar herramienta"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4 sm:mr-1" />
+                    <span className="sm:hidden">Borrar</span>
                   </Button>
                 ) : (
                   <Button
                     onClick={() => onReactivate(tool.id)}
                     size="sm"
-                    className="bg-green-100 hover:bg-green-200 text-green-700"
+                    className="bg-green-100 hover:bg-green-200 text-green-700 flex-1 sm:flex-none"
                     title="Reactivar herramienta"
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4 sm:mr-1" />
+                    <span className="sm:hidden">Reactivar</span>
                   </Button>
                 )}
-                
+
                 {tool.status === 'disponible' && tool.is_active && (
                   <Button
                     onClick={() => onLoan(tool.id)}
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                   >
                     <Hand className="w-4 h-4 mr-1" />
                     Prestar
                   </Button>
                 )}
-                
+
                 {tool.status === 'prestada' && (
                   <Button
                     onClick={() => onLoan(tool.id)}
                     size="sm"
-                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                    className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     Ver Préstamo

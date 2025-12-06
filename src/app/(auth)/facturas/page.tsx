@@ -367,18 +367,18 @@ export default function FacturasPage() {
   return (
     <div className="p-4 w-full h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4 shrink-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 shrink-0 gap-4 sm:gap-0">
         <h1 className="text-2xl font-bold text-slate-100">
           Gestión de Facturas
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             onClick={() => setShowFilters(true)}
-            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors flex-1 sm:flex-none justify-center"
           >
             <Filter className="w-5 h-5" />
-            Filtros
+            <span className="sm:inline">Filtros</span>
             {(projectFilter !== 'all' || selectedMonth !== 'all' || selectedYear !== 0 || invoiceStatusFilter !== 'all') && (
               <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
                 !
@@ -404,15 +404,15 @@ export default function FacturasPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowChart(!showChart)}
-            className={`text-xs ${showChart ? 'bg-slate-700' : ''}`}
+            className={`text-xs ${showChart ? 'bg-slate-700' : ''} flex-1 sm:flex-none justify-center`}
           >
-            {showChart ? 'Ocultar Gráfico' : 'Mostrar Gráfico'}
+            {showChart ? 'Ocultar' : 'Gráfico'}
           </Button>
           <Button
             onClick={() => setShowUpload(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none justify-center"
           >
-            + Nueva Factura
+            + Nueva
           </Button>
         </div>
       </div>

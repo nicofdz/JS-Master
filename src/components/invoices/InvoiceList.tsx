@@ -19,7 +19,7 @@ interface InvoiceListProps {
 export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusChange, externalStatusFilter }: InvoiceListProps) {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'status'>('date')
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'processed' | 'blocked'>('all')
-  
+
   // Usar el filtro externo si está disponible, sino usar el interno
   const activeFilter = externalStatusFilter !== undefined ? externalStatusFilter : filterStatus
 
@@ -39,46 +39,46 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
 
   const getAvailableStatusActions = (invoice: InvoiceIncome) => {
     const actions = []
-    
+
     if (invoice.status === 'pending') {
-      actions.push({ 
-        value: 'processed', 
-        label: 'Procesar', 
+      actions.push({
+        value: 'processed',
+        label: 'Procesar',
         color: 'bg-emerald-900/30 hover:bg-emerald-800/40 text-emerald-400 border border-emerald-600',
         icon: '✅'
       })
-      actions.push({ 
-        value: 'blocked', 
-        label: 'Bloquear', 
+      actions.push({
+        value: 'blocked',
+        label: 'Bloquear',
         color: 'bg-red-900/30 hover:bg-red-800/40 text-red-400 border border-red-600',
         icon: '🚫'
       })
     }
-    
+
     if (invoice.status === 'processed') {
-      actions.push({ 
-        value: 'pending', 
-        label: 'Pendiente', 
+      actions.push({
+        value: 'pending',
+        label: 'Pendiente',
         color: 'bg-yellow-900/30 hover:bg-yellow-800/40 text-yellow-400 border border-yellow-600',
         icon: '⏳'
       })
-      actions.push({ 
-        value: 'blocked', 
-        label: 'Bloquear', 
+      actions.push({
+        value: 'blocked',
+        label: 'Bloquear',
         color: 'bg-red-900/30 hover:bg-red-800/40 text-red-400 border border-red-600',
         icon: '🚫'
       })
     }
-    
+
     if (invoice.status === 'blocked') {
-      actions.push({ 
-        value: 'pending', 
-        label: 'Desbloquear', 
+      actions.push({
+        value: 'pending',
+        label: 'Desbloquear',
         color: 'bg-yellow-900/30 hover:bg-yellow-800/40 text-yellow-400 border border-yellow-600',
         icon: '🔓'
       })
     }
-    
+
     return actions
   }
 
@@ -106,23 +106,23 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
           <CardTitle>Lista de Facturas</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none"
             >
-              <option value="date">Ordenar por fecha</option>
-              <option value="amount">Ordenar por monto</option>
-              <option value="status">Ordenar por estado</option>
+              <option value="date">Fecha</option>
+              <option value="amount">Monto</option>
+              <option value="status">Estado</option>
             </select>
             {externalStatusFilter === undefined && (
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'processed' | 'blocked')}
-                className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-1 border border-slate-600 bg-slate-700 text-slate-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 sm:flex-none"
               >
                 <option value="all">Todas</option>
                 <option value="pending">Pendientes</option>
@@ -145,9 +145,9 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                 key={invoice.id}
                 className="border border-slate-600 rounded-lg p-4 hover:bg-slate-700/50 transition-colors bg-slate-800/50"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-4">
+                  <div className="flex-1 w-full">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h3 className="font-semibold text-slate-100">
                         Factura #{invoice.invoice_number || 'Sin número'}
                       </h3>
@@ -155,8 +155,8 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                         {getStatusText(invoice.status, invoice.is_processed)}
                       </Badge>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                       <div>
                         <span className="text-slate-400">Empresa:</span>
                         <span className="ml-2 font-medium text-slate-100">{invoice.client_name || 'No identificada'}</span>
@@ -171,45 +171,45 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="text-right">
+
+                  <div className="text-left sm:text-right w-full sm:w-auto bg-slate-900/30 p-3 rounded-lg sm:bg-transparent sm:p-0">
                     {(() => {
                       const netAmount = invoice.net_amount || 0
                       const ivaAmount = invoice.iva_amount || 0
-                      
+
                       // Total factura = Neto + IVA
                       const totalFactura = netAmount + ivaAmount
-                      
+
                       // PPM = Total factura * 0.06
                       const ppm = totalFactura * 0.06
-                      
+
                       // Total final = Neto - PPM
                       const totalFinal = netAmount - ppm
-                      
+
                       return (
                         <>
-                          <div className="text-xs text-slate-400 mb-1">
-                            Neto: <span className="text-slate-100 font-medium">{formatCurrency(netAmount)}</span>
+                          <div className="flex justify-between sm:block text-xs text-slate-400 mb-1">
+                            <span>Neto:</span> <span className="text-slate-100 font-medium">{formatCurrency(netAmount)}</span>
                           </div>
-                          <div className="text-xs text-slate-400 mb-1">
-                            IVA 19%: <span className="text-slate-100 font-medium">{formatCurrency(ivaAmount)}</span>
+                          <div className="flex justify-between sm:block text-xs text-slate-400 mb-1">
+                            <span>IVA 19%:</span> <span className="text-slate-100 font-medium">{formatCurrency(ivaAmount)}</span>
                           </div>
-                          <div className="text-xs text-slate-400 mb-2">
-                            Total factura: <span className="text-slate-100 font-medium">{formatCurrency(totalFactura)}</span>
+                          <div className="flex justify-between sm:block text-xs text-slate-400 mb-2">
+                            <span>Total factura:</span> <span className="text-slate-100 font-medium">{formatCurrency(totalFactura)}</span>
                           </div>
-                          <div className="text-lg font-bold text-slate-100 border-t border-slate-600 pt-2">
-                            Total: {formatCurrency(totalFinal)}
+                          <div className="flex justify-between sm:block text-lg font-bold text-slate-100 border-t border-slate-600 pt-2">
+                            <span>Total:</span> <span>{formatCurrency(totalFinal)}</span>
                           </div>
                           <div className="text-xs text-slate-400 mt-1 space-y-0.5">
-                            <div>PPM: <span className="text-red-400">-{formatCurrency(ppm)}</span></div>
-                            <div>IVA: <span className="text-red-400">-{formatCurrency(ivaAmount)}</span></div>
+                            <div className="flex justify-between sm:block"><span>PPM:</span> <span className="text-red-400">-{formatCurrency(ppm)}</span></div>
+                            <div className="flex justify-between sm:block"><span>IVA:</span> <span className="text-red-400">-{formatCurrency(ivaAmount)}</span></div>
                           </div>
                         </>
                       )
                     })()}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-600">
                   <Button
                     variant="outline"
@@ -229,7 +229,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                   >
                     ✏️ Editar
                   </Button>
-                  
+
                   {/* Botones de Estado */}
                   {onStatusChange && getAvailableStatusActions(invoice).map((action) => (
                     <Button
@@ -242,7 +242,7 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                       {action.icon} {action.label}
                     </Button>
                   ))}
-                  
+
                   <Button
                     variant="outline"
                     size="sm"

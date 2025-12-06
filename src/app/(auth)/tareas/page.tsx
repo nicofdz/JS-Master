@@ -362,18 +362,18 @@ export default function TareasPage() {
     <div className="w-full px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Tareas</h1>
-        <p className="text-gray-600">Sistema avanzado de tareas con múltiples trabajadores</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Gestión de Tareas</h1>
+        <p className="text-sm sm:text-base text-gray-600">Sistema avanzado de tareas con múltiples trabajadores</p>
       </div>
 
       {/* Botones de acción */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Listado de Tareas</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Listado de Tareas</h2>
         {activeTab === 'active' && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center"
+              className="flex items-center justify-center"
             >
               <Plus className="w-5 h-5 mr-2" />
               Nueva Tarea
@@ -381,10 +381,10 @@ export default function TareasPage() {
             <Button
               onClick={() => setShowTemplatesModal(true)}
               variant="outline"
-              className="flex items-center"
+              className="flex items-center justify-center"
             >
               <FileText className="w-5 h-5 mr-2" />
-              Plantillas de Tareas
+              Plantillas
             </Button>
           </div>
         )}
@@ -392,8 +392,8 @@ export default function TareasPage() {
 
       {/* Filtros - Solo mostrar en tab activo */}
       {activeTab === 'active' && (
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+        <div className="mb-6 flex flex-col xl:flex-row gap-4 justify-between">
+          <div className="flex flex-col md:flex-row gap-4 flex-1">
             {/* Búsqueda */}
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

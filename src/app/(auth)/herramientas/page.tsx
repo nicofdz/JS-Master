@@ -228,16 +228,16 @@ export default function HerramientasPage() {
   return (
     <div className="p-6 space-y-6 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Herramientas</h1>
           <p className="text-gray-600">Administra el inventario y préstamos de herramientas</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
             onClick={() => setIsFilterSidebarOpen(true)}
-            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors flex-1 sm:flex-none justify-center"
           >
             <Filter className="w-5 h-5" />
             Filtros
@@ -284,7 +284,7 @@ export default function HerramientasPage() {
             )}
           <Button
             onClick={() => setShowToolForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none justify-center"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nueva Herramienta

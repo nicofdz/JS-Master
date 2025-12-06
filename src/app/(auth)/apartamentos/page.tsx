@@ -562,7 +562,7 @@ export default function ApartamentosPage() {
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between mb-6">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
@@ -574,14 +574,14 @@ export default function ApartamentosPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
             onClick={() => setIsFilterSidebarOpen(true)}
-            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors flex-1 sm:flex-none justify-center"
           >
             <Filter className="w-5 h-5" />
-            Filtros
+            <span className="sm:inline">Filtros</span>
             {(statusFilter !== 'all' || projectFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all') && (
               <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
                 !
@@ -605,25 +605,25 @@ export default function ApartamentosPage() {
             </Button>
           )}
 
-          <Button onClick={() => setShowTemplatesModal(true)} variant="outline">
+          <Button onClick={() => setShowTemplatesModal(true)} variant="outline" className="flex-1 sm:flex-none justify-center">
             <FileText className="mr-2 h-4 w-4" />
-            Plantillas
+            <span className="sm:inline">Plantillas</span>
           </Button>
           <Button
             variant={showTrash ? "secondary" : "outline"}
             onClick={() => setShowTrash(!showTrash)}
-            className={`flex items-center gap-2 ${showTrash ? 'bg-red-900/30 text-red-400 border-red-500/50' : 'border-slate-600 text-slate-200 hover:text-white hover:border-slate-500'}`}
+            className={`flex items-center gap-2 flex-1 sm:flex-none justify-center ${showTrash ? 'bg-red-900/30 text-red-400 border-red-500/50' : 'border-slate-600 text-slate-200 hover:text-white hover:border-slate-500'}`}
             title={showTrash ? "Ver activos" : "Ver papelera"}
           >
             <Trash2 className="w-4 h-4" />
-            {showTrash ? 'Salir de la papelera' : 'Papelera'}
+            <span className="hidden sm:inline">{showTrash ? 'Salir' : 'Papelera'}</span>
           </Button>
           <Button onClick={() => {
             setSelectedFloorForApartment(null)
             setShowCreateModal(true)
-          }} className="flex items-center bg-blue-600 hover:bg-blue-700">
+          }} className="flex items-center bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none justify-center">
             <Plus className="w-5 h-5 mr-2" />
-            Nuevo
+            <span className="sm:inline">Nuevo</span>
           </Button>
         </div>
       </div>
@@ -812,7 +812,7 @@ export default function ApartamentosPage() {
                     className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
                     onClick={() => toggleProjectExpansion(projectGroup.projectId)}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         {isProjectExpanded ? (
                           <ChevronDown className="w-4 h-4 text-slate-300" />
@@ -824,7 +824,7 @@ export default function ApartamentosPage() {
                           {projectGroup.projectName}
                         </p>
                       </div>
-                      <div className="flex items-center gap-4 text-xs">
+                      <div className="flex flex-wrap items-center gap-3 text-xs w-full sm:w-auto ml-6 sm:ml-0">
                         <div className="flex items-center gap-2">
                           <span className="text-slate-400">Progreso:</span>
                           <div className="flex items-center gap-1">
@@ -878,7 +878,7 @@ export default function ApartamentosPage() {
                                 className="bg-slate-700/40 rounded-lg border border-slate-600 px-4 py-2 cursor-pointer hover:bg-slate-700/60 transition-colors"
                                 onClick={() => toggleTowerExpansion(towerGroup.towerId)}
                               >
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                   <div className="flex items-center gap-2">
                                     {isTowerExpanded ? (
                                       <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -905,7 +905,7 @@ export default function ApartamentosPage() {
                                       </Button>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-3 text-xs">
+                                  <div className="flex flex-wrap items-center gap-3 text-xs w-full sm:w-auto ml-5 sm:ml-0">
                                     <div className="flex items-center gap-1">
                                       <span className="text-slate-400">Progreso:</span>
                                       <span className="text-slate-300 font-medium">{towerAverageProgress}%</span>
@@ -949,7 +949,7 @@ export default function ApartamentosPage() {
                                             className="bg-slate-700/30 rounded-lg border border-slate-600 px-3 py-2 cursor-pointer hover:bg-slate-700/50 transition-colors"
                                             onClick={() => toggleFloorExpansion(floorGroup.floorId)}
                                           >
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                               <div className="flex items-center gap-2">
                                                 {isFloorExpanded ? (
                                                   <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -961,7 +961,7 @@ export default function ApartamentosPage() {
                                                   Piso {floorGroup.floorNumber}
                                                 </p>
                                               </div>
-                                              <div className="flex items-center gap-3">
+                                              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto ml-5 sm:ml-0">
                                                 <div className="flex items-center gap-3 text-xs">
                                                   <div className="flex items-center gap-1">
                                                     <span className="text-slate-400">Progreso:</span>
@@ -990,11 +990,12 @@ export default function ApartamentosPage() {
                                                     })
                                                     setShowCreateModal(true)
                                                   }}
-                                                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
+                                                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 text-xs sm:text-sm"
                                                   title="Agregar Departamento"
                                                 >
                                                   <Plus className="w-4 h-4 mr-1" />
-                                                  Agregar
+                                                  <span className="hidden sm:inline">Agregar</span>
+                                                  <span className="sm:hidden">Agg</span>
                                                 </Button>
                                               </div>
                                             </div>
@@ -1024,10 +1025,10 @@ export default function ApartamentosPage() {
                                                     onClick={() => setSelectedApartmentForTasks(apartment)}
                                                   >
                                                     <div className="p-4">
-                                                      <div className="flex items-center justify-between">
+                                                      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                                                         {/* Información Principal */}
-                                                        <div className="flex items-center gap-4 flex-1">
-                                                          <div className="flex items-center gap-3">
+                                                        <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 w-full">
+                                                          <div className="flex items-center gap-3 w-full sm:w-auto">
                                                             <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
                                                               <Home className="w-4 h-4 text-blue-400" />
                                                             </div>
@@ -1041,62 +1042,68 @@ export default function ApartamentosPage() {
                                                             </div>
                                                           </div>
 
-                                                          {/* Estado */}
-                                                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(apartment.status)
-                                                            }`}>
-                                                            {getStatusIcon(apartment.status)}
-                                                            {getStatusText(apartment.status)}
-                                                          </span>
-
-                                                          {/* Progreso */}
-                                                          <div className="flex items-center gap-2 flex-1 max-w-xs">
-                                                            <div className="flex-1 bg-slate-700 rounded-full h-2">
-                                                              <div
-                                                                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                                                                style={{ width: `${apartment.progress_percentage || 0}%` }}
-                                                              ></div>
-                                                            </div>
-                                                            <span className="text-xs text-slate-300 font-medium w-10 text-right">
-                                                              {apartment.progress_percentage || 0}%
+                                                          {/* Estado y Progreso Wrapper */}
+                                                          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start flex-1">
+                                                            {/* Estado */}
+                                                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(apartment.status)
+                                                              }`}>
+                                                              {getStatusIcon(apartment.status)}
+                                                              {getStatusText(apartment.status)}
                                                             </span>
-                                                          </div>
 
-                                                          {/* Tareas */}
-                                                          <div className="flex items-center gap-2 text-sm">
-                                                            <CheckCircle className="w-4 h-4 text-green-400" />
-                                                            <span className="text-slate-300 font-medium">
-                                                              {completedTasks}/{apartmentTasks.length}
-                                                            </span>
-                                                          </div>
-
-                                                          {/* Trabajadores */}
-                                                          <div className="flex items-center gap-2 text-sm">
-                                                            <Users className="w-4 h-4 text-blue-400" />
-                                                            {apartmentWorkers.length > 0 ? (
-                                                              <div className="flex items-center gap-1 flex-wrap">
-                                                                {apartmentWorkers.slice(0, 3).map((worker) => (
-                                                                  <span
-                                                                    key={worker.id}
-                                                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                                                                    title={worker.full_name}
-                                                                  >
-                                                                    {abbreviateName(worker.full_name)}
-                                                                  </span>
-                                                                ))}
-                                                                {apartmentWorkers.length > 3 && (
-                                                                  <span className="text-xs text-slate-400">
-                                                                    +{apartmentWorkers.length - 3}
-                                                                  </span>
-                                                                )}
+                                                            {/* Progreso */}
+                                                            <div className="flex items-center gap-2 flex-1 max-w-[120px] sm:max-w-xs">
+                                                              <div className="flex-1 bg-slate-700 rounded-full h-2">
+                                                                <div
+                                                                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                                                  style={{ width: `${apartment.progress_percentage || 0}%` }}
+                                                                ></div>
                                                               </div>
-                                                            ) : (
-                                                              <span className="text-xs text-slate-400">No hay nadie</span>
-                                                            )}
+                                                              <span className="text-xs text-slate-300 font-medium w-9 text-right">
+                                                                {apartment.progress_percentage || 0}%
+                                                              </span>
+                                                            </div>
+                                                          </div>
+
+                                                          {/* Tareas y Trabajadores Wrapper */}
+                                                          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+                                                            {/* Tareas */}
+                                                            <div className="flex items-center gap-2 text-sm">
+                                                              <CheckCircle className="w-4 h-4 text-green-400" />
+                                                              <span className="text-slate-300 font-medium">
+                                                                {completedTasks}/{apartmentTasks.length}
+                                                              </span>
+                                                            </div>
+
+                                                            {/* Trabajadores */}
+                                                            <div className="flex items-center gap-2 text-sm">
+                                                              <Users className="w-4 h-4 text-blue-400" />
+                                                              {apartmentWorkers.length > 0 ? (
+                                                                <div className="flex items-center gap-1 flex-wrap justify-end">
+                                                                  {apartmentWorkers.slice(0, 3).map((worker) => (
+                                                                    <span
+                                                                      key={worker.id}
+                                                                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                                                      title={worker.full_name}
+                                                                    >
+                                                                      {abbreviateName(worker.full_name)}
+                                                                    </span>
+                                                                  ))}
+                                                                  {apartmentWorkers.length > 3 && (
+                                                                    <span className="text-xs text-slate-400">
+                                                                      +{apartmentWorkers.length - 3}
+                                                                    </span>
+                                                                  )}
+                                                                </div>
+                                                              ) : (
+                                                                <span className="text-xs text-slate-400">No hay nadie</span>
+                                                              )}
+                                                            </div>
                                                           </div>
                                                         </div>
 
                                                         {/* Acciones */}
-                                                        <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center gap-2 w-full md:w-auto justify-end border-t md:border-t-0 border-slate-700 pt-3 md:pt-0 mt-2 md:mt-0" onClick={(e) => e.stopPropagation()}>
                                                           {showTrash ? (
                                                             <>
                                                               <Button

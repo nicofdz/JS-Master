@@ -364,10 +364,10 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
       {/* Fila principal (compacta) - Toda clickeable */}
       <div
         onClick={onToggleExpand}
-        className="grid grid-cols-12 gap-4 px-4 py-4 items-center text-sm cursor-pointer hover:bg-gray-50 transition-colors"
+        className="flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 px-4 py-4 items-start md:items-center text-sm cursor-pointer hover:bg-gray-50 transition-colors"
       >
         {/* Tarea (nombre + categoría) */}
-        <div className="col-span-3">
+        <div className="w-full md:col-span-3 mb-2 md:mb-0">
           <div className="flex items-start gap-2">
             <div className="mt-0.5 flex-shrink-0 text-gray-400">
               {isExpanded ? (
@@ -377,14 +377,15 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="font-medium text-gray-900 truncate">{task.task_name}</div>
+              <div className="font-medium text-gray-900 truncate md:whitespace-normal">{task.task_name}</div>
               <div className="text-xs text-gray-500 truncate">{task.task_category}</div>
             </div>
           </div>
         </div>
 
         {/* Prioridad - Badge seleccionable */}
-        <div className="col-span-1" ref={priorityRef}>
+        <div className="w-full md:col-span-1 mb-2 md:mb-0 flex items-center justify-between md:block" ref={priorityRef}>
+          <span className="md:hidden text-xs text-gray-500 mr-2">Prioridad:</span>
           <div className="relative">
             <button
               onClick={(e) => {
@@ -406,7 +407,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
             </button>
 
             {priorityOpen && (
-              <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+              <div className="absolute z-50 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 left-0 md:left-auto">
                 {getPriorityOptions(task.priority).map((option) => {
                   const Icon = option.icon
                   return (
@@ -450,7 +451,8 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
         {/* Badge de Retraso - Solo mostrar si está retrasada */}
         {task.is_delayed && (
-          <div className="col-span-1">
+          <div className="w-full md:col-span-1 mb-2 md:mb-0 flex justify-between md:block">
+            <span className="md:hidden text-xs text-gray-500 mr-2">Estado:</span>
             <DelayTooltip delayReason={task.delay_reason}>
               <span
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-600 border border-red-500/40 cursor-help"
@@ -465,7 +467,8 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
         {/* Badge de Tiempo Transcurrido - Solo mostrar si está completada */}
         {task.status === 'completed' && taskDuration && (
-          <div className="col-span-1">
+          <div className="w-full md:col-span-1 mb-2 md:mb-0 flex justify-between md:block">
+            <span className="md:hidden text-xs text-gray-500 mr-2">Duración:</span>
             <span
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/40"
               title="Tiempo promedio que se demoró en completar la tarea"
@@ -477,7 +480,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         )}
 
         {/* Trabajadores (nombre completo si es 1, avatares si son más) */}
-        <div className={`${task.is_delayed || (task.status === 'completed' && taskDuration) ? 'col-span-2' : 'col-span-3'}`}>
+        <div className={`w-full ${task.is_delayed || (task.status === 'completed' && taskDuration) ? 'md:col-span-2' : 'md:col-span-3'} mb-2 md:mb-0`}>
           {task.workers.length === 1 ? (
             // Si hay 1 trabajador: mostrar nombre completo
             <div className="flex items-center gap-2">
@@ -518,36 +521,40 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         </div>
 
         {/* Presupuesto y Estado de Pago */}
-        <div className="col-span-1 text-right flex flex-col items-end justify-center">
-          {task.workers.some(w => w.contract_type === 'a_trato' && w.assignment_status !== 'removed') ? (
-            <>
-              <div className="font-semibold text-gray-900">${(task.total_budget / 1000).toFixed(0)}K</div>
-              {task.workers.length > 0 && task.workers.every(w => w.is_paid) && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200 mt-0.5">
+        <div className="w-full md:col-span-1 text-left md:text-right flex items-center justify-between md:flex-col md:items-end md:justify-center mb-2 md:mb-0">
+          <span className="md:hidden text-xs text-gray-500">Presupuesto:</span>
+          <div className="flex flex-col items-end">
+            {task.workers.some(w => w.contract_type === 'a_trato' && w.assignment_status !== 'removed') ? (
+              <>
+                <div className="font-semibold text-gray-900">${(task.total_budget / 1000).toFixed(0)}K</div>
+                {task.workers.length > 0 && task.workers.every(w => w.is_paid) && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200 mt-0.5">
+                    <CheckCircle className="w-3 h-3" />
+                    Pagada
+                  </span>
+                )}
+                {!(task.workers.length > 0 && task.workers.every(w => w.is_paid)) && (
+                  <div className="text-xs text-gray-500">Total</div>
+                )}
+              </>
+            ) : (
+              /* Si no es a trato, verificamos si igual está pagada (casos raros o por día) */
+              task.workers.length > 0 && task.workers.every(w => w.is_paid) ? (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
                   <CheckCircle className="w-3 h-3" />
                   Pagada
                 </span>
-              )}
-              {!(task.workers.length > 0 && task.workers.every(w => w.is_paid)) && (
-                <div className="text-xs text-gray-500">Total</div>
-              )}
-            </>
-          ) : (
-            /* Si no es a trato, verificamos si igual está pagada (casos raros o por día) */
-            task.workers.length > 0 && task.workers.every(w => w.is_paid) ? (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700 border border-green-200">
-                <CheckCircle className="w-3 h-3" />
-                Pagada
-              </span>
-            ) : (
-              <div className="text-xs text-gray-400">-</div>
-            )
-          )}
+              ) : (
+                <div className="text-xs text-gray-400">-</div>
+              )
+            )}
+          </div>
         </div>
 
         {/* Estado */}
-        <div className="col-span-1" ref={taskStatusRef}>
-          <div className="relative">
+        <div className="w-full md:col-span-1 mb-2 md:mb-0 flex justify-between md:block" ref={taskStatusRef}>
+          <span className="md:hidden text-xs text-gray-500 mr-2 flex items-center">Status:</span>
+          <div className="relative flex-1 md:flex-none flex justify-end md:block">
             <button
               onClick={(e) => {
                 e.stopPropagation()
@@ -564,7 +571,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
             </button>
 
             {taskStatusOpen && (
-              <div className="absolute z-50 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+              <div className="absolute z-50 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 right-0 md:left-0">
                 {getTaskStatusOptions(task.status).map((option) => (
                   <button
                     key={option.value}
@@ -586,8 +593,8 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
               </div>
             )}
           </div>
-          {/* Barra de progreso mini */}
-          <div className="mt-1 w-full bg-gray-200 rounded-full h-1">
+          {/* Barra de progreso mini - Hidden on mobile or inline */}
+          <div className="hidden md:block mt-1 w-full bg-gray-200 rounded-full h-1">
             <div
               className={`h-1 rounded-full ${task.status === 'completed' ? 'bg-green-500' :
                 task.status === 'in_progress' ? 'bg-blue-500' :
@@ -600,17 +607,17 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         </div>
 
         {/* Fechas */}
-        <div className="col-span-2 text-xs">
-          <div className="text-gray-900">
+        <div className="w-full md:col-span-2 text-xs flex justify-between md:block mb-2 md:mb-0">
+          <div className="text-gray-900 flex md:block gap-2">
             <span className="text-gray-500">Inicio:</span> {formatDate(task.start_date || '')}
           </div>
-          <div className="text-gray-900">
+          <div className="text-gray-900 flex md:block gap-2">
             <span className="text-gray-500">Fin:</span> {formatDate(task.end_date || '')}
           </div>
         </div>
 
         {/* Acciones */}
-        <div className="col-span-1 flex items-center justify-end gap-1">
+        <div className="w-full md:col-span-1 flex items-center justify-end gap-1 mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
           <button
             className="p-1.5 hover:bg-blue-50 rounded-md transition-colors text-blue-600 hover:text-blue-700"
             title="Ver detalles"

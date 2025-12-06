@@ -1331,29 +1331,32 @@ export default function PagosPage() {
                   {/* Card del Proyecto */}
                   <Card className="bg-slate-800/50 border-slate-700">
                     <CardContent className="py-2 px-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
+                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:space-x-4 w-full md:w-auto">
                           <button
                             onClick={() => toggleProjectExpansion(project.project_id)}
-                            className="flex items-center space-x-3 hover:text-blue-400 transition-colors"
+                            className="flex items-center space-x-3 hover:text-blue-400 transition-colors w-full md:w-auto"
                           >
                             {isExpanded ? (
-                              <ChevronDown className="w-5 h-5 text-slate-300" />
+                              <ChevronDown className="w-5 h-5 text-slate-300 flex-shrink-0" />
                             ) : (
-                              <ChevronRight className="w-5 h-5 text-slate-300" />
+                              <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
                             )}
-                            <Building2 className="w-5 h-5 text-blue-400" />
-                            <span className="font-semibold text-slate-100 text-lg">{project.project_name}</span>
+                            <Building2 className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                            <span className="font-semibold text-slate-100 text-lg truncate">{project.project_name}</span>
                           </button>
-                          <Badge className="bg-blue-900/30 text-blue-400 border-blue-500">
-                            {projectWorkers.length} trabajador{projectWorkers.length !== 1 ? 'es' : ''}
-                          </Badge>
-                          {projectTotal > 0 && (
-                            <span className="text-sm text-slate-400">
-                              Total: <span className="font-semibold text-slate-200">{formatCurrency(projectTotal)}</span>
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 pl-8 md:pl-0">
+                            <Badge className="bg-blue-900/30 text-blue-400 border-blue-500 whitespace-nowrap">
+                              {projectWorkers.length} trabajador{projectWorkers.length !== 1 ? 'es' : ''}
+                            </Badge>
+                            {projectTotal > 0 && (
+                              <span className="text-sm text-slate-400 md:hidden lg:inline">
+                                Total: <span className="font-semibold text-slate-200">{formatCurrency(projectTotal)}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {/* Desktop only total for better alignment, or keep it inside as above */}
                       </div>
                     </CardContent>
                   </Card>
@@ -1364,87 +1367,93 @@ export default function PagosPage() {
                       {projectWorkers.map(worker => (
                         <Card key={worker.worker_id} className="bg-slate-700/30 border-slate-600">
                           <CardContent className="py-2 px-3">
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                {worker.type === 'a_trato' ? (
-                                  <FileText className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                                ) : (
-                                  <Calendar className="w-4 h-4 text-green-400 flex-shrink-0" />
-                                )}
-                                <span className="font-medium text-slate-100 text-sm truncate">{worker.name}</span>
-                                <span className="text-xs text-slate-400 flex-shrink-0">{worker.rut}</span>
-                                <Badge className={`flex-shrink-0 ${worker.type === 'a_trato' ? 'bg-purple-900/30 text-purple-400 border-purple-500' : 'bg-green-900/30 text-green-400 border-green-500'}`}>
-                                  {worker.type === 'a_trato' ? 'A Trato' : 'Por Día'}
-                                </Badge>
-                                {worker.is_active === false && (
-                                  <Badge className="flex-shrink-0 bg-red-900/30 text-red-400 border-red-500">
-                                    Contrato Inactivo
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                              <div className="flex flex-col md:flex-row md:items-center gap-2 md:space-x-3 flex-1 min-w-0 w-full md:w-auto">
+                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                  {worker.type === 'a_trato' ? (
+                                    <FileText className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                                  ) : (
+                                    <Calendar className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                  )}
+                                  <span className="font-medium text-slate-100 text-sm truncate flex-1 md:flex-none">{worker.name}</span>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 pl-6 md:pl-0">
+                                  <span className="flex-shrink-0">{worker.rut}</span>
+                                  <Badge className={`flex-shrink-0 ${worker.type === 'a_trato' ? 'bg-purple-900/30 text-purple-400 border-purple-500' : 'bg-green-900/30 text-green-400 border-green-500'}`}>
+                                    {worker.type === 'a_trato' ? 'A Trato' : 'Por Día'}
                                   </Badge>
-                                )}
-                                {(worker.tasksPending > 0 || worker.daysPending > 0) && (
-                                  <span className="text-xs text-slate-500 flex-shrink-0">
-                                    {worker.tasksPending > 0 && `${worker.tasksPending} tarea${worker.tasksPending !== 1 ? 's' : ''}`}
-                                    {worker.tasksPending > 0 && worker.daysPending > 0 && ' • '}
-                                    {worker.daysPending > 0 && `${worker.daysPending} día${worker.daysPending !== 1 ? 's' : ''}`}
-                                  </span>
-                                )}
+                                  {worker.is_active === false && (
+                                    <Badge className="flex-shrink-0 bg-red-900/30 text-red-400 border-red-500">
+                                      Contrato Inactivo
+                                    </Badge>
+                                  )}
+                                  {(worker.tasksPending > 0 || worker.daysPending > 0) && (
+                                    <span className="text-xs text-slate-500 flex-shrink-0">
+                                      {worker.tasksPending > 0 && `${worker.tasksPending} tarea${worker.tasksPending !== 1 ? 's' : ''}`}
+                                      {worker.tasksPending > 0 && worker.daysPending > 0 && ' • '}
+                                      {worker.daysPending > 0 && `${worker.daysPending} día${worker.daysPending !== 1 ? 's' : ''}`}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center space-x-3 flex-shrink-0">
+                              <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto mt-1 md:mt-0 pl-6 md:pl-0">
                                 <span className="font-semibold text-base text-blue-400 whitespace-nowrap">
                                   {formatCurrency(worker.totalPending)}
                                 </span>
-                                {worker.type === 'a_trato' ? (
+                                <div className="flex items-center gap-2">
+                                  {worker.type === 'a_trato' ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleViewTasks(worker)}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      <span className="hidden sm:inline">Ver Tareas</span>
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={async () => {
+                                        setSelectedWorkerForModal({
+                                          id: worker.worker_id,
+                                          name: worker.name,
+                                          rut: worker.rut,
+                                          type: 'por_dia'
+                                        })
+                                        await loadWorkerAttendanceData(worker.worker_id)
+                                        setShowAttendanceModal(true)
+                                      }}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <Calendar className="w-4 h-4" />
+                                      <span className="hidden sm:inline">Ver Asistencia</span>
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
-                                    variant="outline"
-                                    onClick={() => handleViewTasks(worker)}
-                                    className="flex items-center gap-1"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    Ver Tareas
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={async () => {
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                    onClick={() => {
+                                      console.log('💰 Click en Procesar Pago:', { worker, type: worker.type })
                                       setSelectedWorkerForModal({
                                         id: worker.worker_id,
                                         name: worker.name,
                                         rut: worker.rut,
-                                        type: 'por_dia'
+                                        type: worker.type
                                       })
-                                      await loadWorkerAttendanceData(worker.worker_id)
-                                      setShowAttendanceModal(true)
+                                      if (worker.type === 'a_trato') {
+                                        console.log('📋 Abriendo modal de tareas')
+                                        setShowProcessPaymentModal(true)
+                                      } else {
+                                        console.log('📅 Abriendo modal de días')
+                                        setShowProcessDaysModal(true)
+                                      }
                                     }}
-                                    className="flex items-center gap-1"
                                   >
-                                    <Calendar className="w-4 h-4" />
-                                    Ver Asistencia
+                                    Pagar
                                   </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700"
-                                  onClick={() => {
-                                    console.log('💰 Click en Procesar Pago:', { worker, type: worker.type })
-                                    setSelectedWorkerForModal({
-                                      id: worker.worker_id,
-                                      name: worker.name,
-                                      rut: worker.rut,
-                                      type: worker.type
-                                    })
-                                    if (worker.type === 'a_trato') {
-                                      console.log('📋 Abriendo modal de tareas')
-                                      setShowProcessPaymentModal(true)
-                                    } else {
-                                      console.log('📅 Abriendo modal de días')
-                                      setShowProcessDaysModal(true)
-                                    }
-                                  }}
-                                >
-                                  Procesar Pago
-                                </Button>
+                                </div>
                               </div>
                             </div>
                           </CardContent>
@@ -1525,7 +1534,109 @@ export default function PagosPage() {
               <CardTitle className="text-slate-100">Historial de Pagos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Vista Móvil (Cards) */}
+              <div className="md:hidden space-y-4">
+                {loadingHistory ? (
+                  <div className="text-center py-8 text-slate-400">Cargando datos...</div>
+                ) : dbPaymentHistory.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400">No hay pagos registrados</div>
+                ) : (
+                  paginatedHistory.map(payment => (
+                    <div key={payment.id} className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-slate-100 font-medium">{payment.worker_name}</div>
+                          <div className="text-xs text-slate-400">{formatDate(payment.payment_date)}</div>
+                        </div>
+                        <Badge className={payment.type === 'a_trato' ? 'bg-purple-900/30 text-purple-400 border-purple-500' : 'bg-green-900/30 text-green-400 border-green-500'}>
+                          {payment.type === 'a_trato' ? 'Trato' : 'Día'}
+                        </Badge>
+                      </div>
+
+                      <div className="text-sm text-slate-300">
+                        {payment.project_name || 'N/A'}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {payment.tasks_count !== undefined && payment.tasks_count > 0 && (
+                          <Badge variant="outline" className="text-xs border-purple-500/50 text-purple-400">
+                            {payment.tasks_count} tareas
+                          </Badge>
+                        )}
+                        {payment.days_count !== undefined && payment.days_count > 0 && (
+                          <Badge variant="outline" className="text-xs border-green-500/50 text-green-400">
+                            {payment.days_count} días
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex justify-between items-center pt-2 border-t border-slate-700">
+                        <span className="text-lg font-semibold text-blue-400">{formatCurrency(payment.total_amount)}</span>
+
+                        <div className="flex items-center gap-2">
+                          {payment.tasks_count !== undefined && payment.tasks_count > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setSelectedPaymentForModal({
+                                  id: payment.id,
+                                  workerName: payment.worker_name,
+                                  paymentDate: payment.payment_date,
+                                  totalAmount: payment.total_amount
+                                })
+                                setShowPaymentTasksModal(true)
+                              }}
+                              className="p-2 rounded-full bg-purple-900/30 text-purple-400 border border-purple-500 hover:bg-purple-900/50"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          )}
+                          {payment.days_count !== undefined && payment.days_count > 0 && payment.type !== 'a_trato' && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setSelectedPaymentDaysForModal({
+                                  id: payment.id,
+                                  workerId: payment.worker_id,
+                                  workerName: payment.worker_name,
+                                  paymentDate: payment.payment_date,
+                                  paymentMonth: payment.payment_month || new Date(payment.payment_date).getMonth() + 1,
+                                  paymentYear: payment.payment_year || new Date(payment.payment_date).getFullYear(),
+                                  totalAmount: payment.total_amount,
+                                  daysCount: payment.days_count || 0,
+                                  dailyRate: payment.daily_rate || 0,
+                                  startDate: (payment as any).start_date,
+                                  endDate: (payment as any).end_date,
+                                  projectId: payment.project_id
+                                })
+                                setShowPaymentDaysModal(true)
+                              }}
+                              className="p-2 rounded-full bg-green-900/30 text-green-400 border border-green-500 hover:bg-green-900/50"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleExportPaymentPDF(payment)
+                            }}
+                            className="p-2 rounded-full bg-blue-900/30 text-blue-400 border border-blue-500 hover:bg-blue-900/50"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Vista Desktop (Tabla) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-slate-600">

@@ -351,7 +351,7 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddM
 
             {/* Proyecto Content - Torres */}
             {isProjectExpanded && (
-              <div className="space-y-4 ml-4">
+              <div className="space-y-4 ml-2 md:ml-4">
                 {Object.keys(projectData.towers).map(Number).sort((a, b) => {
                   const towerA = projectData.towers[a].tower.number
                   const towerB = projectData.towers[b].tower.number
@@ -422,7 +422,7 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddM
 
                       {/* Torre Content */}
                       {isTowerExpanded && (
-                        <div className="space-y-3 ml-4">
+                        <div className="space-y-3 ml-2 md:ml-4">
                           {Object.keys(towerData.floors).map(Number).sort((a, b) => {
                             const floorA = towerData.floors[a].floor_number
                             const floorB = towerData.floors[b].floor_number
@@ -479,7 +479,7 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddM
 
                                 {/* Piso Content - Apartamentos */}
                                 {isFloorExpanded && (
-                                  <div className="space-y-2 ml-4">
+                                  <div className="space-y-2 ml-2 md:ml-4">
                                     {Object.keys(floorData.apartments).map(Number).sort((a, b) => {
                                       // Ordenar por el número original del departamento (extraer número del string)
                                       const aptA = floorData.apartments[a]
