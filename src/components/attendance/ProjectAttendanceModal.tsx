@@ -542,7 +542,7 @@ export function ProjectAttendanceModal({
                                     }`}
                             >
                                 {/* Header del trabajador */}
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
                                     <div className="flex items-center gap-3 w-full sm:w-auto">
                                         <button
                                             onClick={() => handleTogglePresence(contract.id)}
@@ -554,11 +554,11 @@ export function ProjectAttendanceModal({
                                             {state.isPresent && <Check className="w-6 h-6 text-white" />}
                                         </button>
                                         <div>
-                                            <p className="font-medium text-slate-100">{worker.full_name}</p>
+                                            <p className="font-medium text-slate-100 leading-tight">{worker.full_name}</p>
                                             <p className="text-sm text-slate-400">{worker.rut}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 ml-14 sm:ml-0">
+                                    <div className="flex items-center gap-2 ml-0 w-full sm:w-auto">
                                         <span className={`px-2 py-1 rounded text-xs ${contract.contract_type === 'por_dia'
                                             ? 'bg-purple-900/30 text-purple-400'
                                             : 'bg-orange-900/30 text-orange-400'
@@ -573,8 +573,8 @@ export function ProjectAttendanceModal({
 
                                 {/* Formulario (solo si está presente) */}
                                 {state.isPresent && (
-                                    <div className="ml-0 sm:ml-14 space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
+                                    <div className="ml-0 sm:ml-14 space-y-2">
+                                        <div className="grid grid-cols-2 gap-2">
                                             {/* Hora de entrada */}
                                             <div>
                                                 <label className="block text-xs font-medium text-slate-300 mb-1">
