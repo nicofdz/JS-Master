@@ -301,8 +301,8 @@ export function AttendanceHistoryByCalendar({
 
       {/* Calendario mensual */}
       <Card className="bg-slate-800/50 border-slate-700">
-        <div className="p-6">
-          <div className="grid grid-cols-7 gap-2">
+        <div className="p-6 overflow-x-auto">
+          <div className="grid grid-cols-7 gap-2 min-w-[800px]">
             {/* Encabezados de días */}
             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day, i) => (
               <div

@@ -108,17 +108,17 @@ export function MaterialList({
 	return (
 		<div className="space-y-4">
 
-			<div className="bg-transparent sm:bg-white rounded-lg sm:shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
+			<div className="rounded-lg overflow-hidden">
 
 				{/* VISTA MÓVIL: Tarjetas */}
 				<div className="md:hidden space-y-4">
 					{loading ? (
-						<div className="bg-white rounded-lg shadow p-8 text-center">
-							<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
-							<p className="mt-2 text-sm text-slate-500">Cargando materiales...</p>
+						<div className="bg-slate-800 rounded-lg shadow p-8 text-center">
+							<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-500" />
+							<p className="mt-2 text-sm text-slate-400">Cargando materiales...</p>
 						</div>
 					) : filteredMaterials.length === 0 ? (
-						<div className="bg-white rounded-lg shadow p-8 text-center text-slate-500">
+						<div className="bg-slate-800 rounded-lg shadow p-8 text-center text-slate-500">
 							No se encontraron materiales
 						</div>
 					) : (
@@ -126,49 +126,49 @@ export function MaterialList({
 							const totalStock = getTotalStock(material.id);
 							const isLowStock = totalStock <= (material.stock_min || 0);
 							return (
-								<div key={material.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+								<div key={material.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
 									<div className="flex justify-between items-start mb-2">
 										<div>
-											<h3 className="font-medium text-gray-900">{material.name}</h3>
-											<p className="text-sm text-gray-500">{material.category} • {material.unit}</p>
+											<h3 className="font-medium text-slate-100">{material.name}</h3>
+											<p className="text-sm text-slate-400">{material.category} • {material.unit}</p>
 										</div>
 										{isLowStock && (
-											<span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+											<span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-900/30 text-red-400 border border-red-800/50">
 												Bajo Stock
 											</span>
 										)}
 									</div>
 
 									<div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-										<div className="bg-slate-50 p-2 rounded">
-											<span className="block text-xs text-gray-500">Stock Actual</span>
-											<span className={`block font-medium ${isLowStock ? "text-red-600" : "text-gray-900"}`}>
+										<div className="bg-slate-900/50 p-2 rounded border border-slate-700/50">
+											<span className="block text-xs text-slate-400">Stock Actual</span>
+											<span className={`block font-medium ${isLowStock ? "text-red-400" : "text-slate-200"}`}>
 												{totalStock.toLocaleString()}
 											</span>
 										</div>
-										<div className="bg-slate-50 p-2 rounded">
-											<span className="block text-xs text-gray-500">Mínimo</span>
-											<span className="block font-medium text-gray-700">
+										<div className="bg-slate-900/50 p-2 rounded border border-slate-700/50">
+											<span className="block text-xs text-slate-400">Mínimo</span>
+											<span className="block font-medium text-slate-300">
 												{material.stock_min?.toLocaleString() || 0}
 											</span>
 										</div>
 									</div>
 
-									<div className="text-xs text-gray-500 mb-4">
-										<span className="font-medium">Almacén:</span> {material.default_warehouse?.name || '-'}
+									<div className="text-xs text-slate-400 mb-4">
+										<span className="font-medium text-slate-300">Almacén:</span> {material.default_warehouse?.name || '-'}
 									</div>
 
-									<div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+									<div className="flex justify-end gap-2 pt-3 border-t border-slate-700">
 										<button
 											onClick={() => setViewingDetails(material)}
-											className="p-2 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-md transition-colors"
+											className="p-2 text-purple-400 bg-purple-900/20 hover:bg-purple-900/30 border border-purple-800/50 rounded-md transition-colors"
 											title="Ver detalles"
 										>
 											<Eye className="h-4 w-4" />
 										</button>
 										<button
 											onClick={() => onNewDelivery(material.id)}
-											className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+											className="p-2 text-blue-400 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-800/50 rounded-md transition-colors"
 											title="Registrar entrega"
 										>
 											<Truck className="h-4 w-4" />
@@ -177,21 +177,21 @@ export function MaterialList({
 											<>
 												<button
 													onClick={() => setEditing(material)}
-													className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors"
+													className="p-2 text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/30 border border-emerald-800/50 rounded-md transition-colors"
 													title="Editar"
 												>
 													<Pencil className="h-4 w-4" />
 												</button>
 												<button
 													onClick={() => onAdjustStock(material.id)}
-													className="p-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+													className="p-2 text-slate-300 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 rounded-md transition-colors"
 													title="Ajustar stock"
 												>
 													<Wrench className="h-4 w-4" />
 												</button>
 												<button
 													onClick={() => setDeleting(material)}
-													className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+													className="p-2 text-red-400 bg-red-900/20 hover:bg-red-900/30 border border-red-800/50 rounded-md transition-colors"
 													title="Eliminar"
 												>
 													<Trash2 className="h-4 w-4" />
@@ -207,27 +207,27 @@ export function MaterialList({
 
 				{/* VISTA DESKTOP: Tabla */}
 				<div className="hidden md:block overflow-x-auto">
-					<table className="min-w-full divide-y divide-gray-200">
-						<thead className="bg-slate-700">
+					<table className="min-w-full divide-y divide-slate-700">
+						<thead className="bg-slate-800">
 							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Nombre</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Categoría</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Unidad</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Stock</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Mínimo</th>
-								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Almacén principal</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Categoría</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Unidad</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Stock</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Mínimo</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Almacén principal</th>
 								{canViewCosts && (
-									<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Costo unit.</th>
+									<th className="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">Costo unit.</th>
 								)}
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Acciones</th>
 							</tr>
 						</thead>
-						<tbody className="bg-white divide-y divide-gray-200">
+						<tbody className="bg-slate-900/30 divide-y divide-slate-700">
 							{loading ? (
 								<tr>
 									<td colSpan={canViewCosts ? 8 : 7} className="px-6 py-8 text-center">
-										<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
-										<p className="mt-2 text-sm text-slate-500">Cargando materiales...</p>
+										<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-500" />
+										<p className="mt-2 text-sm text-slate-400">Cargando materiales...</p>
 									</td>
 								</tr>
 							) : filteredMaterials.length === 0 ? (
@@ -241,19 +241,19 @@ export function MaterialList({
 									const totalStock = getTotalStock(material.id);
 									const isLowStock = totalStock <= (material.stock_min || 0);
 									return (
-										<tr key={material.id} className="hover:bg-gray-50">
-											<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{material.name}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{material.category}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{material.unit}</td>
+										<tr key={material.id} className="hover:bg-slate-800/50 transition-colors">
+											<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-200">{material.name}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{material.category}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{material.unit}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">
-												<span className={isLowStock ? "text-red-600 font-medium" : "text-gray-900"}>
+												<span className={isLowStock ? "text-red-400 font-medium" : "text-slate-200"}>
 													{totalStock.toLocaleString()}
 												</span>
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{material.stock_min?.toLocaleString() || 0}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{material.default_warehouse?.name || '-'}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{material.stock_min?.toLocaleString() || 0}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{material.default_warehouse?.name || '-'}</td>
 											{canViewCosts && (
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+												<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
 													${material.unit_cost.toLocaleString('es-CL')}
 												</td>
 											)}
@@ -261,14 +261,14 @@ export function MaterialList({
 												<div className="flex gap-2">
 													<button
 														onClick={() => setViewingDetails(material)}
-														className="text-purple-600 hover:text-purple-800 transition-colors"
+														className="text-purple-400 hover:text-purple-300 transition-colors"
 														title="Ver detalles completos"
 													>
 														<Eye className="h-4 w-4" />
 													</button>
 													<button
 														onClick={() => onNewDelivery(material.id)}
-														className="text-blue-600 hover:text-blue-800 transition-colors"
+														className="text-blue-400 hover:text-blue-300 transition-colors"
 														title="Registrar entrega"
 													>
 														<Truck className="h-4 w-4" />
@@ -276,7 +276,7 @@ export function MaterialList({
 													{canAdjustStock && (
 														<button
 															onClick={() => setEditing(material)}
-															className="text-emerald-600 hover:text-emerald-800 transition-colors"
+															className="text-emerald-400 hover:text-emerald-300 transition-colors"
 															title="Editar material"
 														>
 															<Pencil className="h-4 w-4" />
@@ -285,7 +285,7 @@ export function MaterialList({
 													{canAdjustStock && (
 														<button
 															onClick={() => onAdjustStock(material.id)}
-															className="text-gray-600 hover:text-gray-800 transition-colors"
+															className="text-slate-400 hover:text-slate-300 transition-colors"
 															title="Ajustar stock"
 														>
 															<Wrench className="h-4 w-4" />
@@ -294,7 +294,7 @@ export function MaterialList({
 													{canAdjustStock && (
 														<button
 															onClick={() => setDeleting(material)}
-															className="text-red-600 hover:text-red-800 transition-colors"
+															className="text-red-400 hover:text-red-300 transition-colors"
 															title="Eliminar (soft delete)"
 														>
 															<Trash2 className="h-4 w-4" />
@@ -358,11 +358,11 @@ export function MaterialList({
 			{deleting && (
 				<Modal isOpen={!!deleting} onClose={() => setDeleting(null)} title="Eliminar material">
 					<div className="space-y-3">
-						<p className="text-sm text-gray-700">¿Seguro que deseas eliminar &quot;{deleting.name}&quot;? Se desactivará (soft delete) y no aparecerá en la lista por defecto.</p>
+						<p className="text-sm text-slate-300">¿Seguro que deseas eliminar &quot;{deleting.name}&quot;? Se desactivará (soft delete) y no aparecerá en la lista por defecto.</p>
 						<div className="flex justify-end gap-2 pt-2">
-							<button className="px-3 py-2 text-sm bg-gray-100 rounded-md" onClick={() => setDeleting(null)}>Cancelar</button>
+							<button className="px-3 py-2 text-sm bg-slate-700 text-slate-200 rounded-md hover:bg-slate-600 transition-colors" onClick={() => setDeleting(null)}>Cancelar</button>
 							<button
-								className="px-3 py-2 text-sm bg-red-600 text-white rounded-md"
+								className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
 								onClick={async () => {
 									await deleteMaterial(deleting.id);
 									setDeleting(null);

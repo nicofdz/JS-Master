@@ -1120,8 +1120,8 @@ export default function TrabajadoresPage() {
                     variant={showWorkerTrash ? 'danger' : 'outline'}
                     onClick={() => setShowWorkerTrash(!showWorkerTrash)}
                     className={`flex items-center gap-2 transition-colors ${showWorkerTrash
-                      ? 'bg-red-900/10 text-red-600 border-red-200 hover:bg-red-900/20'
-                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                      ? 'bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50'
+                      : 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white'
                       }`}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1138,7 +1138,7 @@ export default function TrabajadoresPage() {
               {/* VISTA MÓVIL: Tarjetas */}
               <div className="md:hidden space-y-4 pb-4">
                 {filteredWorkers.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow p-4">
+                  <div className="text-center py-12 text-slate-400 bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
                     {searchTerm || statusFilter !== 'all'
                       ? 'No se encontraron trabajadores con los filtros aplicados'
                       : 'No hay trabajadores registrados'
@@ -1146,59 +1146,59 @@ export default function TrabajadoresPage() {
                   </div>
                 ) : (
                   filteredWorkers.map((worker) => (
-                    <div key={worker.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+                    <div key={worker.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <User className="h-5 w-5 text-blue-600" />
+                          <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
+                            <User className="h-5 w-5 text-blue-400" />
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">{worker.full_name}</h3>
-                            <p className="text-sm font-mono text-gray-500">{worker.rut}</p>
+                            <h3 className="font-medium text-slate-100">{worker.full_name}</h3>
+                            <p className="text-sm font-mono text-slate-400">{worker.rut}</p>
                           </div>
                         </div>
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-red-900/30 text-red-400 border border-red-500/30'
                           }`}>
                           {worker.is_active ? 'Activo' : 'Inactivo'}
                         </span>
                       </div>
 
-                      <div className="space-y-2 text-sm text-gray-600 mb-4">
+                      <div className="space-y-2 text-sm text-slate-300 mb-4">
                         {worker.email && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">Email:</span>
-                            <span className="text-blue-600">{worker.email}</span>
+                            <span className="text-xs text-slate-400">Email:</span>
+                            <span className="text-blue-400">{worker.email}</span>
                           </div>
                         )}
                         {worker.phone && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-400">Tel:</span>
+                            <span className="text-xs text-slate-400">Tel:</span>
                             <span>{worker.phone}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                      <div className="flex justify-end gap-2 pt-3 border-t border-slate-700">
                         {!showWorkerTrash ? (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => handleEdit(worker)} className="h-8 w-8 p-0 text-blue-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleEdit(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleShowContractHistory(worker)} className="h-8 w-8 p-0 text-blue-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleShowContractHistory(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
                               <History className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDelete(worker.id)} className="h-8 w-8 p-0 text-red-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(worker.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-green-600">
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-slate-700">
                               <RotateCcw className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-red-600">
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
@@ -1506,77 +1506,77 @@ export default function TrabajadoresPage() {
               {/* VISTA MÓVIL: Tarjetas de Contratos */}
               <div className="md:hidden space-y-4 pb-4">
                 {paginatedContracts.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow p-4">
+                  <div className="text-center py-12 text-slate-400 bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
                     No hay contratos registrados
                   </div>
                 ) : (
                   paginatedContracts.map((contract) => (
-                    <div key={contract.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+                    <div key={contract.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-medium text-gray-900">{contract.worker_name || 'Trabajador no encontrado'}</h4>
-                          <p className="text-xs text-blue-600">{contract.project_name || 'Proyecto no encontrado'}</p>
+                          <h4 className="font-medium text-slate-100">{contract.worker_name || 'Trabajador no encontrado'}</h4>
+                          <p className="text-xs text-blue-400">{contract.project_name || 'Proyecto no encontrado'}</p>
                         </div>
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
                           : contract.status === 'finalizado'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-red-900/30 text-red-400 border border-red-500/30'
+                            : 'bg-slate-700 text-slate-300 border border-slate-600'
                           }`}>
                           {contract.status === 'activo' ? 'Activo' :
                             contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
                         </span>
                       </div>
 
-                      <div className="space-y-2 text-sm text-gray-600 mb-4">
+                      <div className="space-y-2 text-sm text-slate-300 mb-4">
                         <div className="flex justify-between">
-                          <span className="text-xs text-gray-400">Tipo:</span>
+                          <span className="text-xs text-slate-400">Tipo:</span>
                           <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.contract_type === 'por_dia'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-orange-100 text-orange-800'
+                            ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30'
+                            : 'bg-orange-900/30 text-orange-400 border border-orange-500/30'
                             }`}>
                             {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-xs text-gray-400">Categoría:</span>
+                          <span className="text-xs text-slate-400">Categoría:</span>
                           <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.is_renovacion
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-cyan-100 text-cyan-800'
+                            ? 'bg-purple-900/30 text-purple-400 border border-purple-500/30'
+                            : 'bg-cyan-900/30 text-cyan-400 border border-cyan-500/30'
                             }`}>
                             {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center bg-slate-50 p-2 rounded">
-                          <span className="text-xs text-gray-500">Periodo:</span>
-                          <span className="text-xs font-medium">
+                        <div className="flex justify-between items-center bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                          <span className="text-xs text-slate-400">Periodo:</span>
+                          <span className="text-xs font-medium text-slate-200">
                             {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 flex-wrap">
+                      <div className="flex justify-end gap-2 pt-3 border-t border-slate-700 flex-wrap">
                         {!showTrash ? (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => handleEditContract(contract)} className="h-8 w-8 p-0 text-blue-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleEditContract(contract)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleGenerateDocuments(contract)} className="h-8 w-8 p-0 text-green-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleGenerateDocuments(contract)} className="h-8 w-8 p-0 text-green-400 hover:text-green-300 hover:bg-slate-700">
                               <FileText className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-slate-700">
                               <Clock className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteContract(contract.id)} className="h-8 w-8 p-0 text-red-600">
+                            <Button size="sm" variant="ghost" onClick={() => handleDeleteContract(contract.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-green-600">
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-slate-700">
                               <RotateCcw className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-red-600">
+                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </>

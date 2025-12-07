@@ -110,9 +110,9 @@ export function LoanHistory({
 
   const getStatusBadge = (loan: Loan) => {
     if (loan.return_date === null) {
-      return <Badge className="bg-orange-100 text-orange-800">Activo</Badge>
+      return <Badge className="bg-orange-900/30 text-orange-400 border border-orange-600/50">Activo</Badge>
     } else {
-      return <Badge className="bg-green-100 text-green-800">Devuelto</Badge>
+      return <Badge className="bg-emerald-900/30 text-emerald-400 border border-emerald-600/50">Devuelto</Badge>
     }
   }
 
@@ -133,11 +133,11 @@ export function LoanHistory({
   if (loans.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Wrench className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-4">
+          <Wrench className="w-8 h-8 text-slate-500" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No hay préstamos registrados</h3>
-        <p className="text-gray-500">Los préstamos de herramientas aparecerán aquí.</p>
+        <h3 className="text-lg font-medium text-slate-200 mb-2">No hay préstamos registrados</h3>
+        <p className="text-slate-400">Los préstamos de herramientas aparecerán aquí.</p>
       </div>
     )
   }
@@ -146,41 +146,41 @@ export function LoanHistory({
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <Wrench className="w-8 h-8 text-blue-600" />
+              <Wrench className="w-8 h-8 text-blue-400" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Préstamos</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-sm font-medium text-slate-400">Total Préstamos</p>
+                <p className="text-2xl font-bold text-slate-100">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
+              <div className="w-8 h-8 bg-orange-900/20 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Activos</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
+                <p className="text-sm font-medium text-slate-400">Activos</p>
+                <p className="text-2xl font-bold text-slate-100">{stats.active}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-slate-800/50 border-slate-700">
           <CardContent className="p-4">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+              <div className="w-8 h-8 bg-emerald-900/20 rounded-full flex items-center justify-center">
+                <div className="w-3 h-3 bg-emerald-400 rounded-full"></div>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Devueltos</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.returned}</p>
+                <p className="text-sm font-medium text-slate-400">Devueltos</p>
+                <p className="text-2xl font-bold text-slate-100">{stats.returned}</p>
               </div>
             </div>
           </CardContent>
@@ -191,12 +191,12 @@ export function LoanHistory({
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
               placeholder="Buscar por herramienta o prestatario..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-slate-900/50 border-slate-700 text-slate-200 placeholder:text-slate-500"
             />
           </div>
         </div>
@@ -206,12 +206,12 @@ export function LoanHistory({
       {/* Loans List */}
       <div className="space-y-4">
         {filteredLoans.map((loan) => (
-          <Card key={loan.id} className="hover:shadow-md transition-shadow">
+          <Card key={loan.id} className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/80 transition-all duration-200">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row items-start justify-between">
                 <div className="flex-1 w-full">
                   <div className="flex items-center space-x-3 mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-slate-100">
                       {loan.tool_name}
                     </h3>
                     {getStatusBadge(loan)}
@@ -219,50 +219,50 @@ export function LoanHistory({
 
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                     <div className="flex items-center">
-                      <User className="w-4 h-4 text-gray-400 mr-2" />
+                      <User className="w-4 h-4 text-slate-500 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Prestatario</p>
-                        <p className="text-sm text-gray-900">{loan.borrower_name}</p>
+                        <p className="text-sm font-medium text-slate-400">Prestatario</p>
+                        <p className="text-sm text-slate-200">{loan.borrower_name}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center">
-                      <User className="w-4 h-4 text-gray-400 mr-2" />
+                      <User className="w-4 h-4 text-slate-500 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Prestador</p>
-                        <p className="text-sm text-gray-900">{loan.lender_name}</p>
+                        <p className="text-sm font-medium text-slate-400">Prestador</p>
+                        <p className="text-sm text-slate-200">{loan.lender_name}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center">
-                      <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                      <Calendar className="w-4 h-4 text-slate-500 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Fecha Préstamo</p>
-                        <p className="text-sm text-gray-900">{formatDate(loan.loan_date)}</p>
+                        <p className="text-sm font-medium text-slate-400">Fecha Préstamo</p>
+                        <p className="text-sm text-slate-200">{formatDate(loan.loan_date)}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center">
-                      <ArrowLeft className="w-4 h-4 text-gray-400 mr-2" />
+                      <ArrowLeft className="w-4 h-4 text-slate-500 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Fecha Devolución</p>
-                        <p className="text-sm text-gray-900">{formatDate(loan.return_date)}</p>
+                        <p className="text-sm font-medium text-slate-400">Fecha Devolución</p>
+                        <p className="text-sm text-slate-200">{formatDate(loan.return_date)}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center">
-                      <Wrench className="w-4 h-4 text-gray-400 mr-2" />
+                      <Wrench className="w-4 h-4 text-slate-500 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Proyecto</p>
-                        <p className="text-sm text-gray-900">{loan.project_name || 'Sin proyecto'}</p>
+                        <p className="text-sm font-medium text-slate-400">Proyecto</p>
+                        <p className="text-sm text-slate-200">{loan.project_name || 'Sin proyecto'}</p>
                       </div>
                     </div>
                   </div>
 
                   {loan.return_details && (
                     <div>
-                      <p className="text-sm font-medium text-gray-600 mb-1">Detalles de Devolución</p>
-                      <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-slate-400 mb-1">Detalles de Devolución</p>
+                      <p className="text-sm text-slate-300 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
                         {loan.return_details}
                       </p>
                     </div>
@@ -274,14 +274,14 @@ export function LoanHistory({
                     {selectedLoan === loan.id ? (
                       <div className="space-y-3 w-full sm:min-w-[300px]">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
                             Detalles de Devolución
                           </label>
                           <textarea
                             value={returnDetails}
                             onChange={(e) => setReturnDetails(e.target.value)}
                             placeholder="Describe el estado de la herramienta al devolverla..."
-                            className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-3 bg-slate-900/50 border border-slate-600 rounded-lg text-sm text-slate-100 placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             rows={3}
                           />
                         </div>
@@ -298,7 +298,7 @@ export function LoanHistory({
                           <Button
                             onClick={() => setSelectedLoan(null)}
                             size="sm"
-                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 flex-1 sm:flex-none"
+                            className="bg-slate-700 hover:bg-slate-600 text-slate-200 flex-1 sm:flex-none"
                           >
                             Cancelar
                           </Button>
@@ -325,7 +325,7 @@ export function LoanHistory({
       {
         filteredLoans.length === 0 && (
           <div className="text-center py-8">
-            <p className="text-gray-500">No se encontraron préstamos con los filtros aplicados.</p>
+            <p className="text-slate-500">No se encontraron préstamos con los filtros aplicados.</p>
           </div>
         )
       }

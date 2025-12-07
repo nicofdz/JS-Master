@@ -200,12 +200,11 @@ export function AttendanceHistoryByWorker({
       <Card className="bg-slate-800/50 border-slate-700">
         <div className="p-4 space-y-4">
           {/* Encabezado con botón de reporte */}
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-100">Filtros</h3>
-            <div className="flex gap-2">
+          <div className="flex items-center justify-end">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setShowGeneralReportModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors w-full sm:w-auto"
                 title="Generar reporte general de todos los trabajadores"
               >
                 <Users className="w-5 h-5" />
@@ -213,7 +212,7 @@ export function AttendanceHistoryByWorker({
               </button>
               <button
                 onClick={() => setShowReportModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors w-full sm:w-auto"
                 title="Generar reporte individual"
               >
                 <FileText className="w-5 h-5" />
@@ -221,8 +220,6 @@ export function AttendanceHistoryByWorker({
               </button>
             </div>
           </div>
-
-
 
           {/* Input de búsqueda */}
           <div>
@@ -254,7 +251,7 @@ export function AttendanceHistoryByWorker({
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Estado del Trabajador
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Tarjeta: Activos */}
               <button
                 onClick={() => setWorkerStatusFilter('active')}
@@ -589,8 +586,8 @@ export function AttendanceHistoryByWorker({
                           </div>
 
                           {/* Calendario */}
-                          <div className="bg-slate-900/50 rounded-lg p-3">
-                            <div className="grid grid-cols-7 gap-1">
+                          <div className="bg-slate-900/50 rounded-lg p-3 overflow-x-auto">
+                            <div className="grid grid-cols-7 gap-1 min-w-[600px]">
                               {/* Encabezados de días */}
                               {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
                                 <div

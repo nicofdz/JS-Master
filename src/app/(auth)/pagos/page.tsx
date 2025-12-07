@@ -1470,8 +1470,8 @@ export default function PagosPage() {
         <>
 
 
-          {/* Gráfico */}
-          <Card className="mb-6 bg-slate-700/30 border-slate-600">
+          {/* Gráfico - SOLO VISIBLE EN DESKTOP */}
+          <Card className="mb-6 bg-slate-700/30 border-slate-600 hidden md:block">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-slate-100">
                 <TrendingUp className="w-5 h-5" />

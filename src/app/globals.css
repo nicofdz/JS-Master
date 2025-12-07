@@ -204,3 +204,21 @@ body {
     max-width: 42rem !important; /* Ancho apropiado para formulario de trabajadores */
   }
 }
+
+/* Scrollbar for mobile sidebar - visible on mobile/tablet */
+@media (max-width: 1024px) {
+  .mobile-sidebar-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    display: block;
+  }
+  
+  .mobile-sidebar-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5); /* slate-900/50 */
+  }
+  
+  .mobile-sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #475569; /* slate-600 */
+    border-radius: 3px;
+  }
+}
+

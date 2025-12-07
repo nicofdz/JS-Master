@@ -96,63 +96,63 @@ export function MovementList({
 	return (
 		<div className="space-y-4">
 
-			<div className="bg-transparent sm:bg-white rounded-lg sm:shadow-sm border-0 sm:border border-gray-200 overflow-hidden">
+			<div className="rounded-lg overflow-hidden">
 
 				{/* VISTA MÓVIL: Tarjetas */}
 				<div className="md:hidden space-y-4">
 					{loading ? (
-						<div className="bg-white rounded-lg shadow p-8 text-center">
-							<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
-							<p className="mt-2 text-sm text-slate-500">Cargando movimientos...</p>
+						<div className="bg-slate-800 rounded-lg shadow p-8 text-center">
+							<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-500" />
+							<p className="mt-2 text-sm text-slate-400">Cargando movimientos...</p>
 						</div>
 					) : filteredMovements.length === 0 ? (
-						<div className="bg-white rounded-lg shadow p-8 text-center text-slate-500">
+						<div className="bg-slate-800 rounded-lg shadow p-8 text-center text-slate-500">
 							No se encontraron movimientos
 						</div>
 					) : (
 						filteredMovements.map((movement) => {
 							const isNegative = movement.movement_type === 'entrega' || movement.movement_type === 'ajuste_negativo';
 							return (
-								<div key={movement.id} className="bg-white rounded-lg shadow border border-slate-200 p-4">
+								<div key={movement.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
 									<div className="flex justify-between items-start mb-2">
-										<p className="text-xs text-gray-500">{formatDate(movement.created_at)}</p>
-										<span className={`text-xs font-semibold px-2 py-1 rounded-full capitalize ${isNegative ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
+										<p className="text-xs text-slate-400">{formatDate(movement.created_at)}</p>
+										<span className={`text-xs font-semibold px-2 py-1 rounded-full capitalize border ${isNegative ? 'bg-red-900/30 text-red-400 border-red-800/50' : 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50'
 											}`}>
 											{movement.movement_type}
 										</span>
 									</div>
-									<h4 className="font-medium text-gray-900 mb-1">{movement.material_name || 'Material desconocido'}</h4>
+									<h4 className="font-medium text-slate-100 mb-1">{movement.material_name || 'Material desconocido'}</h4>
 
-									<div className="flex items-center justify-between mb-3 bg-slate-50 p-2 rounded">
-										<span className="text-sm text-gray-600">Cantidad:</span>
-										<span className={`text-lg font-bold ${isNegative ? 'text-red-600' : 'text-emerald-600'}`}>
+									<div className="flex items-center justify-between mb-3 bg-slate-900/50 p-2 rounded border border-slate-700/50">
+										<span className="text-sm text-slate-400">Cantidad:</span>
+										<span className={`text-lg font-bold ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
 											{isNegative ? '-' : '+'}{movement.quantity.toLocaleString()}
 										</span>
 									</div>
 
-									<div className="space-y-1 text-xs text-gray-600">
+									<div className="space-y-1 text-xs text-slate-400">
 										{movement.project_name && (
 											<div className="flex justify-between">
 												<span>Proyecto:</span>
-												<span className="font-medium">{movement.project_name}</span>
+												<span className="font-medium text-slate-300">{movement.project_name}</span>
 											</div>
 										)}
 										{movement.worker_name && (
 											<div className="flex justify-between">
 												<span>Trabajador:</span>
-												<span className="font-medium">{movement.worker_name}</span>
+												<span className="font-medium text-slate-300">{movement.worker_name}</span>
 											</div>
 										)}
 										{movement.warehouse_name && (
 											<div className="flex justify-between">
 												<span>Almacén:</span>
-												<span className="font-medium">{movement.warehouse_name}</span>
+												<span className="font-medium text-slate-300">{movement.warehouse_name}</span>
 											</div>
 										)}
 									</div>
 
 									{(movement.notes || movement.reason) && (
-										<div className="mt-3 pt-2 border-t border-gray-100 text-xs italic text-gray-500">
+										<div className="mt-3 pt-2 border-t border-slate-700 text-xs italic text-slate-500">
 											&quot;{movement.notes || movement.reason}&quot;
 										</div>
 									)}
@@ -164,8 +164,8 @@ export function MovementList({
 
 				{/* VISTA DESKTOP: Tabla */}
 				<div className="hidden md:block overflow-x-auto">
-					<table className="min-w-full divide-y divide-gray-200">
-						<thead className="bg-slate-700">
+					<table className="min-w-full divide-y divide-slate-700">
+						<thead className="bg-slate-800">
 							<tr>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Fecha</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Material</th>
@@ -180,12 +180,12 @@ export function MovementList({
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Stock después</th>
 							</tr>
 						</thead>
-						<tbody className="bg-white divide-y divide-gray-200">
+						<tbody className="bg-slate-900/30 divide-y divide-slate-700">
 							{loading ? (
 								<tr>
 									<td colSpan={11} className="px-6 py-8 text-center">
-										<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-400" />
-										<p className="mt-2 text-sm text-slate-500">Cargando movimientos...</p>
+										<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-500" />
+										<p className="mt-2 text-sm text-slate-400">Cargando movimientos...</p>
 									</td>
 								</tr>
 							) : filteredMovements.length === 0 ? (
@@ -198,24 +198,29 @@ export function MovementList({
 								filteredMovements.map((movement) => {
 									const isNegative = movement.movement_type === 'entrega' || movement.movement_type === 'ajuste_negativo';
 									return (
-										<tr key={movement.id} className="hover:bg-gray-50">
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(movement.created_at)}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{movement.material_name || '-'}</td>
+										<tr key={movement.id} className="hover:bg-slate-800/50 transition-colors">
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{formatDate(movement.created_at)}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200 font-medium">{movement.material_name || '-'}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">
-												<span className="capitalize text-gray-600">{movement.movement_type}</span>
+												<span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize border ${isNegative ? 'bg-red-900/30 text-red-400 border-red-800/50' : 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50'
+													}`}>
+													{movement.movement_type}
+												</span>
 											</td>
-											<td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isNegative ? 'text-red-600' : 'text-emerald-600'}`}>
-												{isNegative ? '-' : '+'}{movement.quantity.toLocaleString()}
+											<td className="px-6 py-4 whitespace-nowrap text-sm">
+												<span className={`font-bold ${isNegative ? 'text-red-400' : 'text-emerald-400'}`}>
+													{isNegative ? '-' : '+'}{movement.quantity.toLocaleString()}
+												</span>
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{movement.project_name || '-'}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{movement.worker_name || '-'}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{movement.delivered_by_name || '-'}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{movement.warehouse_name || '-'}</td>
-											<td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={movement.notes || movement.reason || ''}>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{movement.project_name || '-'}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{movement.worker_name || '-'}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{movement.delivered_by_name || '-'}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{movement.warehouse_name || '-'}</td>
+											<td className="px-6 py-4 text-sm text-slate-400 italic truncate max-w-xs" title={movement.notes || movement.reason || ''}>
 												{movement.notes || movement.reason || '-'}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{movement.stock_before.toLocaleString()}</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{movement.stock_after.toLocaleString()}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{movement.stock_before.toLocaleString()}</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200 font-medium">{movement.stock_after.toLocaleString()}</td>
 										</tr>
 									);
 								})

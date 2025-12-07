@@ -404,7 +404,7 @@ export default function FacturasPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowChart(!showChart)}
-            className={`text-xs ${showChart ? 'bg-slate-700' : ''} flex-1 sm:flex-none justify-center`}
+            className={`text-xs ${showChart ? 'bg-slate-700' : ''} hidden md:flex flex-1 sm:flex-none justify-center`}
           >
             {showChart ? 'Ocultar' : 'Gráfico'}
           </Button>
@@ -421,16 +421,18 @@ export default function FacturasPage() {
         {/* Contenido Principal */}
         <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-w-0 pr-2">
 
-          {/* Gráfico Desplegable */}
-          {showChart && (
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-2 shrink-0">
-              <InvoiceChart
-                projectId={projectFilter !== 'all' ? parseInt(projectFilter) : undefined}
-                onMonthClick={handleMonthClick}
-                onYearChange={handleYearChange}
-              />
-            </div>
-          )}
+          {/* Gráfico Desplegable - SOLO VISIBLE EN DESKTOP */}
+          <div className="hidden md:block">
+            {showChart && (
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-2 shrink-0">
+                <InvoiceChart
+                  projectId={projectFilter !== 'all' ? parseInt(projectFilter) : undefined}
+                  onMonthClick={handleMonthClick}
+                  onYearChange={handleYearChange}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Estadísticas */}
           <div className="shrink-0">

@@ -559,10 +559,10 @@ export default function AsistenciaPage() {
       </div>
 
       {/* Toggle principal: Pasar Asistencia / Historial */}
-      <div className="inline-flex bg-slate-900/50 p-1 rounded-xl border border-slate-800">
+      <div className="flex w-full sm:w-auto sm:inline-flex bg-slate-900/50 p-1 rounded-xl border border-slate-800">
         <button
           onClick={() => setViewMode('register')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${viewMode === 'register'
+          className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${viewMode === 'register'
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
@@ -574,7 +574,7 @@ export default function AsistenciaPage() {
         </button>
         <button
           onClick={() => setViewMode('history')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${viewMode === 'history'
+          className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${viewMode === 'history'
             ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
@@ -588,10 +588,10 @@ export default function AsistenciaPage() {
 
       {/* Toggle secundario: Solo visible en modo Historial */}
       {viewMode === 'history' && (
-        <div className="inline-flex bg-slate-900/50 p-1 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="flex w-full sm:w-auto sm:inline-flex bg-slate-900/50 p-1 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
           <button
             onClick={() => setHistoryMode('by-worker')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${historyMode === 'by-worker'
+            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${historyMode === 'by-worker'
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
@@ -603,7 +603,7 @@ export default function AsistenciaPage() {
           </button>
           <button
             onClick={() => setHistoryMode('by-calendar')}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${historyMode === 'by-calendar'
+            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${historyMode === 'by-calendar'
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
