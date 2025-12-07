@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 export default function TareasPage() {
   const {
     tasks,
+    apartments,
     projects,
     users,
     floors,
@@ -336,6 +337,81 @@ export default function TareasPage() {
     return matchesSearch && matchesProject && matchesTower && matchesFloor && matchesApartment && matchesWorker && matchesStatus
   })
 
+  // Filtrar apartamentos para mostrar en la jerarquía (incluso vacíos)
+  const filteredApartments = useMemo(() => {
+    // 1. Filtrar por estructura (Proyecto, Torre, Piso, ID Apartamento)
+    let result = apartments.filter(apt => {
+      // Verificar estructura (usando la jerarquía anidada en apt.floors)
+      const floor = apt.floors
+      if (!floor) return false
+
+      const project = floor.projects
+      const tower = floor.towers // Ahora existe gracias al cambio en useTasksV2
+
+      if (!project || !tower) return false
+
+      const projectId = project.id.toString()
+      const towerId = tower.id.toString()
+      const floorId = floor.id.toString()
+      const apartmentId = apt.id.toString()
+
+      const matchesProject = !selectedProjectId || selectedProjectId === 'all' || projectId === selectedProjectId
+      const matchesTower = towerFilter === 'all' || towerId === towerFilter
+      const matchesFloor = floorFilter === 'all' || floorId === floorFilter
+      const matchesApartment = apartmentFilter === 'all' || apartmentId === apartmentFilter
+
+      return matchesProject && matchesTower && matchesFloor && matchesApartment
+    })
+
+    // 2. Si hay búsqueda, filtrar adicionalmente
+    if (searchTerm) {
+      // Queremos mostrar el apartamento SI:
+      // a) Su código/número coincide con la búsqueda
+      // b) Contiene alguna tarea visible (filteredTasks)
+      // NOTA: Si filtramos por STATUS o WORKER (que afectan a tasks), 
+      // solo deberíamos mostrar apartamentos VACIOS si NO hay filtros de tarea activos?
+      // El usuario pidió "ver todos los departamentos", asumimos prioridad estructural.
+      // Pero con search es distinto.
+
+      const visibleTaskAptIds = new Set(filteredTasks.map(t => t.apartment_id))
+
+      result = result.filter(apt => {
+        const fullNumber = formatApartmentNumber(apt.apartment_code, apt.apartment_number).toLowerCase()
+        const code = (apt.apartment_code || '').toLowerCase()
+        const num = (apt.apartment_number || '').toLowerCase()
+        const term = searchTerm.toLowerCase()
+
+        const matchesName = fullNumber.includes(term) || code.includes(term) || num.includes(term)
+        const hasVisibleTask = visibleTaskAptIds.has(apt.id)
+
+        return matchesName || hasVisibleTask
+      })
+    } else {
+      // Sin búsqueda:
+      // Si hay filtros de tarea específicos (Worker, Status), ¿ocultamos apartamentos vacíos?
+      // El usuario quiere ver "incluso los que no tienen tareas".
+      // Entonces, si filtro por "Pendientes", ¿veo un depto sin tareas? 
+      // Técnicamente no tiene tareas pendientes.
+      // Pero si el usuario dice "ver todos los deptos", probablemente quiere ver la estructura completa 
+      // para, por ejemplo, agregar una tarea a un depto vacío.
+      // Mantendremos la visualización estructural por defecto.
+
+      // Pero si filtro por WORKER?
+      // Si busco "Juan", ¿quiero ver el Depto 101 que no tiene a Juan?
+      // Probablemente NO.
+      // Si hay filtros de TAREA activos (Worker, Status), tal vez deberíamos restringir a los que tienen tareas match.
+
+      const hasTaskFilters = workerFilter !== 'all' || statusFilter !== 'all'
+
+      if (hasTaskFilters) {
+        const visibleTaskAptIds = new Set(filteredTasks.map(t => t.apartment_id))
+        result = result.filter(apt => visibleTaskAptIds.has(apt.id))
+      }
+    }
+
+    return result
+  }, [apartments, selectedProjectId, towerFilter, floorFilter, apartmentFilter, searchTerm, filteredTasks, workerFilter, statusFilter])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -560,6 +636,7 @@ export default function TareasPage() {
           <div id="tasks-list">
             <TaskHierarchyV2
               tasks={filteredTasks}
+              apartments={filteredApartments}
               floors={floors}
               onTaskUpdate={async () => {
                 if (refreshTasks) {

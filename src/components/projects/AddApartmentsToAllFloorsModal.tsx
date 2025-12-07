@@ -24,18 +24,18 @@ interface FloorApartments {
   apartmentNumbers: string[]
 }
 
-export function AddApartmentsToAllFloorsModal({ 
-  isOpen, 
-  onClose, 
-  towerId, 
+export function AddApartmentsToAllFloorsModal({
+  isOpen,
+  onClose,
+  towerId,
   projectId,
-  onSuccess 
+  onSuccess
 }: AddApartmentsToAllFloorsModalProps) {
   const { createApartment } = useApartments(undefined)
   const { floors } = useFloors(projectId)
   const { templates } = useApartmentTemplates(projectId)
   const [submitting, setSubmitting] = useState(false)
-  const [quantity, setQuantity] = useState<number>(1)
+  const [quantity, setQuantity] = useState<number | ''>('')
   const [apartmentCode, setApartmentCode] = useState<string>('')
   const [apartmentType, setApartmentType] = useState<string>('Departamento')
   const [area, setArea] = useState<string>('0')
@@ -61,7 +61,7 @@ export function AddApartmentsToAllFloorsModal({
 
   useEffect(() => {
     if (isOpen && towerId) {
-      setQuantity(1)
+      setQuantity('')
       setApartmentCode('')
       setApartmentType('Departamento')
       setArea('0')
@@ -76,7 +76,7 @@ export function AddApartmentsToAllFloorsModal({
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplateId(templateId)
-    
+
     if (!templateId) {
       return
     }
@@ -93,17 +93,17 @@ export function AddApartmentsToAllFloorsModal({
     setBedrooms(template.bedrooms?.toString() || '')
     setBathrooms(template.bathrooms?.toString() || '')
     setNotes(template.notes || '')
-    
+
     toast.success('Plantilla aplicada')
   }
 
   const loadExistingApartments = async () => {
     if (towerFloors.length === 0) return
-    
+
     try {
       setLoadingApartments(true)
       const floorIds = towerFloors.map(f => f.id)
-      
+
       const { data, error } = await supabase
         .from('apartments')
         .select('id, floor_id, apartment_number')
@@ -150,7 +150,7 @@ export function AddApartmentsToAllFloorsModal({
   const extractSequenceNumber = (apartmentNumber: string, floorNumber: number): number => {
     const floorPrefix = floorNumber < 0 ? `S${Math.abs(floorNumber)}` : String(floorNumber)
     const trimmed = apartmentNumber.trim()
-    
+
     // Si el número empieza con el prefijo del piso (ej: "101" en piso 1, "110" en piso 1)
     if (trimmed.startsWith(floorPrefix)) {
       // Extraer solo la parte de secuencia después del prefijo
@@ -160,7 +160,7 @@ export function AddApartmentsToAllFloorsModal({
         return sequenceNum // Retorna solo la parte de secuencia (01, 02, 10, etc.)
       }
     }
-    
+
     // Si no empieza con el prefijo del piso, es un código personalizado
     // Busca el patrón de número después de un guión o espacio
     // Ejemplos: "F3X D-101" -> extrae 101, luego verifica si tiene prefijo del piso
@@ -179,7 +179,7 @@ export function AddApartmentsToAllFloorsModal({
       // Si es >= 100 pero no empieza con el prefijo, también usarlo directamente
       return extractedNum
     }
-    
+
     // Si no encuentra patrón con guión/espacio, intenta extraer el último número
     const numbers = trimmed.match(/\d+/g)
     if (numbers && numbers.length > 0) {
@@ -194,7 +194,7 @@ export function AddApartmentsToAllFloorsModal({
       // Si es < 100 o no empieza con el prefijo, usarlo directamente
       return lastNum
     }
-    
+
     return 0
   }
 
@@ -203,7 +203,7 @@ export function AddApartmentsToAllFloorsModal({
   const getNextApartmentNumber = (floorId: number, floorNumber: number): number => {
     const floorData = existingApartments.find(fa => fa.floorId === floorId)
     const existingNumbers = floorData?.apartmentNumbers || []
-    
+
     if (existingNumbers.length === 0) {
       return 1 // Si no hay departamentos, empezar desde 1
     }
@@ -227,10 +227,10 @@ export function AddApartmentsToAllFloorsModal({
   const generateApartmentNumbers = (floorId: number, floorNumber: number, quantity: number): string[] => {
     const numbers: string[] = []
     const floorPrefix = floorNumber < 0 ? `S${Math.abs(floorNumber)}` : String(floorNumber)
-    
+
     // Obtener el siguiente número disponible (extrae el número más alto de cualquier formato)
     const startNumber = getNextApartmentNumber(floorId, floorNumber)
-    
+
     for (let i = 0; i < quantity; i++) {
       const sequenceNumber = startNumber + i
       // Formato simple: {piso}{número} (ej: 101, 102, 103 para piso 1 | S101, S102 para piso -1)
@@ -248,19 +248,20 @@ export function AddApartmentsToAllFloorsModal({
       return
     }
 
-    if (quantity < 1 || quantity > 100) {
+    const qty = quantity === '' ? 0 : quantity
+    if (qty < 1 || qty > 100) {
       toast.error('La cantidad debe estar entre 1 y 100')
       return
     }
 
     try {
       setSubmitting(true)
-      
+
       // Crear departamentos en todos los pisos
       for (const floor of towerFloors) {
         // Generar números de departamentos para este piso, continuando la secuencia
-        const apartmentNumbers = generateApartmentNumbers(floor.id, floor.floor_number, quantity)
-        
+        const apartmentNumbers = generateApartmentNumbers(floor.id, floor.floor_number, qty)
+
         for (const apartmentNumber of apartmentNumbers) {
           await createApartment({
             floor_id: floor.id,
@@ -277,8 +278,8 @@ export function AddApartmentsToAllFloorsModal({
           })
         }
       }
-      
-      toast.success(`${quantity} ${quantity === 1 ? 'departamento' : 'departamentos'} agregados a ${towerFloors.length} ${towerFloors.length === 1 ? 'piso' : 'pisos'}`)
+
+      toast.success(`${qty} ${qty === 1 ? 'departamento' : 'departamentos'} agregados a ${towerFloors.length} ${towerFloors.length === 1 ? 'piso' : 'pisos'}`)
       onSuccess?.()
       onClose()
     } catch (err) {
@@ -315,7 +316,7 @@ export function AddApartmentsToAllFloorsModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <p className="text-sm text-blue-800">
-            Se crearán departamentos en todos los pisos de esta torre ({towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}). 
+            Se crearán departamentos en todos los pisos de esta torre ({towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}).
             Los números se generarán automáticamente con el prefijo del piso (ej: Piso 1 → 101, 102, 103... | Piso 2 → 201, 202, 203...).
             {templates.length > 0 && ' Seleccione una plantilla para aplicar valores predeterminados.'}
           </p>
@@ -332,11 +333,13 @@ export function AddApartmentsToAllFloorsModal({
             max={100}
             value={quantity}
             onChange={(e) => {
+              if (e.target.value === '') {
+                setQuantity('')
+                return
+              }
               const value = parseInt(e.target.value)
               if (!isNaN(value) && value > 0 && value <= 100) {
                 setQuantity(value)
-              } else if (e.target.value === '') {
-                setQuantity(1)
               }
             }}
             required
@@ -465,7 +468,7 @@ export function AddApartmentsToAllFloorsModal({
         </div>
 
         {/* Vista previa */}
-        {towerFloors.length > 0 && quantity > 0 && (
+        {towerFloors.length > 0 && typeof quantity === 'number' && quantity > 0 && (
           <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-4">
             <h4 className="text-sm font-semibold text-slate-200 mb-3">Vista previa de departamentos a crear:</h4>
             {loadingApartments ? (
@@ -476,7 +479,7 @@ export function AddApartmentsToAllFloorsModal({
                   const existing = existingApartments.find(fa => fa.floorId === floor.id)
                   const existingNumbers = existing?.apartmentNumbers || []
                   const newApartmentNumbers = generateApartmentNumbers(floor.id, floor.floor_number, quantity)
-                  
+
                   return (
                     <div key={floor.id} className="text-sm">
                       <div className="flex items-start gap-2">
@@ -504,7 +507,7 @@ export function AddApartmentsToAllFloorsModal({
               </div>
             )}
             <p className="text-xs text-slate-400 mt-3">
-              Total: {quantity * towerFloors.length} departamentos en {towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}
+              Total: {(typeof quantity === 'number' ? quantity : 0) * towerFloors.length} departamentos en {towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}
             </p>
           </div>
         )}
@@ -520,11 +523,11 @@ export function AddApartmentsToAllFloorsModal({
           </Button>
           <Button
             type="submit"
-            disabled={submitting || towerFloors.length === 0 || quantity < 1}
+            disabled={submitting || towerFloors.length === 0 || quantity === '' || quantity < 1}
           >
-            {submitting 
-              ? 'Creando...' 
-              : `Crear ${quantity * towerFloors.length} Departamento${quantity * towerFloors.length > 1 ? 's' : ''}`
+            {submitting
+              ? 'Creando...'
+              : `Crear ${(typeof quantity === 'number' ? quantity : 0) * towerFloors.length} Departamento${(typeof quantity === 'number' ? quantity : 0) * towerFloors.length > 1 ? 's' : ''}`
             }
           </Button>
         </div>

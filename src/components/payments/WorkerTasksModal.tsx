@@ -50,22 +50,25 @@ export function WorkerTasksModal({ isOpen, onClose, worker, tasks }: WorkerTasks
             }
         })
 
-        // Filtrar por mes
-        if (selectedMonth !== 'all') {
-            filtered = filtered.filter(task => {
-                const taskDate = task.completed_at ? new Date(task.completed_at) :
-                    (task.paid_at ? new Date(task.paid_at) : null)
-                if (!taskDate) return false
-                return taskDate.getFullYear() === selectedYear && (taskDate.getMonth() + 1) === selectedMonth
-            })
-        } else {
-            // Si es "todos los meses", filtrar solo por año
-            filtered = filtered.filter(task => {
-                const taskDate = task.completed_at ? new Date(task.completed_at) :
-                    (task.paid_at ? new Date(task.paid_at) : null)
-                if (!taskDate) return false
-                return taskDate.getFullYear() === selectedYear
-            })
+        // Filtrar por mes (SOLO si no es "pendientes")
+        // Las tareas pendientes deben mostrarse todas, independientemente de la fecha
+        if (activeTab !== 'pending') {
+            if (selectedMonth !== 'all') {
+                filtered = filtered.filter(task => {
+                    const taskDate = task.completed_at ? new Date(task.completed_at) :
+                        (task.paid_at ? new Date(task.paid_at) : null)
+                    if (!taskDate) return false
+                    return taskDate.getFullYear() === selectedYear && (taskDate.getMonth() + 1) === selectedMonth
+                })
+            } else {
+                // Si es "todos los meses", filtrar solo por año
+                filtered = filtered.filter(task => {
+                    const taskDate = task.completed_at ? new Date(task.completed_at) :
+                        (task.paid_at ? new Date(task.paid_at) : null)
+                    if (!taskDate) return false
+                    return taskDate.getFullYear() === selectedYear
+                })
+            }
         }
 
         return filtered
@@ -127,8 +130,8 @@ export function WorkerTasksModal({ isOpen, onClose, worker, tasks }: WorkerTasks
                     <button
                         onClick={() => setActiveTab('pending')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'pending'
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'text-slate-400 hover:text-slate-300'
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'text-slate-400 hover:text-slate-300'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -139,8 +142,8 @@ export function WorkerTasksModal({ isOpen, onClose, worker, tasks }: WorkerTasks
                     <button
                         onClick={() => setActiveTab('paid')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'paid'
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'text-slate-400 hover:text-slate-300'
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'text-slate-400 hover:text-slate-300'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -151,7 +154,7 @@ export function WorkerTasksModal({ isOpen, onClose, worker, tasks }: WorkerTasks
                 </div>
 
                 {/* Filtros por mes */}
-                <Card className="bg-slate-700/30 border-slate-600">
+                <Card className={`bg-slate-700/30 border-slate-600 ${activeTab === 'pending' ? 'opacity-50 pointer-events-none' : ''}`}>
                     <CardContent className="p-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>

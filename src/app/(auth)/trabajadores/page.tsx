@@ -9,10 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { WorkerForm } from '@/components/workers/WorkerForm'
-import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { ContractFiltersSidebar } from '@/components/workers/ContractFiltersSidebar'
+import { WorkerEfficiencyModal } from '@/components/workers/WorkerEfficiencyModal'
 import { formatDateToChilean } from '@/lib/contracts'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -74,6 +75,12 @@ export default function TrabajadoresPage() {
     fecha_inicio: '',
     fecha_termino: ''
   })
+
+  const [contractToRestore, setContractToRestore] = useState<number | null>(null)
+
+  // Efficiency Report States
+  const [showEfficiencyModal, setShowEfficiencyModal] = useState(false)
+  const [selectedWorkerForEfficiency, setSelectedWorkerForEfficiency] = useState<{ id: number, name: string } | null>(null)
 
   // Estados para modales de confirmación
   const [confirmDeleteWorkerState, setConfirmDeleteWorkerState] = useState<{ isOpen: boolean, workerId: number | null }>({ isOpen: false, workerId: null })
@@ -931,6 +938,11 @@ export default function TrabajadoresPage() {
     setEditingWorker(worker)
   }
 
+  const handleShowEfficiency = (worker: Worker) => {
+    setSelectedWorkerForEfficiency({ id: worker.id, name: worker.full_name })
+    setShowEfficiencyModal(true)
+  }
+
   const handleCreate = () => {
     setEditingWorker(null)
     setShowCreateModal(true)
@@ -1189,6 +1201,9 @@ export default function TrabajadoresPage() {
                             <Button size="sm" variant="ghost" onClick={() => handleShowContractHistory(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
                               <History className="h-4 w-4" />
                             </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleShowEfficiency(worker)} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400 hover:bg-slate-700" title="Ver reporte de eficiencia">
+                              <TrendingUp className="h-4 w-4" />
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => handleDelete(worker.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1298,6 +1313,13 @@ export default function TrabajadoresPage() {
                                     title="Ver historial de contratos"
                                   >
                                     <History className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleShowEfficiency(worker)}
+                                    className="text-amber-600 hover:text-amber-800"
+                                    title="Ver reporte de eficiencia"
+                                  >
+                                    <TrendingUp className="h-4 w-4" />
                                   </button>
                                   <button
                                     onClick={() => handleDelete(worker.id)}
@@ -2508,6 +2530,13 @@ export default function TrabajadoresPage() {
           message="¿Estás seguro de que quieres eliminar este contrato permanentemente? Esta acción NO se puede deshacer."
           confirmText="Eliminar Permanentemente"
           type="danger"
+        />
+        {/* Worker Efficiency Modal */}
+        <WorkerEfficiencyModal
+          isOpen={showEfficiencyModal}
+          onClose={() => setShowEfficiencyModal(false)}
+          workerId={selectedWorkerForEfficiency?.id || 0}
+          workerName={selectedWorkerForEfficiency?.name || ''}
         />
       </div>
     </div>

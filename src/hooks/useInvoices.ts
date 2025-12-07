@@ -119,10 +119,10 @@ export function useInvoices() {
 
       const result = await response.json()
       console.log('✅ Factura procesada exitosamente:', result)
-      
+
       // Recargar la lista de facturas
       await fetchInvoices()
-      
+
       return result
     } catch (err) {
       console.error('❌ Error processing invoice:', err)
@@ -146,8 +146,8 @@ export function useInvoices() {
       if (error) throw error
 
       // Actualizar la lista local
-      setInvoices(prev => 
-        prev.map(invoice => 
+      setInvoices(prev =>
+        prev.map(invoice =>
           invoice.id === id ? { ...invoice, ...updates } : invoice
         )
       )
@@ -163,7 +163,7 @@ export function useInvoices() {
   const deleteInvoice = async (id: number) => {
     try {
       console.log('🗑️ Eliminando factura:', id)
-      
+
       // Primero obtener la factura para saber qué archivos eliminar
       const { data: invoice, error: fetchError } = await supabase
         .from('invoice_income')
@@ -180,18 +180,18 @@ export function useInvoices() {
       if (invoice && invoice.pdf_url) {
         try {
           console.log('🔍 Procesando eliminación de PDF:', invoice.pdf_url)
-          
+
           // Extraer el path del archivo de la URL
           const pdfPath = extractFilePathFromUrl(invoice.pdf_url, 'invoices')
           console.log('📁 Path extraído para PDF:', pdfPath)
-          
+
           if (pdfPath) {
             console.log('🗑️ Intentando eliminar PDF del bucket invoices:', pdfPath)
-            
+
             const { error: pdfDeleteError } = await supabase.storage
               .from('invoices')
               .remove([pdfPath])
-            
+
             if (pdfDeleteError) {
               console.error('❌ Error eliminando PDF:', pdfDeleteError)
             } else {
@@ -233,22 +233,22 @@ export function useInvoices() {
         console.log('❌ URL inválida para extracción:', { url, type: typeof url })
         return null
       }
-      
+
       console.log(`🔍 Extrayendo path de URL para bucket "${bucket}":`, url)
-      
+
       // URL formato: https://xxx.supabase.co/storage/v1/object/public/BUCKET/PATH
       const bucketPattern = `/storage/v1/object/public/${bucket}/`
       const bucketIndex = url.indexOf(bucketPattern)
-      
+
       if (bucketIndex === -1) {
         console.log(`❌ Patrón de bucket "${bucket}" no encontrado en URL:`, url)
         console.log('🔍 Buscando patrón:', bucketPattern)
         return null
       }
-      
+
       const path = url.substring(bucketIndex + bucketPattern.length)
       console.log(`✅ Path extraído para bucket "${bucket}":`, path)
-      
+
       return path || null
     } catch (error) {
       console.error('❌ Error extrayendo path de URL:', error)
@@ -262,13 +262,13 @@ export function useInvoices() {
     const processed = invoices.filter(inv => inv.status === 'processed').length
     const pending = invoices.filter(inv => inv.status === 'pending').length
     const blocked = invoices.filter(inv => inv.status === 'blocked').length
-    
+
     // Ingresos reales (solo facturas procesadas)
     const processedInvoices = invoices.filter(inv => inv.status === 'processed')
     const realIncomeAmount = processedInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0)
     const realIncomeNet = processedInvoices.reduce((sum, inv) => sum + (inv.net_amount || 0), 0)
     const realIncomeIva = processedInvoices.reduce((sum, inv) => sum + (inv.iva_amount || 0), 0)
-    
+
     // Total de todas las facturas (para referencia)
     const totalAmount = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0)
     const totalNet = invoices.reduce((sum, inv) => sum + (inv.net_amount || 0), 0)
@@ -292,7 +292,7 @@ export function useInvoices() {
     // Ingresos reales (solo facturas procesadas)
     const processedInvoices = invoices.filter(inv => inv.status === 'processed')
     const realIncomeAmount = processedInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0)
-    
+
     // Obtener pagos totales realizados a trabajadores
     let totalPaidToWorkers = 0
     try {
@@ -300,15 +300,15 @@ export function useInvoices() {
         .from('worker_payments')
         .select('amount')
         .eq('is_paid', true)
-      
+
       totalPaidToWorkers = payments?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0
     } catch (error) {
       console.error('Error fetching worker payments:', error)
     }
-    
+
     // Ingresos disponibles (ingresos - pagos realizados)
     const availableIncome = Math.max(0, realIncomeAmount - totalPaidToWorkers)
-    
+
     return {
       realIncomeAmount,
       totalPaidToWorkers,

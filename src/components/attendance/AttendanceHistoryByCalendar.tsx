@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
+import { Contract } from '@/hooks/useContracts'
 import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import { AttendanceEditModal } from './AttendanceEditModal'
 import { DayAttendanceModal } from './DayAttendanceModal'
@@ -14,6 +15,7 @@ interface Project {
 interface AttendanceHistoryByCalendarProps {
   attendances: WorkerAttendance[]
   projects: Project[]
+  contracts: Contract[]
   selectedProjectId: number | null
   onProjectChange: (projectId: number | null) => void
   onMonthChange: (year: number, month: number) => void
@@ -23,6 +25,7 @@ interface AttendanceHistoryByCalendarProps {
 export function AttendanceHistoryByCalendar({
   attendances,
   projects,
+  contracts,
   selectedProjectId,
   onProjectChange,
   onMonthChange,
@@ -154,8 +157,117 @@ export function AttendanceHistoryByCalendar({
     }
   }, [monthAttendances])
 
-  // Obtener asistencias del día seleccionado
-  const selectedDayAttendances = selectedDate ? (attendancesByDate[selectedDate] || []) : []
+  // Calcular estadísticas diarias completando con ausencias
+  const getDailyStats = (dateStr: string) => {
+    const existingAttendances = attendancesByDate[dateStr] || []
+
+    // Si no hay contratos disponibles, solo usar asistencias existentes (fallback)
+    if (!contracts || contracts.length === 0) {
+      const present = existingAttendances.filter(a => a.is_present).length
+      return {
+        total: existingAttendances.length,
+        present,
+        rate: existingAttendances.length > 0 ? present / existingAttendances.length : 0
+      }
+    }
+
+    // Calcular trabajadores activos para esta fecha
+    const dateObj = new Date(dateStr)
+    const activeContractsForDate = contracts.filter(contract => {
+      // Filtrar por proyecto si hay uno seleccionado
+      if (selectedProjectId && contract.project_id !== selectedProjectId) return false
+
+      // Verificar vigencia del contrato
+      const startDate = new Date(contract.fecha_inicio)
+      startDate.setHours(0, 0, 0, 0) // Normalizar
+
+      // Ajustar fecha para comparación (asegurar que es medianoche UTC/Local consistente)
+      const compareDate = new Date(dateObj)
+      compareDate.setHours(0, 0, 0, 0)
+
+      if (startDate > compareDate) return false
+
+      if (contract.fecha_termino) {
+        const endDate = new Date(contract.fecha_termino)
+        endDate.setHours(0, 0, 0, 0)
+        if (endDate < compareDate) return false
+      }
+
+      // Verificar status (asumiendo que cancelado no cuenta, pero finalizado sí si fue después de la fecha)
+      // Ojo: contract.status puede ser 'finalizado' pero haber estado activo en esa fecha
+      if (contract.status === 'cancelado') return false
+
+      return true
+    })
+
+    const totalActive = activeContractsForDate.length
+    const presentCount = existingAttendances.filter(a => a.is_present).length
+
+    return {
+      total: totalActive,
+      present: presentCount,
+      rate: totalActive > 0 ? presentCount / totalActive : 0
+    }
+  }
+
+
+  // Obtener asistencias del día seleccionado (mezclando reales con ausencias virtuales)
+  const getSelectedDayCombinedAttendances = () => {
+    if (!selectedDate) return []
+
+    const existingAttendances = attendancesByDate[selectedDate] || []
+    const existingWorkerIds = new Set(existingAttendances.map(a => a.worker_id))
+
+    // Encontrar trabajadores que debían estar pero no tienen registro
+    const dateObj = new Date(selectedDate)
+    const missingWorkers = contracts.filter(contract => {
+      // Filtrar por proyecto si hay uno seleccionado
+      if (selectedProjectId && contract.project_id !== selectedProjectId) return false
+
+      // Mismas reglas de vigencia
+      const startDate = new Date(contract.fecha_inicio)
+      startDate.setHours(0, 0, 0, 0)
+      const compareDate = new Date(dateObj)
+      compareDate.setHours(0, 0, 0, 0)
+
+      if (startDate > compareDate) return false
+
+      if (contract.fecha_termino) {
+        const endDate = new Date(contract.fecha_termino)
+        endDate.setHours(0, 0, 0, 0)
+        if (endDate < compareDate) return false
+      }
+
+      if (contract.status === 'cancelado') return false
+
+      // Si ya tiene asistencia registrada, no es "missing"
+      return !existingWorkerIds.has(contract.worker_id)
+    })
+
+    // Crear registros de "ausencia virtual"
+    const virtualAbsences: WorkerAttendance[] = missingWorkers.map(contract => ({
+      id: -contract.id, // ID negativo temporal
+      worker_id: contract.worker_id,
+      project_id: contract.project_id,
+      contract_id: contract.id,
+      attendance_date: selectedDate,
+      is_present: false, // Marcado como ausente
+      check_in_time: '',
+      notes: 'No registrado',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: null,
+      worker_name: contract.worker_name || 'Desconocido',
+      worker_rut: contract.worker_rut || '',
+      project_name: contract.project_name || 'General',
+      contract_number: contract.contract_number || 'N/A',
+      contract_type: contract.contract_type
+    }))
+
+    return [...existingAttendances, ...virtualAbsences]
+  }
+
+  const selectedDayAttendances = getSelectedDayCombinedAttendances()
 
   return (
     <div className="space-y-6">
@@ -322,17 +434,24 @@ export function AttendanceHistoryByCalendar({
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1
               const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-              const dayAttendances = attendancesByDate[dateStr] || []
-              const present = dayAttendances.filter(a => a.is_present).length
-              const total = dayAttendances.length
+
+              // Usar lógica combinada para stats
+              const stats = getDailyStats(dateStr)
+              const present = stats.present
+              const total = stats.total
+              const rate = stats.rate
+
               const isWeekend = (firstDay + i) % 7 >= 5
-              const isToday = dateStr === new Date().toISOString().split('T')[0]
+              const todayStr = new Date().toISOString().split('T')[0]
+              const isToday = dateStr === todayStr
+              const isFuture = dateStr > todayStr
               const isSelected = dateStr === selectedDate
 
               // Calcular color según asistencia
               const getColor = () => {
+                if (isFuture || isWeekend) return 'bg-slate-800'
                 if (total === 0) return 'bg-slate-800'
-                const rate = present / total
+                // Rate ya está calculado correctamente (0-1)
                 if (rate >= 0.8) return 'bg-emerald-900/40 border-emerald-600'
                 if (rate >= 0.6) return 'bg-emerald-900/20 border-emerald-600/50'
                 if (rate >= 0.4) return 'bg-yellow-900/30 border-yellow-600'
@@ -372,7 +491,7 @@ export function AttendanceHistoryByCalendar({
                           {present} / {total}
                         </div>
                         <div className="text-lg font-bold text-slate-100">
-                          {Math.round((present / total) * 100)}%
+                          {Math.round(rate * 100)}%
                         </div>
                       </div>
                     )}

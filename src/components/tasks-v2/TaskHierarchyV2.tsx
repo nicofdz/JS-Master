@@ -8,29 +8,37 @@ import type { TaskV2 } from '@/hooks/useTasks_v2'
 
 type Task = TaskV2
 
-interface Floor {
+interface Apartment {
   id: number
-  floor_number: number
-  tower_id: number
-  towers?: {
+  apartment_number: string
+  apartment_code: string
+  floors: {
     id: number
-    tower_number: number
-    name?: string
+    floor_number: number
+    project_id: number
+    tower_id: number
+    projects: {
+      id: number
+      name: string
+    }
+    towers: {
+      id: number
+      tower_number: number
+      name: string
+    }
   }
 }
 
 interface TaskHierarchyV2Props {
   tasks: Task[]
-  floors: Floor[]
+  apartments: Apartment[] // List of apartments to render (already filtered)
+  floors: any[] // Kept for legacy compatibility if needed, but likely unused now
   onTaskUpdate?: () => void
   onAddTask?: (projectId: number, towerId: number, floorId: number, apartmentId: number) => void
   onAddMassTask?: (projectId: number, towerId: number) => void
 }
 
-export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddMassTask }: TaskHierarchyV2Props) {
-  // ... (existing code)
-
-  // ... (inside the tower map)
+export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAddTask, onAddMassTask }: TaskHierarchyV2Props) {
   // Inicializar estado expandido desde localStorage (solo una vez)
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(() => {
     try {
@@ -120,12 +128,13 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddM
         project: { id: number; name: string }
         towers: {
           [towerId: number]: {
-            tower: { id: number; number: number }
+            tower: { id: number; number: number; name: string }
             floors: {
               [floorId: number]: {
                 floor_number: number
                 apartments: {
                   [apartmentId: number]: {
+                    id: number
                     number: string
                     originalNumber: string
                     tasks: Task[]
@@ -138,70 +147,123 @@ export function TaskHierarchyV2({ tasks, floors, onTaskUpdate, onAddTask, onAddM
       }
     } = {}
 
-    tasks.forEach(task => {
-      // Validar que la tarea tenga los datos necesarios
-      if (!task.project_id || !task.tower_id || !task.floor_id || !task.apartment_id) {
-        console.warn('⚠️ Tarea sin IDs completos:', {
-          taskId: task.id,
-          taskName: task.task_name,
-          project_id: task.project_id,
-          tower_id: task.tower_id,
-          floor_id: task.floor_id,
-          apartment_id: task.apartment_id
-        })
-        return
+    // 1. Build Structure from Apartments
+    apartments.forEach(apt => {
+      const floor = apt.floors
+      if (!floor) return
+
+      const project = floor.projects
+      const tower = floor.towers
+
+      const projectId = project.id
+      const towerId = tower.id
+      const floorId = floor.id
+      const apartmentId = apt.id
+
+      // Initialize Project
+      if (!grouped[projectId]) {
+        grouped[projectId] = {
+          project: { id: projectId, name: project.name },
+          towers: {}
+        }
       }
+
+      // Initialize Tower
+      if (!grouped[projectId].towers[towerId]) {
+        grouped[projectId].towers[towerId] = {
+          tower: { id: towerId, number: tower.tower_number, name: tower.name },
+          floors: {}
+        }
+      }
+
+      // Initialize Floor
+      if (!grouped[projectId].towers[towerId].floors[floorId]) {
+        grouped[projectId].towers[towerId].floors[floorId] = {
+          floor_number: floor.floor_number,
+          apartments: {}
+        }
+      }
+
+      // Initialize Apartment
+      if (!grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId]) {
+        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId] = {
+          id: apartmentId,
+          number: formatApartmentNumber(apt.apartment_code, apt.apartment_number),
+          originalNumber: apt.apartment_number || '0',
+          tasks: []
+        }
+      }
+    })
+
+    // 2. Populate Tasks
+    // Iterate over tasks and place them into the structure. 
+    // IF the apartment exists in the structure (it should if 'apartments' prop is consistent), add it.
+    // If not (maybe a task belongs to an apartment not in the filtered apartments list?), deciding whether to show it.
+    // Logic: The 'tasks' prop is also filtered. We should show tasks that match filters.
+    // If a task matches filters but its apartment was filtered out (e.g. mismatch), what happens?
+    // In TareasPage we will ensure that 'apartments' list INCLUDES apartments of filtered tasks.
+
+    tasks.forEach(task => {
+      // Validar IDs
+      if (!task.project_id || !task.tower_id || !task.floor_id || !task.apartment_id) return
 
       const projectId = task.project_id
       const towerId = task.tower_id
       const floorId = task.floor_id
       const apartmentId = task.apartment_id
 
-      // Inicializar proyecto
-      if (!grouped[projectId]) {
-        grouped[projectId] = {
-          project: {
-            id: projectId,
-            name: task.project_name || 'Proyecto Desconocido'
-          },
-          towers: {}
-        }
-      }
+      // If structure exists, add task
+      if (
+        grouped[projectId] &&
+        grouped[projectId].towers[towerId] &&
+        grouped[projectId].towers[towerId].floors[floorId] &&
+        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId]
+      ) {
+        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId].tasks.push(task)
+      } else {
+        // Fallback: If apartment wasn't in the 'apartments' list but we have a task for it, 
+        // we might want to create the structure on the fly OR ignore it.
+        // Given the requirement "Show all apartments", the 'apartments' list should be the master.
+        // However, if search finds a task, we want to see it.
+        // So we should probably construct on fly if missing.
 
-      // Inicializar torre
-      if (!grouped[projectId].towers[towerId]) {
-        grouped[projectId].towers[towerId] = {
-          tower: {
-            id: towerId,
-            number: task.tower_number || 0
-          },
-          floors: {}
+        // Initialize Project
+        if (!grouped[projectId]) {
+          grouped[projectId] = {
+            project: { id: projectId, name: task.project_name || 'Desconocido' },
+            towers: {}
+          }
         }
-      }
-
-      // Inicializar piso
-      if (!grouped[projectId].towers[towerId].floors[floorId]) {
-        grouped[projectId].towers[towerId].floors[floorId] = {
-          floor_number: task.floor_number || 0,
-          apartments: {}
+        // Initialize Tower
+        if (!grouped[projectId].towers[towerId]) {
+          grouped[projectId].towers[towerId] = {
+            tower: { id: towerId, number: task.tower_number || 0, name: task.tower_number?.toString() || '' },
+            floors: {}
+          }
         }
-      }
-
-      // Inicializar apartamento
-      if (!grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId]) {
-        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId] = {
-          number: formatApartmentNumber(task.apartment_code, task.apartment_number || 'S/N'),
-          originalNumber: task.apartment_number || '0', // Guardar número original para ordenar
-          tasks: []
+        // Initialize Floor
+        if (!grouped[projectId].towers[towerId].floors[floorId]) {
+          grouped[projectId].towers[towerId].floors[floorId] = {
+            floor_number: task.floor_number || 0,
+            apartments: {}
+          }
         }
-      }
+        // Initialize Apartment
+        if (!grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId]) {
+          grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId] = {
+            id: apartmentId,
+            number: formatApartmentNumber(task.apartment_code, task.apartment_number || ''),
+            originalNumber: task.apartment_number || '0',
+            tasks: []
+          }
+        }
 
-      // Agregar tarea
-      grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId].tasks.push(task)
+        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId].tasks.push(task)
+      }
     })
 
     return grouped
-  }, [tasks])
+  }, [apartments, tasks])
 
   const toggleProject = (projectId: number) => {
     setExpandedProjects(prev => {

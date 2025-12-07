@@ -32,12 +32,12 @@ interface AddApartmentsModalProps {
   onSuccess?: () => void
 }
 
-export function AddApartmentsModal({ 
-  isOpen, 
-  onClose, 
-  floorId, 
+export function AddApartmentsModal({
+  isOpen,
+  onClose,
+  floorId,
   projectId,
-  onSuccess 
+  onSuccess
 }: AddApartmentsModalProps) {
   const { createApartment, getNextApartmentNumber } = useApartments(floorId)
   const { floors } = useFloors(projectId)
@@ -56,7 +56,7 @@ export function AddApartmentsModal({
   }])
   const [submitting, setSubmitting] = useState(false)
   const [nextNumber, setNextNumber] = useState<string | null>(null)
-  const [customQuantity, setCustomQuantity] = useState<number>(1)
+  const [customQuantity, setCustomQuantity] = useState<number | ''>('')
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export function AddApartmentsModal({
     const newId = Date.now().toString()
     const lastRow = rows[rows.length - 1]
     const lastNumber = lastRow.apartment_number
-    
+
     // Intentar incrementar el número del último departamento
     let nextNum = nextNumber || '1'
     if (lastNumber) {
@@ -168,16 +168,17 @@ export function AddApartmentsModal({
 
   const handleQuickAdd = (quantity: number) => {
     generateRows(quantity)
-      toast.success(`${quantity} ${quantity === 1 ? 'Departamento agregado' : 'Departamentos agregados'}`)
+    toast.success(`${quantity} ${quantity === 1 ? 'Departamento agregado' : 'Departamentos agregados'}`)
   }
 
   const handleCustomAdd = () => {
-    if (customQuantity < 1 || customQuantity > 100) {
+    const qty = customQuantity === '' ? 0 : customQuantity
+    if (qty < 1 || qty > 100) {
       toast.error('La cantidad debe estar entre 1 y 100')
       return
     }
-    generateRows(customQuantity)
-      toast.success(`${customQuantity} ${customQuantity === 1 ? 'Departamento agregado' : 'Departamentos agregados'}`)
+    generateRows(qty)
+    toast.success(`${qty} ${qty === 1 ? 'Departamento agregado' : 'Departamentos agregados'}`)
   }
 
   const removeRow = (id: string) => {
@@ -187,14 +188,14 @@ export function AddApartmentsModal({
   }
 
   const updateRow = (id: string, field: keyof ApartmentRow, value: string) => {
-    setRows(rows.map(row => 
+    setRows(rows.map(row =>
       row.id === id ? { ...row, [field]: value } : row
     ))
   }
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplateId(templateId)
-    
+
     if (!templateId) {
       return
     }
@@ -214,7 +215,7 @@ export function AddApartmentsModal({
       bathrooms: template.bathrooms?.toString() || '',
       notes: template.notes || ''
     })))
-    
+
     toast.success('Plantilla aplicada a todas las filas')
   }
 
@@ -230,7 +231,7 @@ export function AddApartmentsModal({
 
     try {
       setSubmitting(true)
-      
+
       // Crear todos los departamentos
       for (const row of rows) {
         await createApartment({
@@ -247,7 +248,7 @@ export function AddApartmentsModal({
           status: 'pending'
         })
       }
-      
+
       onSuccess?.()
       onClose()
       setRows([{
@@ -439,11 +440,13 @@ export function AddApartmentsModal({
                 max={100}
                 value={customQuantity}
                 onChange={(e) => {
+                  if (e.target.value === '') {
+                    setCustomQuantity('')
+                    return
+                  }
                   const value = parseInt(e.target.value)
                   if (!isNaN(value) && value > 0 && value <= 100) {
                     setCustomQuantity(value)
-                  } else if (e.target.value === '') {
-                    setCustomQuantity(1)
                   }
                 }}
                 className="w-20 bg-slate-700 text-slate-100 border-slate-600"

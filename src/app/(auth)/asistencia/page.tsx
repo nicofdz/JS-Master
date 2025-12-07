@@ -930,17 +930,18 @@ export default function AsistenciaPage() {
                 attendances={historyAttendances}
                 projects={projects}
                 selectedProjectId={historyProjectId}
-                onProjectChange={(id) => setHistoryProjectId(id)}
-                onMonthChange={(year, month) => handleHistoryMonthChange(year, month)}
+                onProjectChange={setHistoryProjectId}
+                onMonthChange={handleHistoryMonthChange}
                 onRefresh={loadHistoryAttendances}
               />
             ) : (
               <AttendanceHistoryByCalendar
                 attendances={historyAttendances}
                 projects={projects}
+                contracts={contracts}
                 selectedProjectId={historyProjectId}
-                onProjectChange={(id) => setHistoryProjectId(id)}
-                onMonthChange={(year, month) => handleHistoryMonthChange(year, month)}
+                onProjectChange={setHistoryProjectId}
+                onMonthChange={handleHistoryMonthChange}
                 onRefresh={loadHistoryAttendances}
               />
             )}
@@ -1001,6 +1002,6 @@ export default function AsistenciaPage() {
           />
         )
       }
-    </div >
+    </div>
   )
 }
