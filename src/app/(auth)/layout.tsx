@@ -169,7 +169,7 @@ export default function AuthLayout({
                   <X className="w-6 h-6 text-white" />
                 </button>
               </div>
-              <div className="flex-1 h-0 pt-5 pb-32 overflow-y-auto mobile-sidebar-scrollbar">
+              <div className="flex-1 h-0 pt-5 pb-32 overflow-y-auto overscroll-contain mobile-sidebar-scrollbar">
                 <div className="flex-shrink-0 flex items-center px-4">
                   <h1 className="text-lg font-semibold text-slate-100">JS Master</h1>
                 </div>
