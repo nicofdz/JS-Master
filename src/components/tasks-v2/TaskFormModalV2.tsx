@@ -67,9 +67,8 @@ export function TaskFormModalV2({
   const { towers } = useTowers(projectIdForHooks)
   const { floors } = useFloors(projectIdForHooks)
 
-  // Use apartments hook with floorId
-  const floorIdForHooks = formData.floor_id ? parseInt(formData.floor_id) : undefined
-  const { apartments } = useApartments(floorIdForHooks)
+  // const floorIdForHooks = formData.floor_id ? parseInt(formData.floor_id) : undefined
+  // const { apartments } = useApartments(floorIdForHooks)
 
   // Cascade states
   const [availableTowers, setAvailableTowers] = useState<any[]>([])
@@ -468,6 +467,7 @@ export function TaskFormModalV2({
     }
   }
 
+  /*
   // Update available apartments when apartments state changes
   useEffect(() => {
     if (formData.floor_id) {
@@ -477,6 +477,7 @@ export function TaskFormModalV2({
       setAvailableApartments([])
     }
   }, [apartments, formData.floor_id])
+  */
 
   // Load apartments when floor changes
   const loadApartmentsForFloor = async (floorId: number) => {
@@ -1145,9 +1146,9 @@ export function TaskFormModalV2({
                         required
                       >
                         <option value="">Seleccionar Depto</option>
-                        {apartments.map(apt => (
+                        {availableApartments.map(apt => (
                           <option key={apt.id} value={apt.id}>
-                            {apt.number}
+                            {apt.apartment_number}
                           </option>
                         ))}
                       </select>

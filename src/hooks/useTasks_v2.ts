@@ -328,11 +328,25 @@ export function useTasksV2() {
         })
         if (error) throw error
       } else {
+        // Sanitize updates to remove fields that don't exist in the tasks table
+        const {
+          floor_id,
+          tower_id,
+          project_id,
+          apartment_code,
+          apartment_number,
+          floor_number,
+          tower_number,
+          project_name,
+          workers,
+          ...validUpdates
+        } = updates
+
         // Regular update
         const { error } = await supabase
           .from('tasks')
           .update({
-            ...updates,
+            ...validUpdates,
             updated_at: new Date().toISOString()
           })
           .eq('id', taskId)
