@@ -158,9 +158,9 @@ export default function AuthLayout({
       <div className="min-h-screen bg-slate-900">
         {/* Sidebar móvil */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="fixed inset-0 z-50 lg:hidden h-[100dvh]">
             <div className="fixed inset-0 bg-black bg-opacity-75" onClick={() => setSidebarOpen(false)}></div>
-            <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-800">
+            <div className="relative flex-1 flex flex-col max-w-xs w-full bg-slate-800 h-full">
               <div className="absolute top-0 right-0 -mr-12 pt-2">
                 <button
                   onClick={() => setSidebarOpen(false)}
@@ -169,7 +169,7 @@ export default function AuthLayout({
                   <X className="w-6 h-6 text-white" />
                 </button>
               </div>
-              <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto mobile-sidebar-scrollbar">
+              <div className="flex-1 h-0 pt-5 pb-32 overflow-y-auto mobile-sidebar-scrollbar">
                 <div className="flex-shrink-0 flex items-center px-4">
                   <h1 className="text-lg font-semibold text-slate-100">JS Master</h1>
                 </div>

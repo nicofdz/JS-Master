@@ -10,12 +10,9 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
+  background: linear-gradient(to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+      rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
 }
 
 @layer utilities {
@@ -29,38 +26,46 @@ body {
   table {
     color: rgb(226, 232, 240);
   }
-  
+
   thead {
     background-color: rgb(51, 65, 85);
     color: rgb(203, 213, 225);
   }
-  
+
   tbody {
     background-color: rgb(30, 41, 59);
   }
-  
+
   tbody tr {
     border-bottom: 1px solid rgb(51, 65, 85);
   }
-  
+
   tbody tr:hover {
     background-color: rgb(51, 65, 85);
   }
-  
-  th, td {
+
+  th,
+  td {
     color: rgb(226, 232, 240);
   }
-  
+
   /* Títulos principales */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     color: rgb(241, 245, 249);
   }
-  
+
   /* Párrafos y texto general */
-  p, span, div {
+  p,
+  span,
+  div {
     color: rgb(203, 213, 225);
   }
-  
+
   /* Labels */
   label {
     color: rgb(203, 213, 225);
@@ -69,13 +74,16 @@ body {
 
 /* Mejorar estilos de formularios */
 @layer base {
-  input, select, textarea {
+
+  input,
+  select,
+  textarea {
     color: #e2e8f0 !important;
     background-color: #1e293b !important;
     border-color: #475569 !important;
     pointer-events: auto !important;
   }
-  
+
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
@@ -83,17 +91,17 @@ body {
     -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
     -webkit-text-fill-color: #e2e8f0 !important;
   }
-  
+
   select option {
     color: #e2e8f0;
     background-color: #1e293b;
   }
-  
+
   input::placeholder,
   textarea::placeholder {
     color: #64748b !important;
   }
-  
+
   /* Asegurar que los campos dentro de modales sean interactivos */
   .modal input:not([disabled]),
   .modal select:not([disabled]),
@@ -104,7 +112,7 @@ body {
     -moz-user-select: text;
     -ms-user-select: text;
   }
-  
+
   .modal select:not([disabled]) {
     cursor: pointer;
   }
@@ -112,96 +120,105 @@ body {
 
 /* Clases de utilidad personalizadas para el tema oscuro */
 @layer utilities {
+
   /* Reemplazos de colores de texto oscuros */
   .text-gray-900 {
     color: rgb(241, 245, 249) !important;
   }
-  
+
   .text-gray-800 {
     color: rgb(226, 232, 240) !important;
   }
-  
+
   .text-gray-700 {
     color: rgb(203, 213, 225) !important;
   }
-  
+
   .text-gray-600 {
     color: rgb(148, 163, 184) !important;
   }
-  
+
   .text-gray-500 {
     color: rgb(100, 116, 139) !important;
   }
-  
+
   /* Fondos oscuros actualizados */
   .bg-white {
     background-color: rgb(30, 41, 59) !important;
   }
-  
+
   .bg-gray-50 {
     background-color: rgb(15, 23, 42) !important;
   }
-  
+
   .bg-gray-100 {
     background-color: rgb(30, 41, 59) !important;
   }
-  
+
   .bg-gray-200 {
     background-color: rgb(51, 65, 85) !important;
   }
-  
+
   /* Bordes */
   .border-gray-200 {
     border-color: rgb(51, 65, 85) !important;
   }
-  
+
   .border-gray-300 {
     border-color: rgb(71, 85, 105) !important;
   }
-  
+
   /* Hover backgrounds */
   .hover\:bg-gray-50:hover {
     background-color: rgb(51, 65, 85) !important;
   }
-  
+
   .hover\:bg-gray-100:hover {
     background-color: rgb(51, 65, 85) !important;
   }
-  
+
   /* Dividers */
-  .divide-gray-200 > * + * {
+  .divide-gray-200>*+* {
     border-color: rgb(51, 65, 85) !important;
   }
-  
+
   /* Modal personalizado para contratos */
   .modal_contratos {
-    max-width: 42rem !important; /* Ancho moderado, más que lg pero no excesivo */
+    max-width: 42rem !important;
+    /* Ancho moderado, más que lg pero no excesivo */
   }
-  
+
   /* Modal más ancho para contratos */
   .modal_contratos_wide {
-    max-width: 56rem !important; /* Ancho más amplio para mejor distribución */
-    min-height: 50vh !important; /* Altura mínima para evitar compactación */
+    max-width: 56rem !important;
+    /* Ancho más amplio para mejor distribución */
+    min-height: 50vh !important;
+    /* Altura mínima para evitar compactación */
   }
-  
+
   /* Campos de fecha compactos para modal de contratos */
   .modal_contratos_wide input[type="date"] {
-    padding: 0.5rem 0.75rem !important; /* py-2 px-3 en lugar de py-3 px-4 */
-    font-size: 0.875rem !important; /* text-sm */
+    padding: 0.5rem 0.75rem !important;
+    /* py-2 px-3 en lugar de py-3 px-4 */
+    font-size: 0.875rem !important;
+    /* text-sm */
   }
-  
+
   .modal_contratos_wide .date-field-container {
-    min-width: 0; /* Permite que se compriman más */
+    min-width: 0;
+    /* Permite que se compriman más */
   }
-  
+
   /* Modal compacto para pacto de horas */
   .modal_pacto_horas {
-    max-width: 38rem !important; /* Tamaño compacto pero cómodo */
+    max-width: 38rem !important;
+    /* Tamaño compacto pero cómodo */
   }
-  
+
   /* Modal personalizado para trabajadores */
   .modal_trabajadores {
-    max-width: 42rem !important; /* Ancho apropiado para formulario de trabajadores */
+    max-width: 42rem !important;
+    /* Ancho apropiado para formulario de trabajadores */
   }
 }
 
@@ -209,16 +226,29 @@ body {
 @media (max-width: 1024px) {
   .mobile-sidebar-scrollbar::-webkit-scrollbar {
     width: 6px;
+    /* Aumentar ancho un poco si es necesario, 6px está bien para móvil */
     display: block;
+    background-color: transparent;
+    /* Fondo transparente para el contenedor */
   }
-  
+
   .mobile-sidebar-scrollbar::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5); /* slate-900/50 */
-  }
-  
-  .mobile-sidebar-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #475569; /* slate-600 */
+    background: rgba(15, 23, 42, 0.3);
+    /* Fondo del track sutil */
     border-radius: 3px;
   }
-}
 
+  .mobile-sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #94a3b8;
+    /* slate-400 - Más claro y visible que antes */
+    border-radius: 3px;
+    border: 1px solid #1e293b;
+    /* Borde para separar del fondo */
+  }
+
+  /* Firefox */
+  .mobile-sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 rgba(15, 23, 42, 0.3);
+  }
+}
