@@ -395,11 +395,14 @@ export function usePaymentsV2() {
           tasks!inner (
             id,
             task_name,
+            status,
+            is_deleted,
             apartments!inner (
               id,
               apartment_number,
               floors!inner (
                 id,
+                project_id,
                 projects!inner (
                   id,
                   name
@@ -413,6 +416,7 @@ export function usePaymentsV2() {
                 .eq('assignment_status', 'completed')
                 .eq('is_paid', false)
                 .eq('is_deleted', false)
+                .gt('worker_payment', 0)
 
             if (pendingError) throw pendingError
 
@@ -427,18 +431,21 @@ export function usePaymentsV2() {
           assignment_status,
           payment_task_assignments!inner (
             payment_id,
-            payment_history!inner (
+            worker_payment_history!inner (
               payment_date
             )
           ),
           tasks!inner (
             id,
             task_name,
+            status,
+            apartment_id,
             apartments!inner (
               id,
               apartment_number,
               floors!inner (
                 id,
+                project_id,
                 projects!inner (
                   id,
                   name
@@ -455,28 +462,48 @@ export function usePaymentsV2() {
 
             if (paidError) throw paidError
 
-            // Formatear datos
-            const formattedPending = pendingTasks?.map((t: any) => ({
-                id: t.id,
-                task_name: t.tasks.task_name,
-                apartment_number: t.tasks.apartments.apartment_number,
-                project_name: t.tasks.apartments.floors.projects.name,
-                assignment_status: t.assignment_status,
-                worker_payment: t.worker_payment,
-                completed_at: t.completed_at
-            })) || []
+            // Helper para filtrar tareas válidas
+            const isValidTask = (t: any) => {
+                // Si no hay tarea, no es válido
+                if (!t.tasks) return false
+                // Si está explícitamente eliminada, filtrar (si viene el dato)
+                if (t.tasks.is_deleted === true) return false
+                return true
+            }
 
-            const formattedPaid = paidTasks?.map((t: any) => ({
-                id: t.id,
-                task_name: t.tasks.task_name,
-                apartment_number: t.tasks.apartments.apartment_number,
-                project_name: t.tasks.apartments.floors.projects.name,
-                assignment_status: t.assignment_status,
-                worker_payment: t.worker_payment,
-                completed_at: t.completed_at,
-                paid_at: t.payment_task_assignments[0]?.payment_history?.payment_date,
-                payment_id: t.payment_task_assignments[0]?.payment_id
-            })) || []
+            console.log('🔍 Fetching worker tasks for:', workerId)
+            console.log('📊 Raw pending tasks:', pendingTasks?.length, pendingTasks)
+            if (pendingError) console.error('❌ Error fetching pending tasks:', pendingError)
+
+            // Formatear datos
+            const formattedPending = (pendingTasks || [])
+                .filter(isValidTask)
+                .map((t: any) => ({
+                    id: t.id,
+                    task_name: t.tasks.task_name,
+                    apartment_number: t.tasks.apartments.apartment_number,
+                    project_name: t.tasks.apartments.floors.projects?.name || 'Proyecto Desconocido',
+                    assignment_status: t.assignment_status,
+                    worker_payment: t.worker_payment,
+                    completed_at: t.completed_at
+                }))
+
+            console.log('✅ Formatted pending tasks:', formattedPending.length)
+
+
+            const formattedPaid = (paidTasks || [])
+                .filter(isValidTask)
+                .map((t: any) => ({
+                    id: t.id,
+                    task_name: t.tasks.task_name,
+                    apartment_number: t.tasks.apartments.apartment_number,
+                    project_name: t.tasks.apartments.floors.projects.name,
+                    assignment_status: t.assignment_status,
+                    worker_payment: t.worker_payment,
+                    completed_at: t.completed_at,
+                    paid_at: t.payment_task_assignments[0]?.worker_payment_history?.payment_date,
+                    payment_id: t.payment_task_assignments[0]?.payment_id
+                }))
 
             return [...formattedPending, ...formattedPaid]
         } catch (err: any) {
