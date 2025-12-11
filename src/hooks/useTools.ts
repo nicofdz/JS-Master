@@ -11,6 +11,7 @@ export interface Tool {
   value: number
   location: string
   details: string
+  image_url: string | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -75,7 +76,7 @@ export function useTools() {
         .order('loan_date', { ascending: false })
 
       if (error) throw error
-      
+
       const formattedLoans = (data || []).map((loan: any) => ({
         id: loan.id,
         tool_id: loan.tool_id,
@@ -91,7 +92,7 @@ export function useTools() {
         project_name: loan.projects?.name || null,
         created_at: loan.created_at
       }))
-      
+
       setLoans(formattedLoans)
     } catch (err: any) {
       console.error('Error fetching loans:', err)
@@ -109,7 +110,7 @@ export function useTools() {
         .single()
 
       if (error) throw error
-      
+
       setTools(prev => [data, ...prev])
       return data
     } catch (err: any) {
@@ -130,8 +131,8 @@ export function useTools() {
         .single()
 
       if (error) throw error
-      
-      setTools(prev => prev.map(tool => 
+
+      setTools(prev => prev.map(tool =>
         tool.id === id ? { ...tool, ...data } : tool
       ))
       return data
@@ -153,8 +154,8 @@ export function useTools() {
         .single()
 
       if (error) throw error
-      
-      setTools(prev => prev.map(tool => 
+
+      setTools(prev => prev.map(tool =>
         tool.id === id ? { ...tool, ...data } : tool
       ))
     } catch (err: any) {
@@ -175,8 +176,8 @@ export function useTools() {
         .single()
 
       if (error) throw error
-      
-      setTools(prev => prev.map(tool => 
+
+      setTools(prev => prev.map(tool =>
         tool.id === id ? { ...tool, ...data } : tool
       ))
     } catch (err: any) {
@@ -197,11 +198,11 @@ export function useTools() {
         .single()
 
       if (toolError) throw toolError
-      
+
       if (!tool.is_active) {
         throw new Error('No se puede prestar una herramienta deshabilitada')
       }
-      
+
       if (tool.status !== 'disponible') {
         throw new Error('La herramienta no está disponible para préstamo')
       }
@@ -214,11 +215,11 @@ export function useTools() {
       })
 
       if (error) throw error
-      
+
       // Actualizar herramientas y préstamos
       await fetchTools()
       await fetchLoans()
-      
+
       return data
     } catch (err: any) {
       console.error('Error loaning tool:', err)
@@ -232,14 +233,14 @@ export function useTools() {
     try {
       console.log('Returning tool with loanId:', loanId, 'type:', typeof loanId)
       console.log('Return details:', returnDetails, 'type:', typeof returnDetails)
-      
+
       const { error } = await supabase.rpc('return_tool', {
         p_loan_id: Number(loanId),
         p_return_details: returnDetails
       })
 
       if (error) throw error
-      
+
       // Actualizar herramientas y préstamos
       await fetchTools()
       await fetchLoans()
@@ -341,6 +342,31 @@ export function useTools() {
     loadData()
   }, [])
 
+  // Subir imagen de herramienta
+  const uploadToolImage = async (file: File): Promise<string> => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('tools')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('tools')
+        .getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (err: any) {
+      console.error('Error uploading image:', err)
+      setError(err.message)
+      throw err
+    }
+  }
+
   return {
     tools,
     loans,
@@ -357,6 +383,7 @@ export function useTools() {
     returnTool,
     getAvailableTools,
     getToolLoanHistory,
+    uploadToolImage,
     refreshTools: fetchTools,
     refreshLoans: fetchLoans
   }

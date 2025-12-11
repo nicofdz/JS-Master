@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, Upload, Image as ImageIcon, Trash } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
+import { useTools } from '@/hooks/useTools'
+import toast from 'react-hot-toast'
 
 interface Tool {
   id?: number
@@ -16,6 +18,7 @@ interface Tool {
   value: number
   location: string
   details: string
+  image_url?: string | null
 }
 
 interface ToolFormProps {
@@ -25,20 +28,29 @@ interface ToolFormProps {
 }
 
 export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
+  const { uploadToolImage } = useTools()
   const [formData, setFormData] = useState<Tool>({
     name: '',
     brand: '',
     status: 'disponible',
     value: 0,
     location: 'Almacén Principal',
-    details: ''
+    details: '',
+    image_url: null
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (tool) {
       setFormData(tool)
+      if (tool.image_url) {
+        setPreviewUrl(tool.image_url)
+      }
     } else {
       setFormData({
         name: '',
@@ -46,8 +58,10 @@ export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
         status: 'disponible',
         value: 0,
         location: 'Almacén Principal',
-        details: ''
+        details: '',
+        image_url: null
       })
+      setPreviewUrl(null)
     }
   }, [tool])
 
@@ -74,11 +88,52 @@ export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error('La imagen no debe superar los 5MB')
+        return
+      }
+      setSelectedImage(file)
+      const objectUrl = URL.createObjectURL(file)
+      setPreviewUrl(objectUrl)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setPreviewUrl(null)
+    setFormData(prev => ({ ...prev, image_url: null }))
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (validateForm()) {
-      onSave(formData)
+      try {
+        let imageUrl = formData.image_url
+
+        if (selectedImage) {
+          setIsUploading(true)
+          try {
+            imageUrl = await uploadToolImage(selectedImage)
+          } catch (error) {
+            toast.error('Error al subir la imagen')
+            setIsUploading(false)
+            return
+          }
+          setIsUploading(false)
+        }
+
+        onSave({ ...formData, image_url: imageUrl })
+      } catch (error) {
+        console.error('Error submitting form:', error)
+        setIsUploading(false)
+      }
     }
   }
 
@@ -87,7 +142,7 @@ export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
       ...prev,
       [field]: value
     }))
-    
+
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors(prev => ({
@@ -113,6 +168,64 @@ export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Imagen de la herramienta */}
+          <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+              accept="image/*"
+              className="hidden"
+            />
+
+            {previewUrl ? (
+              <div className="relative w-full h-48 sm:h-64 rounded-md overflow-hidden group">
+                <img
+                  src={previewUrl}
+                  alt="Vista previa"
+                  className="w-full h-full object-contain bg-gray-100"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    className="bg-white/90 border-white text-gray-900 hover:bg-white"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Cambiar
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    variant="danger"
+                    className="bg-red-500/90 hover:bg-red-600 text-white border-none"
+                  >
+                    <Trash className="w-4 h-4 mr-2" />
+                    Quitar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 text-gray-500">
+                <div className="bg-gray-200 p-4 rounded-full mb-3">
+                  <ImageIcon className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="font-medium text-sm mb-1">Cargar foto de la herramienta</p>
+                <p className="text-xs text-gray-400 mb-4">PNG, JPG o WebP hasta 5MB</p>
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  className="border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Seleccionar archivo
+                </Button>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Nombre */}
             <div>
@@ -216,14 +329,16 @@ export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200"
+              disabled={isUploading}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isUploading}
             >
-              {tool ? 'Actualizar' : 'Crear'} Herramienta
+              {isUploading ? 'Subiendo...' : (tool ? 'Actualizar' : 'Crear') + ' Herramienta'}
             </Button>
           </div>
         </form>

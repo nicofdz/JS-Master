@@ -13,6 +13,7 @@ interface Tool {
   value: number
   location: string
   details: string
+  image_url: string | null
   is_active: boolean
 }
 
@@ -91,6 +92,21 @@ export function ToolList({ tools, onEdit, onDelete, onReactivate, onLoan }: Tool
         <Card key={tool.id} className={`bg-slate-800/50 border-slate-700 hover:bg-slate-800/80 transition-all duration-200 ${!tool.is_active ? 'opacity-60' : ''}`}>
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row items-start justify-between">
+              {/* Tool Image */}
+              <div className="w-full sm:w-32 h-48 sm:h-32 bg-slate-900/50 rounded-lg sm:mr-6 mb-4 sm:mb-0 flex-shrink-0 overflow-hidden border border-slate-700/50">
+                {tool.image_url ? (
+                  <img
+                    src={tool.image_url}
+                    alt={tool.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-600">
+                    <Hand className="w-8 h-8 opacity-20" />
+                  </div>
+                )}
+              </div>
+
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                   <h3 className="text-lg font-semibold text-slate-100 mr-2">

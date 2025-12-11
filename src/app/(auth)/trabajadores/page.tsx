@@ -1008,7 +1008,7 @@ export default function TrabajadoresPage() {
   }
 
   return (
-    <div className="w-full md:h-[calc(100vh-120px)] h-auto px-4 sm:px-6 lg:px-8 flex flex-col pb-4">
+    <div className="w-full md:h-[calc(100vh-120px)] h-auto px-4 sm:px-6 lg:px-8 flex flex-col pb-4 mt-8">
       <div className="space-y-6 flex flex-col h-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center flex-shrink-0 gap-4">
