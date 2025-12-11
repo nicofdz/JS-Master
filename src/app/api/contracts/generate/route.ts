@@ -105,7 +105,17 @@ export async function POST(request: NextRequest) {
     }
 
     const timestamp = Date.now()
-    const workerName = data.nombre_trabajador.replace(/\s+/g, '-')
+    // Función para sanitizar el nombre del archivo (eliminar tildes y caracteres especiales)
+    const sanitizeFileName = (name: string) => {
+      return name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Eliminar diacríticos
+        .replace(/[^a-zA-Z0-9\s-]/g, "") // Eliminar caracteres no alfanuméricos (excepto espacios y guiones)
+        .replace(/\s+/g, '-') // Reemplazar espacios con guiones
+        .trim()
+    }
+
+    const workerName = sanitizeFileName(data.nombre_trabajador)
 
     // Generar documentos según el tipo solicitado
     if (documentType === 'hours') {
