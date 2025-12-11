@@ -26,6 +26,7 @@ export default function HerramientasPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'disponible' | 'prestada'>('all')
   const [activeFilter, setActiveFilter] = useState('active')
   const [confirmDeleteToolState, setConfirmDeleteToolState] = useState<{ isOpen: boolean, toolId: number | null }>({ isOpen: false, toolId: null })
+  const [confirmDeleteLoanState, setConfirmDeleteLoanState] = useState<{ isOpen: boolean, loanId: number | null }>({ isOpen: false, loanId: null })
 
   // Sidebar filters
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
@@ -57,6 +58,7 @@ export default function HerramientasPage() {
     reactivateTool,
     loanTool,
     returnTool,
+    deleteLoan,
     refreshTools,
     refreshLoans
   } = useTools()
@@ -145,6 +147,22 @@ export default function HerramientasPage() {
 
   const handleReturnToolForModal = async (loanId: number, returnDetails: string) => {
     await handleReturnTool(loanId, returnDetails)
+  }
+
+  const handleDeleteLoan = (loanId: number) => {
+    setConfirmDeleteLoanState({ isOpen: true, loanId })
+  }
+
+  const executeDeleteLoan = async () => {
+    if (!confirmDeleteLoanState.loanId) return
+
+    try {
+      await deleteLoan(confirmDeleteLoanState.loanId)
+      toast.success('Registro de préstamo eliminado')
+      setConfirmDeleteLoanState({ isOpen: false, loanId: null })
+    } catch (error) {
+      toast.error('Error al eliminar el registro')
+    }
   }
 
   const filteredTools = tools.filter(tool => {
@@ -446,6 +464,7 @@ export default function HerramientasPage() {
           workers={workers}
           projects={projects}
           onReturn={handleReturnToolForModal}
+          onDelete={handleDeleteLoan}
           statusFilter={historyStatusFilter}
           monthFilter={historyMonthFilter}
           yearFilter={historyYearFilter}
@@ -519,6 +538,16 @@ export default function HerramientasPage() {
         title="Deshabilitar Herramienta"
         message="¿Estás seguro de que quieres deshabilitar esta herramienta?"
         confirmText="Deshabilitar"
+        type="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={confirmDeleteLoanState.isOpen}
+        onClose={() => setConfirmDeleteLoanState({ isOpen: false, loanId: null })}
+        onConfirm={executeDeleteLoan}
+        title="Eliminar Registro de Préstamo"
+        message="¿Estás seguro de que quieres eliminar este registro de préstamo? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
         type="danger"
       />
     </div>

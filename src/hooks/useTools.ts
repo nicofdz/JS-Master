@@ -21,6 +21,7 @@ export interface ToolLoan {
   id: number
   tool_id: number
   tool_name: string
+  tool_image_url?: string | null
   borrower_id: number
   borrower_name: string
   lender_id: string
@@ -68,7 +69,7 @@ export function useTools() {
         .from('tool_loans')
         .select(`
           *,
-          tools!inner(name),
+          tools!inner(name, image_url),
           workers!inner(full_name),
           user_profiles!inner(full_name),
           projects(name)
@@ -81,6 +82,7 @@ export function useTools() {
         id: loan.id,
         tool_id: loan.tool_id,
         tool_name: loan.tools.name,
+        tool_image_url: loan.tools.image_url,
         borrower_id: loan.borrower_id,
         borrower_name: loan.workers.full_name,
         lender_id: loan.lender_id,
@@ -251,6 +253,27 @@ export function useTools() {
     }
   }
 
+  // Eliminar préstamo (hard delete)
+  const deleteLoan = async (loanId: number) => {
+    try {
+      const { error } = await supabase
+        .from('tool_loans')
+        .delete()
+        .eq('id', loanId)
+
+      if (error) throw error
+
+      // Actualizar préstamos
+      await fetchLoans()
+      // También podríamos necesitar actualizar herramientas si el préstamo estaba activo
+      await fetchTools()
+    } catch (err: any) {
+      console.error('Error deleting loan:', err)
+      setError(err.message)
+      throw err
+    }
+  }
+
   // Obtener herramientas disponibles
   const getAvailableTools = async () => {
     try {
@@ -381,6 +404,7 @@ export function useTools() {
     reactivateTool,
     loanTool,
     returnTool,
+    deleteLoan,
     getAvailableTools,
     getToolLoanHistory,
     uploadToolImage,

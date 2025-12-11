@@ -16,6 +16,7 @@ interface Tool {
   value: number
   location: string
   details: string
+  image_url?: string | null
 }
 
 interface LoanModalProps {
@@ -61,7 +62,7 @@ export function LoanModal({ tool, workers, users, projects, currentUserId, onClo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (validateForm()) {
       if (isLoaned && activeLoanId) {
         onReturn?.(activeLoanId, returnDetails)
@@ -77,7 +78,7 @@ export function LoanModal({ tool, workers, users, projects, currentUserId, onClo
     if (field === 'lenderId') setSelectedLenderId(value as string)
     if (field === 'projectId') setSelectedProjectId(value as number)
     if (field === 'returnDetails') setReturnDetails(value as string)
-    
+
     // Limpiar error del campo
     if (errors[field]) {
       setErrors(prev => ({
@@ -104,27 +105,43 @@ export function LoanModal({ tool, workers, users, projects, currentUserId, onClo
 
         <div className="p-6">
           {/* Información de la herramienta */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 className="font-medium text-gray-900 mb-2">{tool.name}</h3>
-            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-              <div>
-                <span className="font-medium">Marca:</span> {tool.brand}
-              </div>
-              <div>
-                <span className="font-medium">Valor:</span> ${tool.value.toLocaleString()}
-              </div>
-              <div>
-                <span className="font-medium">Estado:</span> 
-                <span className={`ml-1 px-2 py-1 rounded-full text-xs ${
-                  tool.status === 'prestada' 
-                    ? 'bg-orange-100 text-orange-800' 
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 flex gap-4">
+            {/* Tool Image */}
+            <div className="w-20 h-20 bg-white rounded-md overflow-hidden flex-shrink-0 border border-gray-200">
+              {tool.image_url ? (
+                <img
+                  src={tool.image_url}
+                  alt={tool.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <Hand className="w-8 h-8 opacity-20" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900 mb-2">{tool.name}</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                <div>
+                  <span className="font-medium">Marca:</span> {tool.brand}
+                </div>
+                <div>
+                  <span className="font-medium">Valor:</span> ${tool.value.toLocaleString()}
+                </div>
+                <div>
+                  <span className="font-medium">Estado:</span>
+                  <span className={`ml-1 px-2 py-1 rounded-full text-xs ${tool.status === 'prestada'
+                    ? 'bg-orange-100 text-orange-800'
                     : 'bg-green-100 text-green-800'
-                }`}>
-                  {tool.status === 'prestada' ? 'Prestada' : 'Disponible'}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium">Ubicación:</span> {tool.location}
+                    }`}>
+                    {tool.status === 'prestada' ? 'Prestada' : 'Disponible'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium">Ubicación:</span> {tool.location}
+                </div>
               </div>
             </div>
           </div>
@@ -233,11 +250,10 @@ export function LoanModal({ tool, workers, users, projects, currentUserId, onClo
               </Button>
               <Button
                 type="submit"
-                className={`px-4 py-2 text-white ${
-                  isLoaned 
-                    ? 'bg-orange-600 hover:bg-orange-700' 
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
+                className={`px-4 py-2 text-white ${isLoaned
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-green-600 hover:bg-green-700'
+                  }`}
               >
                 {isLoaned ? (
                   <>

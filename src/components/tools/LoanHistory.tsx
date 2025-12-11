@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Calendar, User, Wrench, Search } from 'lucide-react'
+import { ArrowLeft, Calendar, User, Wrench, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -16,6 +16,7 @@ interface LoanHistoryProps {
   workers: Array<{ id: number; full_name: string }>
   projects: Array<{ id: number; name: string }>
   onReturn: (loanId: number, returnDetails: string) => void | Promise<void>
+  onDelete: (loanId: number) => void | Promise<void>
   statusFilter: string
   monthFilter: string
   yearFilter: string
@@ -28,6 +29,7 @@ export function LoanHistory({
   workers,
   projects,
   onReturn,
+  onDelete,
   statusFilter,
   monthFilter,
   yearFilter,
@@ -211,10 +213,38 @@ export function LoanHistory({
               <div className="flex flex-col sm:flex-row items-start justify-between">
                 <div className="flex-1 w-full">
                   <div className="flex items-center space-x-3 mb-3">
-                    <h3 className="text-lg font-semibold text-slate-100">
-                      {loan.tool_name}
-                    </h3>
-                    {getStatusBadge(loan)}
+                    {/* Tool Image */}
+                    <div className="w-12 h-12 bg-slate-900/50 rounded-md overflow-hidden flex-shrink-0 border border-slate-700/50">
+                      {loan.tool_image_url ? (
+                        <img
+                          src={loan.tool_image_url}
+                          alt={loan.tool_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-600">
+                          <Wrench className="w-6 h-6 opacity-20" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h3 className="text-lg font-semibold text-slate-100">
+                          {loan.tool_name}
+                        </h3>
+                        {getStatusBadge(loan)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(loan.id)}
+                          className="h-10 w-10 text-red-400 hover:text-red-300 hover:bg-red-900/30 border border-red-900/50 rounded-md transition-colors"
+                          title="Eliminar registro"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
