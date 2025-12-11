@@ -78,13 +78,21 @@ export function useUsers() {
                 throw auditError
             }
 
-            // 2. Eliminar el perfil de usuario
-            const { error } = await supabase
-                .from('user_profiles')
-                .delete()
-                .eq('id', id)
+            // 2. Eliminar usuario via API Admin
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) throw new Error('No session found')
 
-            if (error) throw error
+            const response = await fetch(`/api/admin/users/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`
+                }
+            })
+
+            if (!response.ok) {
+                const result = await response.json()
+                throw new Error(result.error || 'Error deleting user')
+            }
 
             setUsers(prev => prev.filter(user => user.id !== id))
             return { error: null }

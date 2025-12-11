@@ -144,10 +144,10 @@ export function useAuthState(): AuthContextType {
     }
   }
 
-  const signUp = async (email: string, password: string, fullName: string, role: any = 'maestro') => {
+  const signUp = async (email: string, password: string, fullName: string, role: any = 'maestro', options?: { redirectTo?: string }) => {
     setLoading(true)
     try {
-      const { data, error } = await authService.signUp(email, password, fullName, role)
+      const { data, error } = await authService.signUp(email, password, fullName, role, options)
       if (error) {
         return { error }
       }

@@ -9,6 +9,7 @@ export interface UserProfile {
   role: UserRole
   phone?: string
   is_active?: boolean
+  must_change_password?: boolean
   created_at: string
   updated_at: string
 }
@@ -19,7 +20,7 @@ export interface AuthContextType {
   session: any | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ data?: any, error?: any }>
-  signUp: (email: string, password: string, fullName: string, role?: UserRole) => Promise<{ data?: any, error?: any }>
+  signUp: (email: string, password: string, fullName: string, role?: UserRole, options?: { redirectTo?: string }) => Promise<{ data?: any, error?: any }>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ data?: any, error?: any }>
   resetPassword: (email: string) => Promise<{ data?: any, error?: any }>

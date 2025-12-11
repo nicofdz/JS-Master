@@ -36,6 +36,8 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+import { ForceChangePassword } from '@/components/auth/ForceChangePassword'
+
 export default function AuthLayout({
   children,
 }: {
@@ -47,6 +49,7 @@ export default function AuthLayout({
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [passwordChanged, setPasswordChanged] = useState(false)
 
   // Cargar estado guardado al iniciar
   useEffect(() => {
@@ -162,6 +165,20 @@ export default function AuthLayout({
 
   if (!user) {
     return null
+  }
+
+  // Force Password Change Check
+  if (profile?.must_change_password && !passwordChanged) {
+    return (
+      <ForceChangePassword
+        userId={user.id}
+        onSuccess={() => {
+          setPasswordChanged(true)
+          router.refresh()
+          window.location.reload() // Reload to fetch fresh profile
+        }}
+      />
+    )
   }
 
   return (

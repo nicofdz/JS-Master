@@ -38,14 +38,16 @@ export const authService = {
   },
 
   // Registrar nuevo usuario
-  async signUp(email: string, password: string, fullName: string, role: string = 'maestro') {
+  async signUp(email: string, password: string, fullName: string, role: string = 'maestro', options?: { redirectTo?: string }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: options?.redirectTo,
         data: {
           full_name: fullName,
           role: role,
+          must_change_password: true,
         },
       },
     })
@@ -123,11 +125,11 @@ export const authService = {
   // Verificar si el usuario tiene un rol específico
   hasRole(userRole: string | undefined, requiredRole: string | string[]): boolean {
     if (!userRole) return false
-    
+
     if (Array.isArray(requiredRole)) {
       return requiredRole.includes(userRole)
     }
-    
+
     return userRole === requiredRole
   },
 

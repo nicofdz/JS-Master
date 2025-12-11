@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { UserRole, ROLE_LABELS } from '@/types/auth'
 import { useAuth } from '@/hooks/useAuth'
+import { authService } from '@/lib/auth'
 import toast from 'react-hot-toast'
 
 interface CreateUserModalProps {
@@ -39,15 +40,31 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
 
         try {
             setLoading(true)
-            const { error } = await signUp(
+            const { data, error } = await signUp(
                 formData.email,
                 formData.password,
                 formData.fullName,
-                formData.role
+                formData.role,
+                { redirectTo: `${window.location.origin}/auth/callback` }
             )
 
             if (error) {
                 throw error
+            }
+
+            // Explicitly create/update user profile to ensure it exists immediately
+            // This is necessary because sometimes the database trigger waits for email confirmation
+            if (data.user) {
+                await authService.upsertUserProfile({
+                    id: data.user.id,
+                    email: formData.email,
+                    full_name: formData.fullName,
+                    role: formData.role,
+                    is_active: true,
+                    must_change_password: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
             }
 
             toast.success('Usuario creado exitosamente')
