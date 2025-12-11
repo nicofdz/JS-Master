@@ -138,6 +138,17 @@ export default function AuthLayout({
     }
   ]
 
+  // Add Administration section for Admins
+  if (profile?.role === 'admin') {
+    navigationSections.push({
+      title: 'ADMINISTRACIÓN',
+      icon: Users, // Using Users icon as a generic admin icon or Shield if available
+      items: [
+        { name: 'Usuarios', href: '/usuarios', icon: Users },
+      ]
+    })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
