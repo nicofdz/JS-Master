@@ -1,10 +1,10 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
+import {
+  DollarSign,
+  TrendingUp,
+  Users,
   CreditCard,
   ArrowUpRight,
   ArrowDownRight,
@@ -76,8 +76,8 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
       value: formatCurrency(data.totalEarnings),
       change: data.earningsChange,
       icon: DollarSign,
-      iconColor: 'text-green-600',
-      bgColor: 'bg-green-50',
+      iconColor: 'text-green-500',
+      bgColor: 'bg-green-500/10',
       description: 'Ingresos totales del mes'
     },
     {
@@ -85,8 +85,8 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
       value: formatCurrency(data.contractorEarnings),
       change: data.contractorChange,
       icon: TrendingUp,
-      iconColor: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-500',
+      bgColor: 'bg-blue-500/10',
       description: 'Beneficios del contratista'
     },
     {
@@ -94,8 +94,8 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
       value: formatCurrency(data.workerPayments),
       change: data.workerChange,
       icon: Users,
-      iconColor: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      iconColor: 'text-orange-500',
+      bgColor: 'bg-orange-500/10',
       description: 'Salarios y bonificaciones'
     },
     {
@@ -103,8 +103,8 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
       value: formatCurrency(data.totalExpenses),
       change: data.expensesChange,
       icon: CreditCard,
-      iconColor: 'text-red-600',
-      bgColor: 'bg-red-50',
+      iconColor: 'text-red-500',
+      bgColor: 'bg-red-500/10',
       description: 'Gastos operacionales'
     }
   ]
@@ -112,9 +112,9 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {cards.map((card, index) => (
-        <Card key={index} className="relative overflow-hidden">
+        <Card key={index} className="relative overflow-hidden bg-slate-800/50 border-slate-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+            <CardTitle className="text-sm font-medium text-slate-400">
               {card.title}
             </CardTitle>
             <div className={`p-2 rounded-full ${card.bgColor}`}>
@@ -122,7 +122,7 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900 mb-1">
+            <div className="text-2xl font-bold text-slate-100 mb-1">
               {card.value}
             </div>
             <div className="flex items-center space-x-1 text-sm">
@@ -130,9 +130,9 @@ export function ReportCards({ data, loading = false }: ReportCardsProps) {
               <span className={getChangeColor(card.change)}>
                 {formatPercentage(card.change)}
               </span>
-              <span className="text-gray-500">vs mes anterior</span>
+              <span className="text-slate-500">vs mes anterior</span>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               {card.description}
             </p>
           </CardContent>

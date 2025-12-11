@@ -20,15 +20,15 @@ export function MonthlyProgressChart({ data }: MonthlyProgressChartProps) {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-900 mb-2">{label}</p>
+        <div className="bg-slate-800 p-4 border border-slate-700 rounded-lg shadow-lg">
+          <p className="font-semibold text-slate-100 mb-2">{label}</p>
           {payload.map((entry: any, index: number) => (
             <div key={index} className="flex items-center space-x-2 mb-1">
-              <div 
-                className="w-3 h-3 rounded-full" 
+              <div
+                className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-slate-300">
                 {entry.name}: {entry.dataKey === 'averageProgress' ? formatPercentage(entry.value) : entry.value}
               </span>
             </div>
@@ -41,10 +41,10 @@ export function MonthlyProgressChart({ data }: MonthlyProgressChartProps) {
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-slate-500">
         <div className="text-center">
           <div className="text-4xl mb-2">📈</div>
-          <p className="text-gray-600">No hay datos de progreso disponibles</p>
+          <p className="text-slate-400">No hay datos de progreso disponibles</p>
         </div>
       </div>
     )
@@ -62,47 +62,47 @@ export function MonthlyProgressChart({ data }: MonthlyProgressChartProps) {
             bottom: 5,
           }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis 
-            dataKey="month" 
-            stroke="#374151"
+          <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+          <XAxis
+            dataKey="month"
+            stroke="#94a3b8"
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tick={{ fill: '#374151' }}
+            tick={{ fill: '#94a3b8' }}
           />
-          <YAxis 
+          <YAxis
             yAxisId="progress"
             orientation="left"
-            stroke="#374151"
+            stroke="#94a3b8"
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tick={{ fill: '#374151' }}
+            tick={{ fill: '#94a3b8' }}
             tickFormatter={(value) => `${value}%`}
             domain={[0, 100]}
           />
-          <YAxis 
+          <YAxis
             yAxisId="projects"
             orientation="right"
-            stroke="#374151"
+            stroke="#94a3b8"
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tick={{ fill: '#374151' }}
+            tick={{ fill: '#94a3b8' }}
             tickFormatter={(value) => `${value}`}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
-            wrapperStyle={{ color: '#374151' }}
+          <Legend
+            wrapperStyle={{ color: '#94a3b8' }}
             iconType="line"
           />
-          <ReferenceLine 
+          <ReferenceLine
             yAxisId="progress"
-            y={75} 
-            stroke="#10b981" 
-            strokeDasharray="5 5" 
-            label={{ value: "Meta 75%", position: "top" }}
+            y={75}
+            stroke="#10b981"
+            strokeDasharray="5 5"
+            label={{ value: "Meta 75%", position: "top", fill: "#10b981", fontSize: 12 }}
           />
           <Line
             yAxisId="progress"
