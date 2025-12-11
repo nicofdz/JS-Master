@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { ChevronUp, ChevronDown } from 'lucide-react'
 import { DashboardStats } from '@/components/dashboard/DashboardStats'
 import { useDashboard } from '@/hooks/useDashboard'
 import { useAuth } from '@/hooks'
@@ -12,6 +13,7 @@ export default function DashboardPage() {
   const { stats, projectProgress, floorStatus, loading, error } = useDashboard()
   const { profile } = useAuth()
   const [showAllFloors, setShowAllFloors] = useState(false)
+  const [showAllProjects, setShowAllProjects] = useState(false)
 
   // Usar datos reales de la base de datos
   const projects = projectProgress || []
@@ -19,18 +21,17 @@ export default function DashboardPage() {
 
   // Filtrar pisos para mostrar
   const displayedFloors = showAllFloors ? floors : floors.slice(0, 2)
+  const displayedProjects = showAllProjects ? projects : projects.slice(0, 2)
 
   return (
     <div className="min-h-screen bg-slate-900 p-6">
       <div className="w-full">
         {/* Header personalizado */}
+        {/* Header personalizado - Título restaurado */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">
             Dashboard Principal
           </h1>
-          <p className="text-slate-400">
-            Bienvenido {profile?.full_name} - {profile?.role ? ROLE_LABELS[profile.role] : 'Usuario'}
-          </p>
         </div>
 
         {/* Error Display */}
@@ -61,16 +62,30 @@ export default function DashboardPage() {
         />
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* Projects List */}
           <div>
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
+            <Card className="bg-slate-800/50 border-slate-700 transition-all duration-300">
+              <CardHeader
+                className="flex flex-row items-center justify-between cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-lg flex-shrink-0"
+                onClick={() => setShowAllProjects(!showAllProjects)}
+              >
                 <CardTitle className="text-slate-100">Proyectos en Progreso</CardTitle>
+                {projects.length > 2 && (
+                  <button
+                    className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-slate-700/50"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowAllProjects(!showAllProjects)
+                    }}
+                  >
+                    {showAllProjects ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {projects.map((project) => (
+                  {displayedProjects.map((project) => (
                     <div key={project.id} className="border border-slate-700 rounded-lg p-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
                       <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
@@ -102,7 +117,6 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-
                       {/* Progress Bar */}
                       <div className="mb-3">
                         <div className="flex justify-between text-sm mb-1">
@@ -123,8 +137,6 @@ export default function DashboardPage() {
                           ></div>
                         </div>
                       </div>
-
-
                     </div>
                   ))}
                 </div>
@@ -134,9 +146,23 @@ export default function DashboardPage() {
 
           {/* Floor Status */}
           <div>
-            <Card className="bg-slate-800/50 border-slate-700">
-              <CardHeader>
+            <Card className="bg-slate-800/50 border-slate-700 transition-all duration-300">
+              <CardHeader
+                className="flex flex-row items-center justify-between cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-lg flex-shrink-0"
+                onClick={() => setShowAllFloors(!showAllFloors)}
+              >
                 <CardTitle className="text-slate-100">Estado de Pisos Recientes</CardTitle>
+                {floors.length > 2 && (
+                  <button
+                    className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-slate-700/50"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowAllFloors(!showAllFloors)
+                    }}
+                  >
+                    {showAllFloors ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -209,35 +235,12 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
-
-                  {/* Botón Ver más/Ver menos */}
-                  {floors.length > 2 && (
-                    <div className="flex justify-center pt-4 border-t border-slate-700">
-                      <button
-                        onClick={() => setShowAllFloors(!showAllFloors)}
-                        className="px-4 py-2 text-sm font-medium text-blue-400 hover:text-blue-300 hover:bg-slate-800 rounded-md transition-colors duration-200"
-                      >
-                        {showAllFloors ? (
-                          <>
-                            <span>Ver menos</span>
-                            <span className="ml-1">↑</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Ver más ({floors.length - 2} pisos adicionales)</span>
-                            <span className="ml-1">↓</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-
       </div>
     </div>
-  );
+  )
 }

@@ -444,7 +444,7 @@ export default function TareasPage() {
 
       {/* Botones de acción */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Listado de Tareas</h2>
+        {/* Título eliminado */}
         {activeTab === 'active' && (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <Button

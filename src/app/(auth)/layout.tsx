@@ -38,6 +38,8 @@ import toast from 'react-hot-toast'
 
 import { ForceChangePassword } from '@/components/auth/ForceChangePassword'
 
+import { useTaskDelayChecker } from '@/hooks/useTaskDelayChecker'
+
 export default function AuthLayout({
   children,
 }: {
@@ -45,6 +47,7 @@ export default function AuthLayout({
 }) {
   const { user, profile, loading, signOut } = useAuth()
   const { delayedCount } = useDelayedTasks()
+  useTaskDelayChecker()
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -349,12 +352,12 @@ export default function AuthLayout({
           </div>
 
           {/* Header desktop */}
-          <div className="hidden lg:flex lg:items-center lg:justify-between lg:px-6 lg:py-4 bg-slate-800 border-b border-slate-700">
+          <div className="hidden lg:flex lg:items-center lg:justify-between lg:px-6 lg:py-2 bg-slate-800 border-b border-slate-700">
             <div>
-              <h2 className="text-xl font-semibold text-slate-100">
+              <h2 className="text-lg font-semibold text-slate-100">
                 Bienvenido, {profile?.full_name}
               </h2>
-              <p className="text-sm text-slate-400">
+              <p className="text-xs text-slate-400">
                 {profile?.role ? ROLE_LABELS[profile.role as keyof typeof ROLE_LABELS] : 'Usuario'}
               </p>
             </div>
@@ -363,13 +366,15 @@ export default function AuthLayout({
               {/* Centro de Notificaciones */}
               <NotificationCenter />
 
-              <Image
-                src="/logo/logo jsmaster.png"
-                alt="JS Master Logo"
-                width={80}
-                height={30}
-                className="object-contain"
-              />
+              <Link href="/dashboard">
+                <Image
+                  src="/logo/logo jsmaster.png"
+                  alt="JS Master Logo"
+                  width={80}
+                  height={30}
+                  className="object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </Link>
             </div>
           </div>
 
