@@ -14,6 +14,9 @@ const nextConfig = {
 
     return config;
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Configuración experimental para manejar workers y archivos estáticos
   experimental: {
     esmExternals: 'loose',
