@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
+import type { UserProfile } from '@/types/auth'
 
 export interface AuthUser extends User {
   user_metadata: {
@@ -8,15 +9,7 @@ export interface AuthUser extends User {
   }
 }
 
-export interface UserProfile {
-  id: string
-  email: string
-  full_name: string
-  role: 'admin' | 'supervisor' | 'jefe_cuadrilla' | 'maestro'
-  phone?: string
-  created_at: string
-  updated_at: string
-}
+// Tipos de autenticación
 
 // Tipos de autenticación
 export interface AuthState {
