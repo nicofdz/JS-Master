@@ -66,7 +66,7 @@ export async function middleware(req: NextRequest) {
 
   // Rutas protegidas que requieren autenticación
   const protectedRoutes = ['/dashboard', '/trabajadores', '/pisos', '/reportes']
-  const isProtectedRoute = protectedRoutes.some(route => 
+  const isProtectedRoute = protectedRoutes.some(route =>
     req.nextUrl.pathname.startsWith(route)
   )
 
@@ -75,19 +75,48 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  // Si hay sesión y está tratando de acceder al login, redirigir al dashboard
+  // Si hay sesión y está tratando de acceder al login, redirigir según rol
   if (session && req.nextUrl.pathname === '/login') {
+    const role = session.user.user_metadata?.role
+    if (role === 'supervisor') {
+      return NextResponse.redirect(new URL('/tareas', req.url))
+    }
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  // Si hay sesión y está en la raíz, redirigir al dashboard
-  if (session && req.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
+  // Control de Acceso Basado en Roles (RBAC)
+  if (session && isProtectedRoute) {
+    const role = session.user.user_metadata?.role
 
-  // Si no hay sesión y está en la raíz, redirigir al login
-  if (!session && req.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/login', req.url))
+    // Si es admin tiene acceso a todo
+    if (role === 'admin') {
+      return res
+    }
+
+    // Definir rutas permitidas por rol
+    const supervisorAllowedRoutes = [
+      '/tareas',
+      '/asistencia',
+      '/herramientas',
+      '/trabajadores',
+      '/materiales'
+    ]
+
+    // Si es supervisor
+    if (role === 'supervisor') {
+      // Verificar si la ruta actual comienza con alguna de las rutas permitidas
+      const isAllowed = supervisorAllowedRoutes.some(route =>
+        req.nextUrl.pathname.startsWith(route)
+      )
+
+      if (!isAllowed) {
+        // Si intenta acceder a una ruta no permitida, redirigir a su home
+        return NextResponse.redirect(new URL('/tareas', req.url))
+      }
+    }
+
+    // Otros roles (por ahora redirigir a dashboard si intentan acceder a rutas protegidas básicas no permitidas)
+    // Se puede expandir según sea necesario
   }
 
   return res

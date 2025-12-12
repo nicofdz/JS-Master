@@ -144,11 +144,34 @@ export default function AuthLayout({
     }
   ]
 
+  // Filter navigation based on role
+  const filteredNavigationSections = navigationSections.map(section => {
+    // If admin, show everything (including Administration which is added below)
+    if (profile?.role === 'admin') {
+      return section
+    }
+
+    // If supervisor, filter specific items
+    if (profile?.role === 'supervisor') {
+      const allowedItems = ['Tareas', 'Asistencia', 'Herramientas', 'Trabajadores/Contratos', 'Materiales']
+      const filteredItems = section.items.filter(item => allowedItems.includes(item.name))
+
+      // Return section only if it has items
+      if (filteredItems.length > 0) {
+        return { ...section, items: filteredItems }
+      }
+      return null
+    }
+
+    // Default: Show nothing or basic items (can be adjusted)
+    return null
+  }).filter(Boolean) as typeof navigationSections
+
   // Add Administration section for Admins
   if (profile?.role === 'admin') {
-    navigationSections.push({
+    filteredNavigationSections.push({
       title: 'ADMINISTRACIÓN',
-      icon: Users, // Using Users icon as a generic admin icon or Shield if available
+      icon: Users,
       items: [
         { name: 'Usuarios', href: '/usuarios', icon: Users },
       ]
@@ -205,7 +228,7 @@ export default function AuthLayout({
                   <h1 className="text-lg font-semibold text-slate-100">JS Master</h1>
                 </div>
                 <nav className="mt-5 px-2 space-y-4">
-                  {navigationSections.map((section) => {
+                  {filteredNavigationSections.map((section) => {
                     const SectionIcon = section.icon
                     return (
                       <div key={section.title} className="space-y-1">
@@ -268,7 +291,7 @@ export default function AuthLayout({
                 </button>
               </div>
               <nav className="mt-5 flex-1 px-2 space-y-4">
-                {navigationSections.map((section) => {
+                {filteredNavigationSections.map((section) => {
                   const SectionIcon = section.icon
                   return (
                     <div key={section.title} className="space-y-1">
@@ -366,7 +389,7 @@ export default function AuthLayout({
               {/* Centro de Notificaciones */}
               <NotificationCenter />
 
-              <Link href="/dashboard">
+              <Link href="/">
                 <Image
                   src="/logo/logo jsmaster.png"
                   alt="JS Master Logo"

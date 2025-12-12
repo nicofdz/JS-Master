@@ -21,7 +21,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
         email: '',
         password: '',
         confirmPassword: '',
-        role: 'maestro' as UserRole,
+        role: 'supervisor' as UserRole,
         phone: ''
     })
 
@@ -77,7 +77,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
                 email: '',
                 password: '',
                 confirmPassword: '',
-                role: 'maestro',
+                role: 'supervisor',
                 phone: ''
             })
 
@@ -122,11 +122,13 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
                         onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
                         className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                                {label}
-                            </option>
-                        ))}
+                        {Object.entries(ROLE_LABELS)
+                            .filter(([value]) => ['admin', 'supervisor'].includes(value))
+                            .map(([value, label]) => (
+                                <option key={value} value={value}>
+                                    {label}
+                                </option>
+                            ))}
                     </select>
                 </div>
 

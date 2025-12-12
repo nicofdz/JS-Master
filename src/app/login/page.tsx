@@ -7,29 +7,27 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/hooks'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [showRegister, setShowRegister] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
-  const [registerData, setRegisterData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: '',
-    role: 'maestro' as const,
-    phone: ''
-  })
 
-  const { signIn, signUp, resetPassword, user, loading } = useAuth()
+  const { signIn, resetPassword, user, loading } = useAuth()
   const router = useRouter()
 
   // Redireccionar si ya está autenticado
   useEffect(() => {
     if (user && !loading) {
-      router.push('/dashboard')
+      const role = user.user_metadata?.role
+      if (role === 'supervisor') {
+        router.push('/tareas')
+      } else {
+        router.push('/dashboard')
+      }
     }
   }, [user, loading, router])
 
@@ -46,52 +44,22 @@ export default function LoginPage() {
       }
 
       toast.success('¡Bienvenido!')
-      router.push('/dashboard')
+
+      // Verificar rol para redirección
+      const { data: { user } } = await import('@/lib/auth').then(m => m.authService.getUser())
+      const role = user?.user_metadata?.role
+
+      if (role === 'supervisor') {
+        router.push('/tareas')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (error) {
       toast.error('Error inesperado al iniciar sesión')
     } finally {
       setIsLoading(false)
     }
   }
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (registerData.password !== registerData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden')
-      return
-    }
-
-    if (registerData.password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres')
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const { error } = await signUp(
-        registerData.email,
-        registerData.password,
-        registerData.fullName,
-        registerData.role
-      )
-
-      if (error) {
-        toast.error(error.message || 'Error al registrarse')
-        return
-      }
-
-      toast.success('¡Cuenta creada exitosamente!')
-      setShowRegister(false)
-      // El usuario será redirigido automáticamente cuando se autentique
-    } catch (error) {
-      toast.error('Error inesperado al registrarse')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,30 +91,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center bg-no-repeat relative">
+      <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+
+      <div className="absolute top-4 left-4 z-20">
+        <Link href="/">
+          <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/10 gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Volver al Inicio
+          </Button>
+        </Link>
+      </div>
+
+      <div className="max-w-md w-full space-y-8 relative z-10">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Sistema de Control de Terminaciones
-          </h1>
-          <p className="mt-2 text-gray-600">
+          <Link href="/" className="inline-block mb-4">
+            <h1 className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-tight hover:scale-105 transition-transform cursor-pointer">
+              JS MASTER
+            </h1>
+          </Link>
+          <h2 className="text-2xl font-bold text-white">
+            Sistema de Gestión
+          </h2>
+          <p className="mt-2 text-slate-400">
             {showForgotPassword
               ? 'Ingresa tu correo para recuperar tu contraseña'
-              : showRegister
-                ? 'Crear nueva cuenta'
-                : 'Iniciar sesión en tu cuenta'}
+              : 'Ingresa tus credenciales para acceder'}
           </p>
         </div>
 
-        <Card>
+        <Card className="bg-slate-900/90 border-slate-800 shadow-2xl backdrop-blur-md">
           <CardHeader>
-            <CardTitle>
+            <CardTitle className="text-center text-white">
               {showForgotPassword
                 ? '🔄 Recuperar Contraseña'
-                : showRegister
-                  ? '🔐 Registro'
-                  : '🔑 Iniciar Sesión'}
+                : '🔑 Iniciar Sesión'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -159,11 +139,12 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@correo.com"
                   required
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
                 />
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Enviando...' : 'Enviar correo de recuperación'}
@@ -173,14 +154,14 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(false)}
-                    className="text-primary-600 hover:text-primary-500 text-sm"
+                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
                   >
                     Volver al inicio de sesión
                   </button>
                 </div>
               </form>
-            ) : !showRegister ? (
-              <form onSubmit={handleLogin} className="space-y-4">
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-5">
                 <Input
                   label="Correo electrónico"
                   type="email"
@@ -188,6 +169,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@correo.com"
                   required
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
                 />
 
                 <Input
@@ -197,116 +179,24 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
                 />
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-medium shadow-lg shadow-blue-500/20"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                 </Button>
 
-                <div className="text-center space-y-2">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotPassword(true)}
-                      className="text-primary-600 hover:text-primary-500 text-sm"
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
-                  </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowRegister(true)}
-                      className="text-primary-600 hover:text-primary-500 text-sm"
-                    >
-                      ¿No tienes cuenta? Regístrate aquí
-                    </button>
-                  </div>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <Input
-                  label="Nombre completo"
-                  type="text"
-                  value={registerData.fullName}
-                  onChange={(e) => setRegisterData({ ...registerData, fullName: e.target.value })}
-                  placeholder="Tu nombre completo"
-                  required
-                />
-
-                <Input
-                  label="Correo electrónico"
-                  type="email"
-                  value={registerData.email}
-                  onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                  placeholder="ejemplo@correo.com"
-                  required
-                />
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Rol <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={registerData.role}
-                    onChange={(e) => setRegisterData({ ...registerData, role: e.target.value as any })}
-                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                  >
-                    <option value="maestro">Maestro</option>
-                    <option value="jefe_cuadrilla">Jefe de Cuadrilla</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-
-                <Input
-                  label="Teléfono (opcional)"
-                  type="tel"
-                  value={registerData.phone}
-                  onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                  placeholder="+56 9 1234 5678"
-                />
-
-                <Input
-                  label="Contraseña"
-                  type="password"
-                  value={registerData.password}
-                  onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                  placeholder="••••••••"
-                  helperText="Mínimo 6 caracteres"
-                  required
-                />
-
-                <Input
-                  label="Confirmar contraseña"
-                  type="password"
-                  value={registerData.confirmPassword}
-                  onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                  placeholder="••••••••"
-                  required
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
-                </Button>
-
-                <div className="text-center">
+                <div className="text-center pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowRegister(false)}
-                    className="text-primary-600 hover:text-primary-500 text-sm"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-slate-400 hover:text-blue-400 text-sm transition-colors"
                   >
-                    ¿Ya tienes cuenta? Inicia sesión aquí
+                    ¿Olvidaste tu contraseña?
                   </button>
                 </div>
               </form>

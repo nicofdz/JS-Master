@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getStatusColor(status: string | null | undefined): string {
   if (!status) return 'bg-slate-600 text-slate-200'
-  
+
   switch (status) {
     case 'completed':
       return 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50'
@@ -37,7 +37,7 @@ export function getStatusColor(status: string | null | undefined): string {
 
 export function getStatusEmoji(status: string | null | undefined): string {
   if (!status) return '⚫'
-  
+
   switch (status) {
     case 'completed': return '✅'
     case 'good': return '🟢'
@@ -56,7 +56,7 @@ export function getStatusEmoji(status: string | null | undefined): string {
 
 export function getStatusText(status: string | null | undefined): string {
   if (!status) return 'Pendiente'
-  
+
   switch (status) {
     case 'completed': return 'Completado'
     case 'good': return 'Bueno'
@@ -75,14 +75,14 @@ export function getStatusText(status: string | null | undefined): string {
 
 export function formatDate(date: string | Date): string {
   if (!date) return 'Sin fecha'
-  
+
   // Si es string, extraer solo la fecha sin hora
   const dateString = typeof date === 'string' ? date.split('T')[0] : date.toISOString().split('T')[0]
-  
+
   // Crear fecha en zona local para evitar problemas UTC
   const [year, month, day] = dateString.split('-')
   const localDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-  
+
   return localDate.toLocaleDateString('es-CL', {
     day: '2-digit',
     month: 'short',
