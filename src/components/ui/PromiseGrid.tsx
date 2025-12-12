@@ -66,14 +66,7 @@ export function PromiseGrid() {
                                 No somos una constructora más. Somos especialistas en el detalle final, esa etapa crítica que define la calidad de tu inversión.
                             </p>
 
-                            <div className="hidden lg:block">
-                                <a href="#contacto" className="inline-flex items-center text-blue-400 hover:text-blue-300 font-semibold transition-colors group">
-                                    Agenda una visita técnica
-                                    <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                    </svg>
-                                </a>
-                            </div>
+
                         </RevealOnScroll>
                     </div>
 
@@ -97,14 +90,7 @@ export function PromiseGrid() {
                             ))}
                         </div>
 
-                        <div className="mt-8 lg:hidden text-center">
-                            <a href="#contacto" className="inline-flex items-center text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-                                Agenda una visita técnica
-                                <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                </svg>
-                            </a>
-                        </div>
+
                     </div>
 
                 </div>
