@@ -7,6 +7,7 @@ import { RevealOnScroll } from '@/components/ui/RevealOnScroll'
 import { CountUpAnimation } from '@/components/ui/CountUp'
 import { PromiseGrid } from '@/components/ui/PromiseGrid'
 import { WorkWithUs } from '@/components/ui/WorkWithUs'
+import { ServiceRequestForm } from '@/components/ui/ServiceRequestForm'
 
 export default function Home() {
   return (
@@ -15,8 +16,8 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12">
+            <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+              <div className="relative w-12 h-12 group-hover:scale-105 transition-transform">
                 <Image
                   src="/logo/logo jsmaster.png"
                   alt="JS Master Logo"
@@ -24,11 +25,11 @@ export default function Home() {
                   className="object-contain"
                 />
               </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-wide">
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-wide group-hover:opacity-80 transition-opacity">
                 JS MASTER
               </span>
-            </div>
-            <div className="hidden md:flex items-center space-x-8">
+            </Link>
+            <div className="hidden md:flex items-center gap-2 lg:gap-6">
               <Link href="#servicios" className="text-sm font-medium text-slate-300 hover:text-white transition-colors hover:scale-105 transform">
                 Servicios
               </Link>
@@ -38,8 +39,23 @@ export default function Home() {
               <Link href="#contacto" className="text-sm font-medium text-slate-300 hover:text-white transition-colors hover:scale-105 transform">
                 Contacto
               </Link>
+
+              <div className="w-px h-5 bg-slate-800 mx-2"></div>
+
+              <Link
+                href="#contrata-servicios"
+                className="text-sm font-medium text-slate-300 hover:text-white transition-colors hover:scale-105 transform"
+              >
+                Contratar Servicios
+              </Link>
+              <Link
+                href="#trabaja-con-nosotros"
+                className="text-sm font-medium text-slate-300 hover:text-white transition-colors hover:scale-105 transform"
+              >
+                Trabaja con Nosotros
+              </Link>
             </div>
-            <div>
+            <div className="ml-4">
               <Link
                 href="/login"
                 className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-full text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500 transition-all shadow-lg shadow-blue-500/20 hover:scale-105"
@@ -82,10 +98,10 @@ export default function Home() {
 
           <RevealOnScroll delay={600} className="mt-12 flex flex-col sm:flex-row justify-center gap-4">
             <Link
-              href="/login"
+              href="#contrata-servicios"
               className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 transition-all hover:scale-105 shadow-xl shadow-blue-500/20 group"
             >
-              Acceder al Portal
+              Contrata nuestros servicios
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
@@ -160,7 +176,7 @@ export default function Home() {
                 <h3 className="text-5xl font-bold text-white mb-2">100%</h3>
                 <p className="text-lg font-semibold text-slate-200 mb-4">Equipo Calificado</p>
                 <p className="text-slate-400 leading-relaxed text-sm">
-                  Cuadrillas especializadas en tabiquería, pintura y carpintería, dirigidas por supervisores con amplia experiencia.
+                  Cuadrillas especializadas en tabiquería y carpintería, dirigidas por supervisores con amplia experiencia.
                 </p>
               </div>
             </RevealOnScroll>
@@ -199,7 +215,7 @@ export default function Home() {
             <ServiceCard
               icon={<PaintBucket />}
               title="Terminaciones"
-              description="Acabados superficiales de alto nivel. Empastar, pintura (látex, esmalte), texturas y revestimientos murales que definen la personalidad."
+              description="Especialistas en terminaciones de puertas, guardapolvos y cornisas. Acabados precisos que realzan la estética de cada espacio."
               delay={150}
             />
             <ServiceCard
@@ -218,6 +234,9 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Hire Services Section */}
+      <ServiceRequestForm />
+
       {/* CTA Section */}
       <section className="py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-blue-900/20"></div>
@@ -230,10 +249,10 @@ export default function Home() {
               Utilizamos tecnología avanzada para gestionar nuestros proyectos, asegurando transparencia, trazabilidad y eficiencia en cada entrega.
             </p>
             <Link
-              href="/login"
+              href="#trabaja-con-nosotros"
               className="group relative inline-flex items-center px-12 py-5 bg-white text-blue-950 font-bold text-lg rounded-full hover:bg-blue-50 transition-all shadow-2xl hover:shadow-white/20 hover:-translate-y-1 overflow-hidden"
             >
-              <span className="relative z-10">Ingresar al Sistema de Gestión</span>
+              <span className="relative z-10">Trabaja con nosotros</span>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-100 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </Link>
           </RevealOnScroll>
@@ -268,7 +287,7 @@ export default function Home() {
               <h4 className="text-white font-bold mb-6">Servicios</h4>
               <ul className="space-y-3 text-slate-500 text-sm">
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">Tabiquería</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Pintura y Terminaciones</li>
+                <li className="hover:text-blue-400 transition-colors cursor-pointer">Terminaciones</li>
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">Instalación de Puertas</li>
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">Guardapolvos y Molduras</li>
               </ul>

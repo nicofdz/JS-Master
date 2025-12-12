@@ -97,7 +97,37 @@ export default function TrabajadoresPage() {
 
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
+  // Estados para paginación (Performance)
   const [itemsPerPage] = useState(50)
+
+  // Estado para datos iniciales de creación (desde URL)
+  const [initialWorkerData, setInitialWorkerData] = useState<any>(null)
+
+  // Checking URL params for "Quick Hire" action
+  useEffect(() => {
+    // Basic implementation to parse query params without using useSearchParams hook directly
+    // to avoid suspense boundaries issues if not already properly set up
+    const searchParams = new URLSearchParams(window.location.search)
+    const action = searchParams.get('action')
+
+    if (action === 'create') {
+      const name = searchParams.get('name') || ''
+      const rut = searchParams.get('rut') || ''
+      const email = searchParams.get('email') || ''
+      const phone = searchParams.get('phone') || ''
+
+      setInitialWorkerData({
+        full_name: name,
+        rut: rut,
+        email: email,
+        phone: phone
+      })
+      setShowCreateModal(true)
+
+      // Clean URL
+      window.history.replaceState({}, '', '/trabajadores')
+    }
+  }, [])
 
   // Refrescar datos al cambiar vista de papelera de contratos
   useEffect(() => {
@@ -1366,6 +1396,7 @@ export default function TrabajadoresPage() {
             >
               <WorkerForm
                 worker={editingWorker}
+                initialData={initialWorkerData}
                 onSave={handleSave}
                 onCancel={handleCloseModal}
               />

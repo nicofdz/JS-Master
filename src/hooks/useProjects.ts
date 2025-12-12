@@ -222,6 +222,132 @@ export const useProjects = () => {
     }
   }
 
+  const hardDeleteProject = async (id: number) => {
+    try {
+      console.log(`🗑️ Starting hard delete/prune for project ${id}...`)
+
+      // 1. Identificar si hay tareas completadas que deban preservarse
+      // Buscamos tareas completadas en todos los apartamentos de este proyecto
+      // Necesitamos unir: projects -> towers -> floors -> apartments -> tasks
+      const { data: completedTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select(`
+          id,
+          apartment_id,
+          apartments!inner (
+            id,
+            floor_id,
+            floors!inner (
+              id,
+              tower_id,
+              towers!inner (
+                id,
+                project_id
+              )
+            )
+          )
+        `)
+        .eq('status', 'completed')
+        .eq('apartments.floors.towers.project_id', id) // Esto puede requerir un filtrado manual si Supabase no soporta nesting profundo en .eq
+
+      // Nota: Supabase a veces tiene límites con filtros profundos. 
+      // Si falla, podemos buscar primero los IDs de apartamentos del proyecto.
+
+      // Enfoque alternativo más robusto:
+      // A. Obtener todas las torres del proyecto
+      const { data: towers } = await supabase.from('towers').select('id').eq('project_id', id)
+      const towerIds = towers?.map(t => t.id) || []
+
+      // B. Obtener todos los pisos
+      const { data: floors } = await supabase.from('floors').select('id, tower_id').in('tower_id', towerIds)
+      const floorIds = floors?.map(f => f.id) || []
+
+      // C. Obtener todos los apartamentos
+      const { data: apartments } = await supabase.from('apartments').select('id, floor_id').in('floor_id', floorIds)
+      const apartmentIds = apartments?.map(a => a.id) || []
+
+      // D. Buscar tareas completadas en estos apartamentos (incluyendo las eliminadas logicamente)
+      const { data: meaningfulTasks, error: meaningfulTasksError } = await supabase
+        .from('tasks')
+        .select('id, apartment_id')
+        .in('apartment_id', apartmentIds)
+        .eq('status', 'completed')
+      // No filtramos is_deleted porque queremos preservar historial aunque la tarea haya sido borrada soft
+
+      if (meaningfulTasksError) throw meaningfulTasksError
+
+      const hasHistory = meaningfulTasks && meaningfulTasks.length > 0
+
+      if (!hasHistory) {
+        // --- ESCENARIO 1: BORRADO TOTAL ---
+        console.log('No completed tasks found. Performing full delete.')
+
+        // Eliminar Proyecto (Cascade eliminará todo lo demás)
+        const { error: deleteError } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id)
+
+        if (deleteError) throw deleteError
+
+        setProjects(prev => prev.filter(p => p.id !== id))
+        return { type: 'deleted', message: 'Proyecto eliminado permanentemente' }
+      } else {
+        // --- ESCENARIO 2: PODA (PRUNING) ---
+        console.log(`Found ${meaningfulTasks.length} completed tasks. Pruning unused elements.`)
+
+        // Identificar IDs a MANTENER
+        const keptApartmentIds = new Set(meaningfulTasks.map(t => t.apartment_id))
+
+        // Encontrar pisos a mantener (los que contienen apartamentos mantenidos)
+        const keptFloorIds = new Set<number>()
+        apartments?.forEach(a => {
+          if (keptApartmentIds.has(a.id)) {
+            keptFloorIds.add(a.floor_id)
+          }
+        })
+
+        // Encontrar torres a mantener (las que contienen pisos mantenidos)
+        const keptTowerIds = new Set<number>()
+        floors?.forEach(f => {
+          if (keptFloorIds.has(f.id)) {
+            keptTowerIds.add(f.tower_id)
+          }
+        })
+
+        // Ejecutar eliminación de lo NO mantenido
+
+        // 1. Eliminar Apartamentos no usados
+        const apartmentsToDelete = apartmentIds.filter(id => !keptApartmentIds.has(id))
+        if (apartmentsToDelete.length > 0) {
+          await supabase.from('apartments').delete().in('id', apartmentsToDelete)
+        }
+
+        // 2. Eliminar Pisos no usados
+        const floorsToDelete = floorIds.filter(id => !keptFloorIds.has(id))
+        if (floorsToDelete.length > 0) {
+          await supabase.from('floors').delete().in('id', floorsToDelete)
+        }
+
+        // 3. Eliminar Torres no usadas
+        const towersToDelete = towerIds.filter(id => !keptTowerIds.has(id))
+        if (towersToDelete.length > 0) {
+          await supabase.from('towers').delete().in('id', towersToDelete)
+        }
+
+        // El proyecto SE MANTIENE, pero nos aseguramos que siga inactivo
+        // No necesitamos cambiar nada en el proyecto, ya está soft-deleted
+
+        return { type: 'pruned', message: 'Proyecto podado: Se mantuvo el historial de tareas completadas' }
+      }
+
+    } catch (err: any) {
+      console.error('Error hard deleting project:', err)
+      setError(err.message || 'Error al eliminar proyecto permanentemente')
+      throw err
+    }
+  }
+
   const uploadPlan = async (projectId: number, file: File) => {
     try {
       const fileExt = file.name.split('.').pop()
@@ -339,6 +465,7 @@ export const useProjects = () => {
     updateProject,
     deleteProject,
     restoreProject,
+    hardDeleteProject,
     uploadPlan,
     uploadContract,
     uploadSpecifications

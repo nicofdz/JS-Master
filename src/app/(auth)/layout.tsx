@@ -32,7 +32,9 @@ import {
   CreditCard, // Icono para sección Finanzas
   PieChart, // Icono para sección Reportes
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Briefcase,
+  FileText as FileMsg
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -174,6 +176,16 @@ export default function AuthLayout({
       icon: Users,
       items: [
         { name: 'Usuarios', href: '/usuarios', icon: Users },
+      ]
+    })
+
+    // Add Requests section for Admins
+    filteredNavigationSections.push({
+      title: 'SOLICITUDES',
+      icon: ClipboardCheck,
+      items: [
+        { name: 'Bolsa de Trabajo', href: '/solicitudes/trabajo', icon: Briefcase },
+        { name: 'Cotizaciones', href: '/solicitudes/servicios', icon: FileMsg },
       ]
     })
   }

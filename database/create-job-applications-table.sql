@@ -33,6 +33,11 @@ create policy "Authenticated users can update applications"
     on public.job_applications for update
     using (auth.role() = 'authenticated');
 
+-- Policy: Only authenticated users can delete applications
+create policy "Authenticated users can delete applications"
+    on public.job_applications for delete
+    using (auth.role() = 'authenticated');
+
 -- Create updated_at trigger
 create or replace function public.handle_updated_at()
 returns trigger as $$

@@ -21,7 +21,7 @@ import { PROJECT_STATUSES } from '@/lib/constants'
 import toast from 'react-hot-toast'
 
 export default function ProyectosPage() {
-  const { projects, loading, error, createProject, updateProject, deleteProject, restoreProject, refresh, uploadPlan, uploadContract, uploadSpecifications } = useProjects()
+  const { projects, loading, error, createProject, updateProject, deleteProject, restoreProject, hardDeleteProject, refresh, uploadPlan, uploadContract, uploadSpecifications } = useProjects()
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
   const [searchTerm, setSearchTerm] = useState('')
   const [cardFilter, setCardFilter] = useState<'all' | 'planning' | 'active' | 'completed'>('all')
@@ -47,6 +47,7 @@ export default function ProyectosPage() {
   const [showTrash, setShowTrash] = useState(false)
   const [confirmDeleteProjectState, setConfirmDeleteProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
   const [confirmRestoreProjectState, setConfirmRestoreProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
+  const [confirmHardDeleteProjectState, setConfirmHardDeleteProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
 
   // Recargar proyectos cuando cambia el modo papelera
   React.useEffect(() => {
@@ -99,6 +100,26 @@ export default function ProyectosPage() {
       setConfirmRestoreProjectState({ isOpen: false, projectId: null })
     } catch (error) {
       toast.error('Error al restaurar el proyecto')
+    }
+  }
+
+  const handleHardDelete = (projectId: number) => {
+    setConfirmHardDeleteProjectState({ isOpen: true, projectId })
+  }
+
+  const executeHardDeleteProject = async () => {
+    if (!confirmHardDeleteProjectState.projectId) return
+
+    try {
+      const result = await hardDeleteProject(confirmHardDeleteProjectState.projectId)
+      if (result && result.message) {
+        toast.success(result.message)
+      } else {
+        toast.success('Proyecto eliminado permanentemente')
+      }
+      setConfirmHardDeleteProjectState({ isOpen: false, projectId: null })
+    } catch (error) {
+      toast.error('Error al eliminar el proyecto permanentemente')
     }
   }
 
@@ -459,84 +480,102 @@ export default function ProyectosPage() {
 
                         {/* Acciones */}
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedProjectForWorkers(project)
-                              setShowWorkersModal(true)
-                            }}
-                            className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-                            title="Ver Trabajadores"
-                          >
-                            <Users className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedProjectForDetails(project)
-                              setShowDetailsModal(true)
-                            }}
-                            className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-                            title="Ver Detalles"
-                          >
-                            <Info className="w-4 h-4" />
-                          </Button>
-                          {(project.plan_pdf || project.plan_image_url) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleViewPlan(project)
-                              }}
-                              className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                              title="Ver Plano"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </Button>
+                          {!showTrash && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedProjectForWorkers(project)
+                                  setShowWorkersModal(true)
+                                }}
+                                className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                                title="Ver Trabajadores"
+                              >
+                                <Users className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedProjectForDetails(project)
+                                  setShowDetailsModal(true)
+                                }}
+                                className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                                title="Ver Detalles"
+                              >
+                                <Info className="w-4 h-4" />
+                              </Button>
+                              {(project.plan_pdf || project.plan_image_url) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleViewPlan(project)
+                                  }}
+                                  className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                  title="Ver Plano"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditingProject(project)
+                                }}
+                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                                title="Editar"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDelete(project.id)
+                                }}
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingProject(project)
-                            }}
-                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-                            title="Editar"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDelete(project.id)
-                            }}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
 
                           {showTrash && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleRestore(project.id)
-                              }}
-                              className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                              title="Restaurar"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleRestore(project.id)
+                                }}
+                                className="text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                title="Restaurar"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleHardDelete(project.id)
+                                }}
+                                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                title="Eliminar Permanentemente"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -1014,6 +1053,16 @@ export default function ProyectosPage() {
         message="¿Estás seguro de que quieres restaurar este proyecto?"
         confirmText="Restaurar"
         type="info"
+      />
+
+      <ConfirmationModal
+        isOpen={confirmHardDeleteProjectState.isOpen}
+        onClose={() => setConfirmHardDeleteProjectState({ isOpen: false, projectId: null })}
+        onConfirm={executeHardDeleteProject}
+        title="¿Eliminar permanentemente?"
+        message="Esta acción NO se puede deshacer. Se eliminará el proyecto y todos sus datos asociados (torres, pisos, departamentos, tareas, etc). Si existen tareas completadas, se mantendrá un registro histórico mínimo."
+        confirmText="Eliminar para siempre"
+        type="danger"
       />
 
     </div >

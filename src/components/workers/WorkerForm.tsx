@@ -7,11 +7,12 @@ import { validateRut, formatRut, cleanRut } from '@/lib/rut'
 
 interface WorkerFormProps {
   worker?: any
+  initialData?: Partial<WorkerFormData>
   onSave: (data: WorkerFormData) => void
   onCancel: () => void
 }
 
-export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
+export function WorkerForm({ worker, initialData, onSave, onCancel }: WorkerFormProps) {
   const [formData, setFormData] = useState<WorkerFormData>({
     full_name: '',
     rut: '',
@@ -33,7 +34,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Inicializar formulario cuando se edita un trabajador
+  // Inicializar formulario cuando se edita un trabajador o hay datos iniciales
   useEffect(() => {
     if (worker) {
       setFormData({
@@ -55,13 +56,23 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         cargo: (worker.cargo && !['Obrero', 'Maestro', 'Jefe de Cuadrilla', 'Supervisor', 'Especialista', 'Ayudante', 'Maestro Tabiquero', 'Ayudante Maestro'].includes(worker.cargo)) ? 'Otro' : (worker.cargo || ''),
         cargo_personalizado: (worker.cargo && !['Obrero', 'Maestro', 'Jefe de Cuadrilla', 'Supervisor', 'Especialista', 'Ayudante', 'Maestro Tabiquero', 'Ayudante Maestro'].includes(worker.cargo)) ? worker.cargo : ''
       })
+    } else if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData,
+        // Asegurar que campos obligatorios tengan string vacio si vienen undefined
+        full_name: initialData.full_name || '',
+        rut: initialData.rut || '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
+      }))
     }
-  }, [worker])
+  }, [worker, initialData])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
     const checked = 'checked' in e.target ? e.target.checked : false
-    
+
     // Formatear RUT automáticamente
     if (name === 'rut') {
       const cleanValue = cleanRut(value)
@@ -72,7 +83,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
           [name]: formattedValue
         }))
       }
-    } 
+    }
     // Convertir email a minúsculas automáticamente
     else if (name === 'email') {
       setFormData(prev => ({
@@ -102,7 +113,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         [name]: type === 'checkbox' ? checked : value
       }))
     }
-    
+
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors(prev => ({
@@ -139,7 +150,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (validateForm()) {
       // Preparar los datos para guardar
       const dataToSave = {
@@ -147,7 +158,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         // Si hay cargo personalizado, usar ese valor; sino usar el cargo del select
         cargo: formData.cargo_personalizado?.trim() || formData.cargo
       }
-      
+
       onSave(dataToSave)
     }
   }
@@ -158,7 +169,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         {/* Información Básica */}
         <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
           <h3 className="text-lg font-medium text-slate-100 mb-4">Información Básica</h3>
-          
+
           {/* Nombre completo */}
           <div className="mb-4">
             <label htmlFor="full_name" className="block text-sm font-medium text-slate-300 mb-2">
@@ -240,7 +251,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         {/* Información Personal */}
         <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
           <h3 className="text-lg font-medium text-slate-100 mb-4">Información Personal</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Nacionalidad */}
             <div>
@@ -334,7 +345,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
         {/* Información Laboral */}
         <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
           <h3 className="text-lg font-medium text-slate-100 mb-4">Información Laboral</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Cargo */}
             <div>
@@ -354,7 +365,7 @@ export function WorkerForm({ worker, onSave, onCancel }: WorkerFormProps) {
                 <option value="Ayudante Maestro">Ayudante Maestro</option>
                 <option value="Otro">Otro</option>
               </Select>
-              
+
               {/* Input personalizado cuando se selecciona "Otro" */}
               {formData.cargo === 'Otro' && (
                 <div className="mt-2">
