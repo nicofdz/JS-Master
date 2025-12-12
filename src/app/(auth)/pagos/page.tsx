@@ -288,30 +288,30 @@ export default function PagosPage() {
         const { data: paymentAssignments, error: tasksError } = await supabase
           .from('payment_task_assignments')
           .select(`
-            task_assignment_id,
-            amount_paid,
-            task_assignments!inner(
-              id,
-              task_id,
-              worker_payment,
-              completed_at,
-              tasks!inner(
-                id,
-                task_name,
-                apartment_id,
-                apartments!inner(
-                  id,
-                  apartment_number,
-                  floor_id,
-                  floors!inner(
-                    id,
-                    project_id,
-                    projects!inner(id, name)
-                  )
-                )
-              )
-            )
-          `)
+                      task_assignment_id,
+                      amount_paid,
+                      task_assignments!inner(
+                      id,
+                      task_id,
+                      worker_payment,
+                      completed_at,
+                      tasks!inner(
+                      id,
+                      task_name,
+                      apartment_id,
+                      apartments!inner(
+                      id,
+                      apartment_number,
+                      floor_id,
+                      floors!inner(
+                      id,
+                      project_id,
+                      projects!inner(id, name)
+                      )
+                      )
+                      )
+                      )
+                      `)
           .eq('payment_id', payment.id)
 
         if (tasksError) throw tasksError
@@ -325,18 +325,18 @@ export default function PagosPage() {
         const { data: daysByPaymentId, error: errorById } = await supabase
           .from('worker_attendance')
           .select(`
-            id,
-            attendance_date,
-            is_present,
-            hours_worked,
-            payment_percentage,
-            late_arrival,
-            early_departure,
-            is_overtime,
-            overtime_hours,
-            arrival_reason,
-            departure_reason
-          `)
+                      id,
+                      attendance_date,
+                      is_present,
+                      hours_worked,
+                      payment_percentage,
+                      late_arrival,
+                      early_departure,
+                      is_overtime,
+                      overtime_hours,
+                      arrival_reason,
+                      departure_reason
+                      `)
           .eq('worker_id', payment.worker_id)
           .eq('is_present', true)
           .eq('is_paid', true)
@@ -348,18 +348,18 @@ export default function PagosPage() {
           let fallbackQuery = supabase
             .from('worker_attendance')
             .select(`
-              id,
-              attendance_date,
-              is_present,
-              hours_worked,
-              payment_percentage,
-              late_arrival,
-              early_departure,
-              is_overtime,
-              overtime_hours,
-              arrival_reason,
-              departure_reason
-            `)
+                      id,
+                      attendance_date,
+                      is_present,
+                      hours_worked,
+                      payment_percentage,
+                      late_arrival,
+                      early_departure,
+                      is_overtime,
+                      overtime_hours,
+                      arrival_reason,
+                      departure_reason
+                      `)
             .eq('worker_id', payment.worker_id)
             .eq('is_present', true)
             .eq('is_paid', true)
@@ -766,22 +766,22 @@ export default function PagosPage() {
       const { data: attendancesData, error: attendancesError } = await supabase
         .from('worker_attendance')
         .select(`
-          id,
-          attendance_date,
-          is_present,
-          check_in_time,
-          check_out_time,
-          hours_worked,
-          early_departure,
-          late_arrival,
-          arrival_reason,
-          departure_reason,
-          is_overtime,
-          overtime_hours,
-          is_paid,
-          payment_percentage,
-          projects(name)
-        `)
+                      id,
+                      attendance_date,
+                      is_present,
+                      check_in_time,
+                      check_out_time,
+                      hours_worked,
+                      early_departure,
+                      late_arrival,
+                      arrival_reason,
+                      departure_reason,
+                      is_overtime,
+                      overtime_hours,
+                      is_paid,
+                      payment_percentage,
+                      projects(name)
+                      `)
         .eq('worker_id', workerId)
         .eq('is_present', true)
         .eq('is_paid', false)
@@ -795,12 +795,12 @@ export default function PagosPage() {
       const { data: contractsData, error: contractsError } = await supabase
         .from('contract_history')
         .select(`
-          id,
-          contract_number,
-          fecha_inicio,
-          fecha_termino,
-          projects(name)
-        `)
+                      id,
+                      contract_number,
+                      fecha_inicio,
+                      fecha_termino,
+                      projects(name)
+                      `)
         .eq('worker_id', workerId)
         .eq('is_active', true)
         .order('fecha_inicio', { ascending: false })
@@ -1129,16 +1129,21 @@ export default function PagosPage() {
   return (
     <div className="w-full p-6">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Resumen de Pagos</h1>
-          <p className="text-gray-600">Seguimiento de pagos pendientes y completados por trabajador</p>
-          {loading && (
-            <p className="text-sm text-blue-600 mt-2">Cargando datos...</p>
-          )}
-          {error && (
-            <p className="text-sm text-red-600 mt-2">Error: {error}</p>
-          )}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-600/20">
+            <DollarSign className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Pagos</h1>
+            <p className="text-gray-500">Administra los pagos y anticipos de trabajadores</p>
+            {loading && (
+              <p className="text-sm text-blue-600 mt-2">Cargando datos...</p>
+            )}
+            {error && (
+              <p className="text-sm text-red-600 mt-2">Error: {error}</p>
+            )}
+          </div>
         </div>
 
         {currentView === 'pending' && (

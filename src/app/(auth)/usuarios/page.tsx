@@ -13,7 +13,8 @@ import {
     Edit2,
     Eye,
     Power,
-    Trash2
+    Trash2,
+    Users
 } from 'lucide-react'
 import { UserProfile, ROLE_LABELS } from '@/types/auth'
 import { UserModal } from '@/components/users/UserModal'
@@ -150,12 +151,16 @@ export default function UsersPage() {
             <div className="w-full space-y-6">
 
                 {/* Header */}
+                {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-100">Gestión de Usuarios</h1>
-                        <p className="text-slate-400 mt-1">
-                            Administra los usuarios, roles y permisos del sistema
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+                            <Users className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-white tracking-tight">Gestión de Usuarios</h1>
+                            <p className="text-slate-400">Administra los usuarios, roles y permisos del sistema</p>
+                        </div>
                     </div>
                     <Button
                         className="bg-blue-600 hover:bg-blue-700"
@@ -210,8 +215,8 @@ export default function UsersPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.is_active !== false
-                                                    ? 'bg-green-500/10 text-green-500'
-                                                    : 'bg-red-500/10 text-red-500'
+                                                ? 'bg-green-500/10 text-green-500'
+                                                : 'bg-red-500/10 text-red-500'
                                                 }`}>
                                                 {user.is_active !== false ? 'Activo' : 'Inactivo'}
                                             </span>
@@ -235,8 +240,8 @@ export default function UsersPage() {
                                                     size="sm"
                                                     onClick={() => handleToggleStatus(user)}
                                                     className={`hover:bg-transparent p-0 h-auto transition-all duration-300 ${user.is_active !== false
-                                                            ? 'text-amber-500 hover:text-amber-400 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]'
-                                                            : 'text-slate-500 hover:text-slate-400'
+                                                        ? 'text-amber-500 hover:text-amber-400 hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]'
+                                                        : 'text-slate-500 hover:text-slate-400'
                                                         }`}
                                                     title={user.is_active !== false ? 'Desactivar' : 'Activar'}
                                                 >

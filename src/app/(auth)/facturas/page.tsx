@@ -10,7 +10,7 @@ import { InvoiceChart } from '@/components/invoices/InvoiceChart'
 import { InvoiceEditModal } from '@/components/invoices/InvoiceEditModal'
 import { InvoiceFiltersSidebar } from '@/components/invoices/InvoiceFiltersSidebar'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
-import { Filter, X, XCircle } from 'lucide-react'
+import { Filter, X, XCircle, FileText } from 'lucide-react'
 import { useProjects } from '@/hooks/useProjects'
 import { useInvoices } from '@/hooks/useInvoices'
 import { InvoiceIncome } from '@/hooks/useInvoices'
@@ -367,10 +367,16 @@ export default function FacturasPage() {
   return (
     <div className="p-4 w-full h-[calc(100vh-4rem)] flex flex-col">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 shrink-0 gap-4 sm:gap-0">
-        <h1 className="text-2xl font-bold text-slate-100">
-          Gestión de Facturas
-        </h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 shrink-0 gap-4 sm:gap-0">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-600/20">
+            <FileText className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Gestión de Facturas</h1>
+            <p className="text-slate-400">Controla y gestiona las facturas y pagos del sistema.</p>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"

@@ -246,10 +246,15 @@ export default function HerramientasPage() {
   return (
     <div className="p-6 space-y-6 w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestión de Herramientas</h1>
-          <p className="text-gray-600">Administra el inventario y préstamos de herramientas</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-stone-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-stone-500/20">
+            <Wrench className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Herramientas</h1>
+            <p className="text-gray-500">Administra el inventario y préstamos de herramientas</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-3 w-full sm:w-auto">
           <Button

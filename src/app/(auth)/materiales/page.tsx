@@ -9,7 +9,7 @@ import { MaterialFormModal } from "@/components/materials/MaterialFormModal";
 import { MaterialFiltersSidebar } from "@/components/materials/MaterialFiltersSidebar";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Filter, Search } from "lucide-react";
+import { Filter, Search, Package } from "lucide-react";
 import { useMaterials } from "@/hooks/useMaterials";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkers } from "@/hooks/useWorkers";
@@ -97,9 +97,14 @@ export default function MaterialesPage() {
 	return (
 		<div className="w-full px-6 space-y-6 py-8">
 			<div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-				<div>
-					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Materiales</h1>
-					<p className="text-sm sm:text-base text-gray-600 mt-1">Administra el catálogo, registra entregas y controla el stock por almacén.</p>
+				<div className="flex items-center gap-4">
+					<div className="w-12 h-12 bg-slate-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-600/20">
+						<Package className="w-6 h-6" />
+					</div>
+					<div>
+						<h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Materiales</h1>
+						<p className="text-gray-500">Administra el catálogo, registra entregas y controla el stock</p>
+					</div>
 				</div>
 				<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
 					{view === 'materiales' && (

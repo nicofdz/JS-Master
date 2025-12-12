@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'react-hot-toast'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
+import { ServiceRequestFiltersSidebar } from './ServiceRequestFiltersSidebar'
+import { Button } from '@/components/ui/Button'
+import { Filter } from 'lucide-react'
 import {
     Building2,
     MapPin,
@@ -55,6 +58,7 @@ export function ServiceRequestsTable() {
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null)
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+    const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
 
     useEffect(() => {
         fetchRequests()
@@ -172,49 +176,69 @@ export function ServiceRequestsTable() {
     return (
         <div className="space-y-6">
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+            {/* Header Actions */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
                 <div className="relative w-full md:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <input
                         type="text"
                         placeholder="Buscar por empresa, contacto, ubicación..."
-                        className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="w-full md:w-auto px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="all">Todos los estados</option>
-                    <option value="new">Nuevos</option>
-                    <option value="contacted">Contactados</option>
-                    <option value="quoted">Cotizados</option>
-                    <option value="closed">Cerrados</option>
-                </select>
 
-                <button
-                    onClick={() => setShowTrash(!showTrash)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors border ${showTrash
-                        ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'
-                        }`}
-                >
-                    {showTrash ? (
-                        <>
-                            <Archive className="w-4 h-4" />
-                            Ver Activos
-                        </>
-                    ) : (
-                        <>
-                            <Trash2 className="w-4 h-4" />
-                            Papelera
-                        </>
-                    )}
-                </button>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsFilterSidebarOpen(true)}
+                        className="flex items-center gap-2 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors flex-1 md:flex-none justify-center"
+                    >
+                        <Filter className="w-4 h-4" />
+                        <span>Filtros</span>
+                        {filterStatus !== 'all' && (
+                            <span className="bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                                !
+                            </span>
+                        )}
+                    </Button>
+
+                    <button
+                        onClick={() => setShowTrash(!showTrash)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors border flex-1 md:flex-none justify-center ${showTrash
+                            ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'
+                            }`}
+                    >
+                        {showTrash ? (
+                            <>
+                                <Archive className="w-4 h-4" />
+                                <span>Ver Activos</span>
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="w-4 h-4" />
+                                <span>Papelera</span>
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
+
+            <ServiceRequestFiltersSidebar
+                isOpen={isFilterSidebarOpen}
+                onClose={() => setIsFilterSidebarOpen(false)}
+                currentStatusFilter={filterStatus}
+                onStatusFilterChange={setFilterStatus}
+                counts={{
+                    all: requests.length,
+                    new: requests.filter(r => r.status === 'new').length,
+                    contacted: requests.filter(r => r.status === 'contacted').length,
+                    quoted: requests.filter(r => r.status === 'quoted').length,
+                    closed: requests.filter(r => r.status === 'closed').length
+                }}
+            />
 
             {/* Table */}
             <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl">

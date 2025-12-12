@@ -1041,17 +1041,15 @@ export default function TrabajadoresPage() {
     <div className="w-full md:h-[calc(100vh-120px)] h-auto px-4 sm:px-6 lg:px-8 flex flex-col pb-4 mt-8">
       <div className="space-y-6 flex flex-col h-full">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center flex-shrink-0 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {currentView === 'workers' ? 'Gestión de Trabajadores' : 'Gestión de Contratos'}
-            </h1>
-            <p className="text-gray-600">
-              {currentView === 'workers'
-                ? 'Administra todos los trabajadores del sistema'
-                : 'Administra todos los contratos del sistema'
-              }
-            </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 sm:gap-0">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Trabajadores</h1>
+              <p className="text-gray-500">Administra el personal y sus contratos</p>
+            </div>
           </div>
 
           {/* Toggle entre vistas */}
@@ -1094,1371 +1092,291 @@ export default function TrabajadoresPage() {
         </div>
 
         {/* Vista de Trabajadores */}
-        {currentView === 'workers' && (
-          <>
-            {/* Estadísticas */}
-            <div className="flex-shrink-0">
-              <StatusFilterCards
-                selectedValue={cardFilter}
-                onSelect={(value) => {
-                  setCardFilter(value as 'all' | 'active' | 'inactive')
-                  // Scroll automático a la tabla de trabajadores
-                  setTimeout(() => {
-                    const workersTable = document.getElementById('workers-table')
-                    if (workersTable) {
-                      workersTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        {
+          currentView === 'workers' && (
+            <>
+              {/* Estadísticas */}
+              <div className="flex-shrink-0">
+                <StatusFilterCards
+                  selectedValue={cardFilter}
+                  onSelect={(value) => {
+                    setCardFilter(value as 'all' | 'active' | 'inactive')
+                    // Scroll automático a la tabla de trabajadores
+                    setTimeout(() => {
+                      const workersTable = document.getElementById('workers-table')
+                      if (workersTable) {
+                        workersTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
+                    }, 100)
+                  }}
+                  defaultOption={{
+                    value: 'active',
+                    label: 'Activos',
+                    icon: UserCheck,
+                    count: activeWorkers,
+                    activeColor: 'emerald-400',
+                    activeBg: 'emerald-900/30',
+                    activeBorder: 'emerald-500'
+                  }}
+                  options={[
+                    {
+                      value: 'all',
+                      label: 'Todos',
+                      icon: Layers,
+                      count: totalWorkers,
+                      activeColor: 'blue-400',
+                      activeBg: 'blue-900/30',
+                      activeBorder: 'blue-500'
+                    },
+                    {
+                      value: 'inactive',
+                      label: 'Inactivos',
+                      icon: UserX,
+                      count: inactiveWorkers,
+                      activeColor: 'red-400',
+                      activeBg: 'red-900/30',
+                      activeBorder: 'red-500'
                     }
-                  }, 100)
-                }}
-                defaultOption={{
-                  value: 'active',
-                  label: 'Activos',
-                  icon: UserCheck,
-                  count: activeWorkers,
-                  activeColor: 'emerald-400',
-                  activeBg: 'emerald-900/30',
-                  activeBorder: 'emerald-500'
-                }}
-                options={[
-                  {
-                    value: 'all',
-                    label: 'Todos',
-                    icon: Layers,
-                    count: totalWorkers,
-                    activeColor: 'blue-400',
-                    activeBg: 'blue-900/30',
-                    activeBorder: 'blue-500'
-                  },
-                  {
-                    value: 'inactive',
-                    label: 'Inactivos',
-                    icon: UserX,
-                    count: inactiveWorkers,
-                    activeColor: 'red-400',
-                    activeBg: 'red-900/30',
-                    activeBorder: 'red-500'
-                  }
-                ]}
-              />
-            </div>
-
-            {/* Filtros */}
-            <div className="space-y-4 flex-shrink-0">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="Buscar por nombre, RUT, email o teléfono..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={showWorkerTrash ? 'danger' : 'outline'}
-                    onClick={() => setShowWorkerTrash(!showWorkerTrash)}
-                    className={`flex items-center gap-2 transition-colors ${showWorkerTrash
-                      ? 'bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50'
-                      : 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white'
-                      }`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {showWorkerTrash ? 'Salir de Papelera' : 'Papelera'}
-                  </Button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Lista de trabajadores */}
-            <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-transparent sm:bg-white rounded-lg sm:shadow">
-
-              {/* VISTA MÓVIL: Tarjetas */}
-              <div className="md:hidden space-y-4 pb-4">
-                {filteredWorkers.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
-                    {searchTerm || statusFilter !== 'all'
-                      ? 'No se encontraron trabajadores con los filtros aplicados'
-                      : 'No hay trabajadores registrados'
-                    }
-                  </div>
-                ) : (
-                  filteredWorkers.map((worker) => (
-                    <div key={worker.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
-                            <User className="h-5 w-5 text-blue-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-slate-100">{worker.full_name}</h3>
-                            <p className="text-sm font-mono text-slate-400">{worker.rut}</p>
-                          </div>
-                        </div>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
-                          ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
-                          : 'bg-red-900/30 text-red-400 border border-red-500/30'
-                          }`}>
-                          {worker.is_active ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-slate-300 mb-4">
-                        {worker.email && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-400">Email:</span>
-                            <span className="text-blue-400">{worker.email}</span>
-                          </div>
-                        )}
-                        {worker.phone && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-400">Tel:</span>
-                            <span>{worker.phone}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-3 border-t border-slate-700">
-                        {!showWorkerTrash ? (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => handleEdit(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleShowContractHistory(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
-                              <History className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleShowEfficiency(worker)} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400 hover:bg-slate-700" title="Ver reporte de eficiencia">
-                              <TrendingUp className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDelete(worker.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-slate-700">
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* VISTA DESKTOP: Tabla */}
-              <div id="workers-table" className="hidden md:block overflow-auto h-full">
-                <table className="w-full relative">
-                  <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Trabajador
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        RUT
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Contacto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredWorkers.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                          {searchTerm || statusFilter !== 'all'
-                            ? 'No se encontraron trabajadores con los filtros aplicados'
-                            : 'No hay trabajadores registrados'
-                          }
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredWorkers.map((worker) => (
-                        <tr key={worker.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-blue-600" />
-                                </div>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {worker.full_name}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-mono text-gray-900">
-                              {worker.rut}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {worker.email && (
-                                <div className="text-blue-600">{worker.email}</div>
-                              )}
-                              {worker.phone && (
-                                <div className="text-gray-500">{worker.phone}</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                              }`}>
-                              {worker.is_active ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              {!showWorkerTrash ? (
-                                <>
-                                  <button
-                                    onClick={() => handleEdit(worker)}
-                                    className="text-blue-600 hover:text-blue-900"
-                                    title="Editar trabajador"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleShowContractHistory(worker)}
-                                    className="text-blue-600 hover:text-blue-900"
-                                    title="Ver historial de contratos"
-                                  >
-                                    <History className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleShowEfficiency(worker)}
-                                    className="text-amber-600 hover:text-amber-800"
-                                    title="Ver reporte de eficiencia"
-                                  >
-                                    <TrendingUp className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(worker.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                    title="Eliminar trabajador"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })}
-                                    className="text-green-600 hover:text-green-900"
-                                    title="Restaurar trabajador"
-                                  >
-                                    <RotateCcw className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })}
-                                    className="text-red-600 hover:text-red-900"
-                                    title="Eliminar permanentemente"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Modal de creación/edición */}
-            <Modal
-              isOpen={showCreateModal || !!editingWorker}
-              onClose={handleCloseModal}
-              title={editingWorker ? 'Editar Trabajador' : 'Nuevo Trabajador'}
-              className="modal_trabajadores"
-            >
-              <WorkerForm
-                worker={editingWorker}
-                initialData={initialWorkerData}
-                onSave={handleSave}
-                onCancel={handleCloseModal}
-              />
-            </Modal>
-
-            {/* Modal de generación de contratos */}
-          </>
-        )}
-
-        {/* Vista de Contratos */}
-        {currentView === 'contracts' && (
-          <>
-            {/* Estadísticas de contratos */}
-            <div className="flex-shrink-0">
-              <StatusFilterCards
-                selectedValue={contractCardFilter}
-                onSelect={(value) => {
-                  const filterValue = value as 'all' | 'active' | 'finalized'
-                  if (contractCardFilter === filterValue) {
-                    setContractCardFilter('all')
-                    setContractStatusFilter('all')
-                  } else {
-                    setContractCardFilter(filterValue)
-                    // Actualizar el select de estado según la tarjeta clickeada
-                    if (filterValue === 'active') {
-                      setContractStatusFilter('activo')
-                    } else if (filterValue === 'finalized') {
-                      setContractStatusFilter('finalizado')
-                    } else {
-                      setContractStatusFilter('all')
-                    }
-                  }
-
-                  // Resetear paginación
-                  setCurrentPage(1)
-
-                  // Scroll automático a la tabla de contratos
-                  setTimeout(() => {
-                    const contractsTable = document.getElementById('contracts-table')
-                    if (contractsTable) {
-                      contractsTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                    }
-                  }, 100)
-                }}
-                defaultOption={{
-                  value: 'active',
-                  label: 'Activos',
-                  icon: UserCheck,
-                  count: activeContracts,
-                  activeColor: 'emerald-400',
-                  activeBg: 'emerald-900/30',
-                  activeBorder: 'emerald-500'
-                }}
-                options={[
-                  {
-                    value: 'all',
-                    label: 'Todos',
-                    icon: Layers,
-                    count: totalContracts,
-                    activeColor: 'blue-400',
-                    activeBg: 'blue-900/30',
-                    activeBorder: 'blue-500'
-                  },
-                  {
-                    value: 'finalized',
-                    label: 'Finalizados',
-                    icon: UserX,
-                    count: finalizedContracts,
-                    activeColor: 'red-400',
-                    activeBg: 'red-900/30',
-                    activeBorder: 'red-500'
-                  }
-                ]}
-              />
-            </div>
-
-
-            {/* Filtros para contratos */}
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-between mb-4 flex-shrink-0">
-              <div className="flex-1 max-w-md">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
-                    placeholder="Buscar contratos..."
-                    value={contractSearchTerm}
-                    onChange={(e) => setContractSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsFilterSidebarOpen(true)}
-                  className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
-                >
-                  <Filter className="w-4 h-4" />
-                  Filtros
-                  {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
-                    <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
-                      !
-                    </span>
-                  )}
-                </Button>
-
-                <Button
-                  variant={showTrash ? 'danger' : 'outline'}
-                  onClick={() => setShowTrash(!showTrash)}
-                  className={`flex items-center gap-2 transition-colors ${showTrash
-                    ? 'bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50'
-                    : 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white'
-                    }`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {showTrash ? 'Salir de Papelera' : 'Papelera'}
-                </Button>
-
-                {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setContractProjectFilter('all')
-                      setContractWorkerFilter('all')
-                      setContractStatusFilter('all')
-                      setContractTypeButtonFilter('all')
-                      setContractDateFilter('')
-                    }}
-                    className="text-slate-400 hover:text-white hover:bg-slate-800"
-                    title="Limpiar filtros"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <ContractFiltersSidebar
-              isOpen={isFilterSidebarOpen}
-              onClose={() => setIsFilterSidebarOpen(false)}
-              currentProjectFilter={contractProjectFilter}
-              onProjectFilterChange={setContractProjectFilter}
-              currentWorkerFilter={contractWorkerFilter}
-              onWorkerFilterChange={handleContractWorkerFilterChange}
-              currentStatusFilter={contractStatusFilter}
-              onStatusFilterChange={handleContractStatusSelectChange}
-              currentTypeFilter={contractTypeButtonFilter as 'all' | 'a_trato' | 'por_dia'}
-              onTypeFilterChange={handleContractTypeButtonFilter}
-              currentDateFilter={contractDateFilter}
-              onDateFilterChange={setContractDateFilter}
-              projects={projects}
-              workers={workers}
-            />
-
-            {/* Lista de contratos */}
-            <div className="bg-transparent sm:bg-white rounded-lg sm:shadow flex-1 overflow-hidden flex flex-col min-h-0">
-
-              {/* VISTA MÓVIL: Tarjetas de Contratos */}
-              <div className="md:hidden space-y-4 pb-4">
-                {paginatedContracts.length === 0 ? (
-                  <div className="text-center py-12 text-slate-400 bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
-                    No hay contratos registrados
-                  </div>
-                ) : (
-                  paginatedContracts.map((contract) => (
-                    <div key={contract.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h4 className="font-medium text-slate-100">{contract.worker_name || 'Trabajador no encontrado'}</h4>
-                          <p className="text-xs text-blue-400">{contract.project_name || 'Proyecto no encontrado'}</p>
-                        </div>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
-                          ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
-                          : contract.status === 'finalizado'
-                            ? 'bg-red-900/30 text-red-400 border border-red-500/30'
-                            : 'bg-slate-700 text-slate-300 border border-slate-600'
-                          }`}>
-                          {contract.status === 'activo' ? 'Activo' :
-                            contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-slate-300 mb-4">
-                        <div className="flex justify-between">
-                          <span className="text-xs text-slate-400">Tipo:</span>
-                          <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.contract_type === 'por_dia'
-                            ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30'
-                            : 'bg-orange-900/30 text-orange-400 border border-orange-500/30'
-                            }`}>
-                            {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-xs text-slate-400">Categoría:</span>
-                          <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.is_renovacion
-                            ? 'bg-purple-900/30 text-purple-400 border border-purple-500/30'
-                            : 'bg-cyan-900/30 text-cyan-400 border border-cyan-500/30'
-                            }`}>
-                            {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center bg-slate-900/50 p-2 rounded border border-slate-700/50">
-                          <span className="text-xs text-slate-400">Periodo:</span>
-                          <span className="text-xs font-medium text-slate-200">
-                            {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-3 border-t border-slate-700 flex-wrap">
-                        {!showTrash ? (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => handleEditContract(contract)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleGenerateDocuments(contract)} className="h-8 w-8 p-0 text-green-400 hover:text-green-300 hover:bg-slate-700">
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-slate-700">
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteContract(contract.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-slate-700">
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* VISTA DESKTOP: Tabla */}
-              <div id="contracts-table" className="hidden md:block overflow-auto h-full">
-                <table className="w-full relative">
-                  <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Trabajador
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Proyecto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Período
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Categoría
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Tipo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedContracts.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                          No hay contratos registrados
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedContracts.map((contract) => (
-                        <tr key={contract.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {contract.worker_name || 'Trabajador no encontrado'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {contract.project_name || 'Proyecto no encontrado'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.is_renovacion
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-cyan-100 text-cyan-800'
-                              }`}>
-                              {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.contract_type === 'por_dia'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-orange-100 text-orange-800'
-                              }`}>
-                              {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
-                              ? 'bg-green-100 text-green-800'
-                              : contract.status === 'finalizado'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-100 text-gray-800'
-                              }`}>
-                              {contract.status === 'activo' ? 'Activo' :
-                                contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              {!showTrash ? (
-                                <>
-                                  <button
-                                    onClick={() => handleEditContract(contract)}
-                                    className="text-blue-600 hover:text-blue-900"
-                                    title="Editar contrato"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleGenerateDocuments(contract)}
-                                    className="text-green-600 hover:text-green-900"
-                                    title="Generar documentos completos (Contrato + Pacto de Horas)"
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleGenerateHoursOnly(contract)}
-                                    className="text-purple-600 hover:text-purple-900"
-                                    title="Generar solo Pacto de Horas (renovación cada 3 meses)"
-                                  >
-                                    <Clock className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteContract(contract.id)}
-                                    className="text-red-600 hover:text-red-900"
-                                    title="Eliminar contrato"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })}
-                                    className="text-green-600 hover:text-green-900"
-                                    title="Restaurar contrato"
-                                  >
-                                    <RotateCcw className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })}
-                                    className="text-red-600 hover:text-red-900"
-                                    title="Eliminar permanentemente"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Controles de paginación */}
-              {filteredContracts.length > itemsPerPage && (
-                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
-                  <div className="flex-1 flex justify-between sm:hidden">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Anterior
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Siguiente
-                    </button>
-                  </div>
-                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
-                        <span className="font-medium">
-                          {Math.min(currentPage * itemsPerPage, filteredContracts.length)}
-                        </span>{' '}
-                        de <span className="font-medium">{filteredContracts.length}</span> contratos
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <ChevronLeft className="h-5 w-5" />
-                        </button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
-                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                              }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <ChevronRight className="h-5 w-5" />
-                        </button>
-                      </nav>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal de creación/edición de contrato */}
-            <Modal
-              isOpen={showCreateContractModal || !!editingContract}
-              onClose={handleCloseContractModal}
-              title={editingContract ? 'Editar Contrato' : 'Nuevo Contrato'}
-              className="modal_contratos_wide"
-            >
-              <form onSubmit={handleSaveContract}>
-                <div className="grid grid-cols-1 gap-8">
-                  {/* Información del Contrato */}
-                  <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
-                    <h3 className="text-lg font-medium text-slate-100 mb-4">Información del Contrato</h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {/* Primera fila: Trabajador y Proyecto */}
-                      <div className="md:col-span-1">
-                        <label htmlFor="worker_id" className="block text-sm font-medium text-slate-300 mb-2">
-                          Trabajador *
-                        </label>
-                        <select
-                          id="worker_id"
-                          name="worker_id"
-                          value={contractFormData.worker_id}
-                          onChange={handleContractFormChange}
-                          required
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Seleccionar trabajador...</option>
-                          {workers
-                            .filter(w => !w.is_deleted) // Solo excluir trabajadores eliminados
-                            .sort((a, b) => {
-                              // Ordenar: activos primero, inactivos al final
-                              if (a.is_active && !b.is_active) return -1
-                              if (!a.is_active && b.is_active) return 1
-                              return a.full_name.localeCompare(b.full_name)
-                            })
-                            .map(worker => (
-                              <option key={worker.id} value={worker.id}>
-                                {worker.full_name} - {worker.rut} {!worker.is_active ? '(Inactivo)' : ''}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-
-                      {/* Proyecto */}
-                      <div className="md:col-span-1">
-                        <label htmlFor="project_id" className="block text-sm font-medium text-slate-300 mb-2">
-                          Proyecto *
-                        </label>
-                        <select
-                          id="project_id"
-                          name="project_id"
-                          value={contractFormData.project_id}
-                          onChange={handleContractFormChange}
-                          required
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Seleccionar proyecto...</option>
-                          {projects.map(project => (
-                            <option key={project.id} value={project.id}>
-                              {project.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Segunda fila: Fechas y Checkbox en 3 columnas */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
-                      {/* Fecha de Inicio */}
-                      <div className="date-field-container">
-                        <label htmlFor="fecha_inicio" className="block text-sm font-medium text-slate-300 mb-2">
-                          Fecha de Inicio *
-                        </label>
-                        <input
-                          type="date"
-                          id="fecha_inicio"
-                          name="fecha_inicio"
-                          value={contractFormData.fecha_inicio}
-                          onChange={handleContractFormChange}
-                          required
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      {/* Fecha de Término */}
-                      <div className="date-field-container">
-                        <label htmlFor="fecha_termino" className="block text-sm font-medium text-slate-300 mb-2">
-                          Fecha de Término *
-                        </label>
-                        <input
-                          type="date"
-                          id="fecha_termino"
-                          name="fecha_termino"
-                          value={contractFormData.fecha_termino}
-                          onChange={handleContractFormChange}
-                          required={!isIndefiniteContract}
-                          disabled={isIndefiniteContract}
-                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isIndefiniteContract ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                        />
-                      </div>
-
-                      {/* Contrato Indefinido */}
-                      <div>
-                        <label htmlFor="isIndefiniteContract" className="block text-sm font-medium text-slate-300 mb-2">
-                          Contrato Indefinido
-                        </label>
-                        <div className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-slate-100 flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="isIndefiniteContract"
-                            name="isIndefiniteContract"
-                            checked={isIndefiniteContract}
-                            onChange={handleContractFormChange}
-                            className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-500 rounded focus:ring-blue-500 focus:ring-2"
-                          />
-                          <span className="text-sm text-slate-300">
-                            {isIndefiniteContract ? 'Sí' : 'No'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tercera fila: Renovación y Fecha de Entrada */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-                      {/* Renovación */}
-                      <div>
-                        <label htmlFor="is_renovacion" className="block text-sm font-medium text-slate-300 mb-2">
-                          Renovación de Contrato
-                        </label>
-                        <div className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-slate-100 flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="is_renovacion"
-                            name="is_renovacion"
-                            checked={contractFormData.is_renovacion}
-                            onChange={handleContractFormChange}
-                            className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-500 rounded focus:ring-blue-500 focus:ring-2"
-                          />
-                          <span className="text-sm text-slate-300">
-                            {contractFormData.is_renovacion ? 'Sí' : 'No'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Marcar si este contrato es una renovación
-                        </p>
-                      </div>
-
-                      {/* Fecha de Entrada a la Empresa - Solo visible si es renovación */}
-                      {contractFormData.is_renovacion && (
-                        <div className="date-field-container">
-                          <label htmlFor="fecha_entrada_empresa" className="block text-sm font-medium text-slate-300 mb-2">
-                            Fecha de Entrada a la Empresa *
-                          </label>
-                          <input
-                            type="date"
-                            id="fecha_entrada_empresa"
-                            name="fecha_entrada_empresa"
-                            value={fechaEntradaEmpresa}
-                            onChange={(e) => setFechaEntradaEmpresa(e.target.value)}
-                            required
-                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <p className="text-xs text-slate-400 mt-1">
-                            Fecha del primer contrato en este proyecto
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Cuarta fila: Resto de campos */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-
-                      {/* Tipo de Contrato */}
-                      <div>
-                        <label htmlFor="contract_type" className="block text-sm font-medium text-slate-300 mb-2">
-                          Tipo de Contrato *
-                        </label>
-                        <select
-                          id="contract_type"
-                          name="contract_type"
-                          value={contractFormData.contract_type}
-                          onChange={handleContractFormChange}
-                          required
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Seleccionar tipo...</option>
-                          <option value="por_dia">Por día</option>
-                          <option value="a_trato">A trato</option>
-                        </select>
-                      </div>
-
-                      {/* Tarifa Diaria (solo si es por día) */}
-                      {contractFormData.contract_type === 'por_dia' && (
-                        <div>
-                          <label htmlFor="daily_rate" className="block text-sm font-medium text-slate-300 mb-2">
-                            Tarifa Diaria *
-                          </label>
-                          <input
-                            type="number"
-                            id="daily_rate"
-                            name="daily_rate"
-                            value={contractFormData.daily_rate}
-                            onChange={handleContractFormChange}
-                            min="0"
-                            step="1000"
-                            required
-                            placeholder="Ingrese la tarifa diaria"
-                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      )}
-
-                      {/* Estado */}
-                      <div>
-                        <label htmlFor="status" className="block text-sm font-medium text-slate-300 mb-2">
-                          Estado
-                        </label>
-                        <select
-                          id="status"
-                          name="status"
-                          value={contractFormData.status}
-                          onChange={handleContractFormChange}
-                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="activo">Activo</option>
-                          <option value="finalizado">Finalizado</option>
-                          <option value="cancelado">Cancelado</option>
-                        </select>
-                      </div>
-
-                      {/* Número de Contrato */}
-                      <div>
-                        <label htmlFor="contract_number" className="block text-sm font-medium text-slate-300 mb-2">
-                          Número de Contrato
-                        </label>
-                        <input
-                          type="text"
-                          id="contract_number"
-                          name="contract_number"
-                          value={contractFormData.contract_number}
-                          onChange={handleContractFormChange}
-                          placeholder={editingContract ? "Ej: CONT-2024-001 (opcional)" : "Se genera automáticamente"}
-                          readOnly={!editingContract}
-                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!editingContract ? 'opacity-75 cursor-not-allowed' : ''
-                            }`}
-                        />
-                        {!editingContract && (
-                          <p className="text-xs text-slate-400 mt-1">
-                            Se genera automáticamente al seleccionar el proyecto
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Notas */}
-                    <div className="mt-4">
-                      <label htmlFor="notes" className="block text-sm font-medium text-slate-300 mb-2">
-                        Notas Adicionales
-                      </label>
-                      <textarea
-                        id="notes"
-                        name="notes"
-                        value={contractFormData.notes}
-                        onChange={handleContractFormChange}
-                        rows={3}
-                        placeholder="Información adicional del contrato..."
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Historial de Contratos del Trabajador */}
-                {contractFormData.worker_id && (
-                  <div className="mt-6 bg-slate-700/40 p-4 rounded-lg border border-slate-600">
-                    <h3 className="text-lg font-medium text-slate-100 mb-4">
-                      Historial de Contratos
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-slate-600">
-                        <thead className="bg-slate-800/50">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
-                              Proyecto
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
-                              Período
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
-                              Categoría
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
-                              Tipo
-                            </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
-                              Estado
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-600">
-                          {contracts
-                            .filter(c => c.worker_id === parseInt(contractFormData.worker_id))
-                            .sort((a, b) => new Date(b.fecha_inicio).getTime() - new Date(a.fecha_inicio).getTime())
-                            .map((contract) => (
-                              <tr key={contract.id} className="hover:bg-slate-700/30">
-                                <td className="px-3 py-2 text-sm text-slate-100">
-                                  {contract.project_name}
-                                </td>
-                                <td className="px-3 py-2 text-sm text-slate-100">
-                                  <div className="text-xs">
-                                    {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
-                                  </div>
-                                </td>
-                                <td className="px-3 py-2 text-sm">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.is_renovacion
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : 'bg-cyan-100 text-cyan-800'
-                                    }`}>
-                                    {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-sm">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.contract_type === 'por_dia'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-orange-100 text-orange-800'
-                                    }`}>
-                                    {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-sm">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.status === 'activo'
-                                    ? 'bg-green-100 text-green-800'
-                                    : contract.status === 'finalizado'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                    {contract.status === 'activo' ? 'Activo' :
-                                      contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          {contracts.filter(c => c.worker_id === parseInt(contractFormData.worker_id)).length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="px-3 py-4 text-center text-slate-400 text-sm">
-                                Este trabajador no tiene contratos previos
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Botones */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-600">
-                  <button
-                    type="button"
-                    onClick={handleCloseContractModal}
-                    className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                  >
-                    {editingContract ? 'Actualizar Contrato' : 'Crear Contrato'}
-                  </button>
-                </div>
-              </form>
-            </Modal>
-          </>
-        )}
-
-        {/* Modal de Generación de Pacto de Horas */}
-        {showHoursModal && selectedContractForHours && (
-          <Modal
-            isOpen={showHoursModal}
-            onClose={handleCloseHoursModal}
-            title="Generar Pacto de Horas"
-            className="modal_pacto_horas"
-          >
-            <div className="space-y-4">
-              {/* Información del trabajador (solo lectura) */}
-              <div className="bg-slate-700/40 p-3 rounded-lg border border-slate-600">
-                <h3 className="text-xs font-semibold text-slate-300 mb-2 flex items-center">
-                  <User className="h-3.5 w-3.5 mr-1.5" />
-                  Información del Trabajador
-                </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-xs text-slate-400">Trabajador:</span>
-                    <p className="text-slate-100 font-medium truncate">
-                      {workers.find(w => w.id === selectedContractForHours.worker_id)?.full_name}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-400">RUT:</span>
-                    <p className="text-slate-100 font-medium">
-                      {workers.find(w => w.id === selectedContractForHours.worker_id)?.rut}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-400">Proyecto:</span>
-                    <p className="text-slate-100 font-medium truncate">
-                      {projects.find(p => p.id === selectedContractForHours.project_id)?.name}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-400">Contrato N°:</span>
-                    <p className="text-slate-100 font-medium">
-                      {selectedContractForHours.contract_number}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Selección de fechas del pacto */}
-              <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-600">
-                <h3 className="text-xs font-semibold text-slate-300 mb-2 flex items-center">
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  Período del Pacto de Horas
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="hours_fecha_inicio" className="block text-xs font-medium text-slate-300 mb-1.5">
-                      Fecha de Inicio *
-                    </label>
-                    <Input
-                      type="date"
-                      id="hours_fecha_inicio"
-                      value={hoursFormData.fecha_inicio}
-                      onChange={(e) => setHoursFormData(prev => ({ ...prev, fecha_inicio: e.target.value }))}
-                      required
-                      className="w-full text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="hours_fecha_termino" className="block text-xs font-medium text-slate-300 mb-1.5">
-                      Fecha de Término *
-                    </label>
-                    <Input
-                      type="date"
-                      id="hours_fecha_termino"
-                      value={hoursFormData.fecha_termino}
-                      onChange={(e) => setHoursFormData(prev => ({ ...prev, fecha_termino: e.target.value }))}
-                      required
-                      className="w-full text-sm"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400 mt-2">
-                  💡 Por ley, el pacto de horas tiene vigencia máxima de 3 meses.
-                </p>
-              </div>
-
-              {/* Resumen */}
-              {hoursFormData.fecha_inicio && hoursFormData.fecha_termino && (
-                <div className="bg-blue-900/20 border border-blue-700/50 p-3 rounded-lg">
-                  <h4 className="text-xs font-semibold text-blue-300 mb-1.5">📄 Resumen del Documento</h4>
-                  <p className="text-xs text-slate-300">
-                    Desde <strong>{formatDateToChilean(hoursFormData.fecha_inicio)}</strong> hasta <strong>{formatDateToChilean(hoursFormData.fecha_termino)}</strong>
-                  </p>
-                </div>
-              )}
-
-              {/* Botones de acción */}
-              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-600">
-                <button
-                  type="button"
-                  onClick={handleCloseHoursModal}
-                  className="px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmGenerateHours}
-                  disabled={!hoursFormData.fecha_inicio || !hoursFormData.fecha_termino}
-                  className="px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-md transition-colors flex items-center"
-                >
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  Generar Pacto
-                </button>
-              </div>
-            </div>
-          </Modal>
-        )}
-
-        {/* Modal de Historial de Contratos */}
-        {showContractHistoryModal && selectedWorkerForHistory && (
-          <Modal
-            isOpen={showContractHistoryModal}
-            onClose={handleCloseContractHistoryModal}
-            title={`Historial de Contratos - ${selectedWorkerForHistory.full_name}`}
-            className="modal_contratos_wide"
-          >
-            <div className="space-y-4">
-              {/* Información del trabajador */}
-              <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-slate-400">Nombre:</span>
-                    <p className="text-slate-100 font-medium">{selectedWorkerForHistory.full_name}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-slate-400">RUT:</span>
-                    <p className="text-slate-100 font-medium">{selectedWorkerForHistory.rut}</p>
-                  </div>
-                </div>
+                  ]}
+                />
               </div>
 
               {/* Filtros */}
-              <div className="flex items-center space-x-4">
-                <label className="text-sm font-medium text-slate-300">Filtrar por estado:</label>
-                <select
-                  value={contractHistoryFilter}
-                  onChange={(e) => setContractHistoryFilter(e.target.value)}
-                  className="px-3 py-1 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">Todos</option>
-                  <option value="activo">Activos</option>
-                  <option value="finalizado">Finalizados</option>
-                  <option value="cancelado">Cancelados</option>
-                </select>
+              <div className="space-y-4 flex-shrink-0">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por nombre, RUT, email o teléfono..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={showWorkerTrash ? 'danger' : 'outline'}
+                      onClick={() => setShowWorkerTrash(!showWorkerTrash)}
+                      className={`flex items-center gap-2 transition-colors ${showWorkerTrash
+                        ? 'bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50'
+                        : 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white'
+                        }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {showWorkerTrash ? 'Salir de Papelera' : 'Papelera'}
+                    </Button>
+                  </div>
+                </div>
+
               </div>
 
-              {/* Tabla de contratos */}
-              <div className="bg-slate-800 rounded-lg border border-slate-600 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-600">
-                    <thead className="bg-slate-700">
+              {/* Lista de trabajadores */}
+              <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-transparent sm:bg-white rounded-lg sm:shadow">
+
+                {/* VISTA MÓVIL: Tarjetas */}
+                <div className="md:hidden space-y-4 pb-4">
+                  {filteredWorkers.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
+                      {searchTerm || statusFilter !== 'all'
+                        ? 'No se encontraron trabajadores con los filtros aplicados'
+                        : 'No hay trabajadores registrados'
+                      }
+                    </div>
+                  ) : (
+                    filteredWorkers.map((worker) => (
+                      <div key={worker.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-blue-900/30 flex items-center justify-center flex-shrink-0 border border-blue-500/30">
+                              <User className="h-5 w-5 text-blue-400" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-slate-100">{worker.full_name}</h3>
+                              <p className="text-sm font-mono text-slate-400">{worker.rut}</p>
+                            </div>
+                          </div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
+                            ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-red-900/30 text-red-400 border border-red-500/30'
+                            }`}>
+                            {worker.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-sm text-slate-300 mb-4">
+                          {worker.email && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400">Email:</span>
+                              <span className="text-blue-400">{worker.email}</span>
+                            </div>
+                          )}
+                          {worker.phone && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-400">Tel:</span>
+                              <span>{worker.phone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                          {!showWorkerTrash ? (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => handleEdit(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleShowContractHistory(worker)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
+                                <History className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleShowEfficiency(worker)} className="h-8 w-8 p-0 text-amber-500 hover:text-amber-400 hover:bg-slate-700" title="Ver reporte de eficiencia">
+                                <TrendingUp className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleDelete(worker.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-slate-700">
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* VISTA DESKTOP: Tabla */}
+                <div id="workers-table" className="hidden md:block overflow-auto h-full">
+                  <table className="w-full relative">
+                    <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                          Contrato
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Trabajador
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                          Proyecto
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          RUT
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                          Fechas
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Contacto
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                          Duración
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                          Categoría
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
-                          Tipo
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
                           Estado
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
+                          Acciones
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-slate-800 divide-y divide-slate-600">
-                      {getWorkerContracts().length === 0 ? (
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredWorkers.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                            No se encontraron contratos
+                          <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                            {searchTerm || statusFilter !== 'all'
+                              ? 'No se encontraron trabajadores con los filtros aplicados'
+                              : 'No hay trabajadores registrados'
+                            }
                           </td>
                         </tr>
                       ) : (
-                        getWorkerContracts().map((contract) => (
-                          <tr key={contract.id} className="hover:bg-slate-700/50">
-                            <td className="px-4 py-3 text-sm text-slate-100 font-medium">
-                              {contract.contract_number || 'N/A'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-slate-100">
-                              {contract.project_name}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-slate-100">
-                              <div>
-                                <div>Inicio: {contract.fecha_inicio}</div>
-                                <div>
-                                  Término: {contract.fecha_termino || 'Indefinido'}
+                        filteredWorkers.map((worker) => (
+                          <tr key={worker.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <User className="h-5 w-5 text-blue-600" />
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {worker.full_name}
+                                  </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm text-slate-100">
-                              <span className="text-xs font-medium text-slate-300">
-                                {calculateContractDuration(contract.fecha_inicio, contract.fecha_termino)}
-                              </span>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-mono text-gray-900">
+                                {worker.rut}
+                              </div>
                             </td>
-                            <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.is_renovacion
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-cyan-100 text-cyan-800'
-                                }`}>
-                                {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
-                              </span>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {worker.email && (
+                                  <div className="text-blue-600">{worker.email}</div>
+                                )}
+                                {worker.phone && (
+                                  <div className="text-gray-500">{worker.phone}</div>
+                                )}
+                              </div>
                             </td>
-                            <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.contract_type === 'por_dia'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-orange-100 text-orange-800'
-                                }`}>
-                                {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.status === 'activo'
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
                                 ? 'bg-green-100 text-green-800'
-                                : contract.status === 'finalizado'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                : 'bg-red-100 text-red-800'
                                 }`}>
-                                {contract.status === 'activo' ? 'Activo' :
-                                  contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                                {worker.is_active ? 'Activo' : 'Inactivo'}
                               </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                {!showWorkerTrash ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleEdit(worker)}
+                                      className="text-blue-600 hover:text-blue-900"
+                                      title="Editar trabajador"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleShowContractHistory(worker)}
+                                      className="text-blue-600 hover:text-blue-900"
+                                      title="Ver historial de contratos"
+                                    >
+                                      <History className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleShowEfficiency(worker)}
+                                      className="text-amber-600 hover:text-amber-800"
+                                      title="Ver reporte de eficiencia"
+                                    >
+                                      <TrendingUp className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(worker.id)}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Eliminar trabajador"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })}
+                                      className="text-green-600 hover:text-green-900"
+                                      title="Restaurar trabajador"
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Eliminar permanentemente"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -2468,18 +1386,1106 @@ export default function TrabajadoresPage() {
                 </div>
               </div>
 
-              {/* Botón de cerrar */}
-              <div className="flex justify-end pt-4 border-t border-slate-600">
-                <button
-                  onClick={handleCloseContractHistoryModal}
-                  className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
-                >
-                  Cerrar
-                </button>
+              {/* Modal de creación/edición */}
+              <Modal
+                isOpen={showCreateModal || !!editingWorker}
+                onClose={handleCloseModal}
+                title={editingWorker ? 'Editar Trabajador' : 'Nuevo Trabajador'}
+                className="modal_trabajadores"
+              >
+                <WorkerForm
+                  worker={editingWorker}
+                  initialData={initialWorkerData}
+                  onSave={handleSave}
+                  onCancel={handleCloseModal}
+                />
+              </Modal>
+
+              {/* Modal de generación de contratos */}
+            </>
+          )
+        }
+
+        {/* Vista de Contratos */}
+        {
+          currentView === 'contracts' && (
+            <>
+              {/* Estadísticas de contratos */}
+              <div className="flex-shrink-0">
+                <StatusFilterCards
+                  selectedValue={contractCardFilter}
+                  onSelect={(value) => {
+                    const filterValue = value as 'all' | 'active' | 'finalized'
+                    if (contractCardFilter === filterValue) {
+                      setContractCardFilter('all')
+                      setContractStatusFilter('all')
+                    } else {
+                      setContractCardFilter(filterValue)
+                      // Actualizar el select de estado según la tarjeta clickeada
+                      if (filterValue === 'active') {
+                        setContractStatusFilter('activo')
+                      } else if (filterValue === 'finalized') {
+                        setContractStatusFilter('finalizado')
+                      } else {
+                        setContractStatusFilter('all')
+                      }
+                    }
+
+                    // Resetear paginación
+                    setCurrentPage(1)
+
+                    // Scroll automático a la tabla de contratos
+                    setTimeout(() => {
+                      const contractsTable = document.getElementById('contracts-table')
+                      if (contractsTable) {
+                        contractsTable.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
+                    }, 100)
+                  }}
+                  defaultOption={{
+                    value: 'active',
+                    label: 'Activos',
+                    icon: UserCheck,
+                    count: activeContracts,
+                    activeColor: 'emerald-400',
+                    activeBg: 'emerald-900/30',
+                    activeBorder: 'emerald-500'
+                  }}
+                  options={[
+                    {
+                      value: 'all',
+                      label: 'Todos',
+                      icon: Layers,
+                      count: totalContracts,
+                      activeColor: 'blue-400',
+                      activeBg: 'blue-900/30',
+                      activeBorder: 'blue-500'
+                    },
+                    {
+                      value: 'finalized',
+                      label: 'Finalizados',
+                      icon: UserX,
+                      count: finalizedContracts,
+                      activeColor: 'red-400',
+                      activeBg: 'red-900/30',
+                      activeBorder: 'red-500'
+                    }
+                  ]}
+                />
               </div>
-            </div>
-          </Modal>
-        )}
+
+
+              {/* Filtros para contratos */}
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-between mb-4 flex-shrink-0">
+                <div className="flex-1 max-w-md">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Buscar contratos..."
+                      value={contractSearchTerm}
+                      onChange={(e) => setContractSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsFilterSidebarOpen(true)}
+                    className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Filtros
+                    {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
+                      <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
+                        !
+                      </span>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant={showTrash ? 'danger' : 'outline'}
+                    onClick={() => setShowTrash(!showTrash)}
+                    className={`flex items-center gap-2 transition-colors ${showTrash
+                      ? 'bg-red-900/30 text-red-400 border-red-800 hover:bg-red-900/50'
+                      : 'border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white'
+                      }`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {showTrash ? 'Salir de Papelera' : 'Papelera'}
+                  </Button>
+
+                  {(contractProjectFilter !== 'all' || contractWorkerFilter !== 'all' || contractTypeButtonFilter !== 'all' || contractDateFilter !== '') && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setContractProjectFilter('all')
+                        setContractWorkerFilter('all')
+                        setContractStatusFilter('all')
+                        setContractTypeButtonFilter('all')
+                        setContractDateFilter('')
+                      }}
+                      className="text-slate-400 hover:text-white hover:bg-slate-800"
+                      title="Limpiar filtros"
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <ContractFiltersSidebar
+                isOpen={isFilterSidebarOpen}
+                onClose={() => setIsFilterSidebarOpen(false)}
+                currentProjectFilter={contractProjectFilter}
+                onProjectFilterChange={setContractProjectFilter}
+                currentWorkerFilter={contractWorkerFilter}
+                onWorkerFilterChange={handleContractWorkerFilterChange}
+                currentStatusFilter={contractStatusFilter}
+                onStatusFilterChange={handleContractStatusSelectChange}
+                currentTypeFilter={contractTypeButtonFilter as 'all' | 'a_trato' | 'por_dia'}
+                onTypeFilterChange={handleContractTypeButtonFilter}
+                currentDateFilter={contractDateFilter}
+                onDateFilterChange={setContractDateFilter}
+                projects={projects}
+                workers={workers}
+              />
+
+              {/* Lista de contratos */}
+              <div className="bg-transparent sm:bg-white rounded-lg sm:shadow flex-1 overflow-hidden flex flex-col min-h-0">
+
+                {/* VISTA MÓVIL: Tarjetas de Contratos */}
+                <div className="md:hidden space-y-4 pb-4">
+                  {paginatedContracts.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
+                      No hay contratos registrados
+                    </div>
+                  ) : (
+                    paginatedContracts.map((contract) => (
+                      <div key={contract.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-medium text-slate-100">{contract.worker_name || 'Trabajador no encontrado'}</h4>
+                            <p className="text-xs text-blue-400">{contract.project_name || 'Proyecto no encontrado'}</p>
+                          </div>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
+                            ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30'
+                            : contract.status === 'finalizado'
+                              ? 'bg-red-900/30 text-red-400 border border-red-500/30'
+                              : 'bg-slate-700 text-slate-300 border border-slate-600'
+                            }`}>
+                            {contract.status === 'activo' ? 'Activo' :
+                              contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-sm text-slate-300 mb-4">
+                          <div className="flex justify-between">
+                            <span className="text-xs text-slate-400">Tipo:</span>
+                            <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.contract_type === 'por_dia'
+                              ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30'
+                              : 'bg-orange-900/30 text-orange-400 border border-orange-500/30'
+                              }`}>
+                              {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-xs text-slate-400">Categoría:</span>
+                            <span className={`inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full ${contract.is_renovacion
+                              ? 'bg-purple-900/30 text-purple-400 border border-purple-500/30'
+                              : 'bg-cyan-900/30 text-cyan-400 border border-cyan-500/30'
+                              }`}>
+                              {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                            <span className="text-xs text-slate-400">Periodo:</span>
+                            <span className="text-xs font-medium text-slate-200">
+                              {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-3 border-t border-slate-700 flex-wrap">
+                          {!showTrash ? (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => handleEditContract(contract)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleGenerateDocuments(contract)} className="h-8 w-8 p-0 text-green-400 hover:text-green-300 hover:bg-slate-700">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-slate-700">
+                                <Clock className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleDeleteContract(contract.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-emerald-400 hover:text-emerald-300 hover:bg-slate-700">
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* VISTA DESKTOP: Tabla */}
+                <div id="contracts-table" className="hidden md:block overflow-auto h-full">
+                  <table className="w-full relative">
+                    <thead className="bg-slate-800 border border-slate-600 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Trabajador
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Proyecto
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Período
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Categoría
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Tipo
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Estado
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {paginatedContracts.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                            No hay contratos registrados
+                          </td>
+                        </tr>
+                      ) : (
+                        paginatedContracts.map((contract) => (
+                          <tr key={contract.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {contract.worker_name || 'Trabajador no encontrado'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {contract.project_name || 'Proyecto no encontrado'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.is_renovacion
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-cyan-100 text-cyan-800'
+                                }`}>
+                                {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.contract_type === 'por_dia'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-orange-100 text-orange-800'
+                                }`}>
+                                {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contract.status === 'activo'
+                                ? 'bg-green-100 text-green-800'
+                                : contract.status === 'finalizado'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                {contract.status === 'activo' ? 'Activo' :
+                                  contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex space-x-2">
+                                {!showTrash ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleEditContract(contract)}
+                                      className="text-blue-600 hover:text-blue-900"
+                                      title="Editar contrato"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleGenerateDocuments(contract)}
+                                      className="text-green-600 hover:text-green-900"
+                                      title="Generar documentos completos (Contrato + Pacto de Horas)"
+                                    >
+                                      <FileText className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleGenerateHoursOnly(contract)}
+                                      className="text-purple-600 hover:text-purple-900"
+                                      title="Generar solo Pacto de Horas (renovación cada 3 meses)"
+                                    >
+                                      <Clock className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteContract(contract.id)}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Eliminar contrato"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => setConfirmRestoreContractState({ isOpen: true, contractId: contract.id })}
+                                      className="text-green-600 hover:text-green-900"
+                                      title="Restaurar contrato"
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmHardDeleteContractState({ isOpen: true, contractId: contract.id })}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Eliminar permanentemente"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Controles de paginación */}
+                {filteredContracts.length > itemsPerPage && (
+                  <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                    <div className="flex-1 flex justify-between sm:hidden">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Anterior
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm text-gray-700">
+                          Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
+                          <span className="font-medium">
+                            {Math.min(currentPage * itemsPerPage, filteredContracts.length)}
+                          </span>{' '}
+                          de <span className="font-medium">{filteredContracts.length}</span> contratos
+                        </p>
+                      </div>
+                      <div>
+                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                          <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="h-5 w-5" />
+                          </button>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+                        </nav>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal de creación/edición de contrato */}
+              <Modal
+                isOpen={showCreateContractModal || !!editingContract}
+                onClose={handleCloseContractModal}
+                title={editingContract ? 'Editar Contrato' : 'Nuevo Contrato'}
+                className="modal_contratos_wide"
+              >
+                <form onSubmit={handleSaveContract}>
+                  <div className="grid grid-cols-1 gap-8">
+                    {/* Información del Contrato */}
+                    <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+                      <h3 className="text-lg font-medium text-slate-100 mb-4">Información del Contrato</h3>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Primera fila: Trabajador y Proyecto */}
+                        <div className="md:col-span-1">
+                          <label htmlFor="worker_id" className="block text-sm font-medium text-slate-300 mb-2">
+                            Trabajador *
+                          </label>
+                          <select
+                            id="worker_id"
+                            name="worker_id"
+                            value={contractFormData.worker_id}
+                            onChange={handleContractFormChange}
+                            required
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Seleccionar trabajador...</option>
+                            {workers
+                              .filter(w => !w.is_deleted) // Solo excluir trabajadores eliminados
+                              .sort((a, b) => {
+                                // Ordenar: activos primero, inactivos al final
+                                if (a.is_active && !b.is_active) return -1
+                                if (!a.is_active && b.is_active) return 1
+                                return a.full_name.localeCompare(b.full_name)
+                              })
+                              .map(worker => (
+                                <option key={worker.id} value={worker.id}>
+                                  {worker.full_name} - {worker.rut} {!worker.is_active ? '(Inactivo)' : ''}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+
+                        {/* Proyecto */}
+                        <div className="md:col-span-1">
+                          <label htmlFor="project_id" className="block text-sm font-medium text-slate-300 mb-2">
+                            Proyecto *
+                          </label>
+                          <select
+                            id="project_id"
+                            name="project_id"
+                            value={contractFormData.project_id}
+                            onChange={handleContractFormChange}
+                            required
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Seleccionar proyecto...</option>
+                            {projects.map(project => (
+                              <option key={project.id} value={project.id}>
+                                {project.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Segunda fila: Fechas y Checkbox en 3 columnas */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
+                        {/* Fecha de Inicio */}
+                        <div className="date-field-container">
+                          <label htmlFor="fecha_inicio" className="block text-sm font-medium text-slate-300 mb-2">
+                            Fecha de Inicio *
+                          </label>
+                          <input
+                            type="date"
+                            id="fecha_inicio"
+                            name="fecha_inicio"
+                            value={contractFormData.fecha_inicio}
+                            onChange={handleContractFormChange}
+                            required
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        {/* Fecha de Término */}
+                        <div className="date-field-container">
+                          <label htmlFor="fecha_termino" className="block text-sm font-medium text-slate-300 mb-2">
+                            Fecha de Término *
+                          </label>
+                          <input
+                            type="date"
+                            id="fecha_termino"
+                            name="fecha_termino"
+                            value={contractFormData.fecha_termino}
+                            onChange={handleContractFormChange}
+                            required={!isIndefiniteContract}
+                            disabled={isIndefiniteContract}
+                            className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${isIndefiniteContract ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                          />
+                        </div>
+
+                        {/* Contrato Indefinido */}
+                        <div>
+                          <label htmlFor="isIndefiniteContract" className="block text-sm font-medium text-slate-300 mb-2">
+                            Contrato Indefinido
+                          </label>
+                          <div className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-slate-100 flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="isIndefiniteContract"
+                              name="isIndefiniteContract"
+                              checked={isIndefiniteContract}
+                              onChange={handleContractFormChange}
+                              className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-500 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <span className="text-sm text-slate-300">
+                              {isIndefiniteContract ? 'Sí' : 'No'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tercera fila: Renovación y Fecha de Entrada */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+                        {/* Renovación */}
+                        <div>
+                          <label htmlFor="is_renovacion" className="block text-sm font-medium text-slate-300 mb-2">
+                            Renovación de Contrato
+                          </label>
+                          <div className="w-full px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-slate-100 flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="is_renovacion"
+                              name="is_renovacion"
+                              checked={contractFormData.is_renovacion}
+                              onChange={handleContractFormChange}
+                              className="h-4 w-4 text-blue-600 bg-slate-700 border-slate-500 rounded focus:ring-blue-500 focus:ring-2"
+                            />
+                            <span className="text-sm text-slate-300">
+                              {contractFormData.is_renovacion ? 'Sí' : 'No'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Marcar si este contrato es una renovación
+                          </p>
+                        </div>
+
+                        {/* Fecha de Entrada a la Empresa - Solo visible si es renovación */}
+                        {contractFormData.is_renovacion && (
+                          <div className="date-field-container">
+                            <label htmlFor="fecha_entrada_empresa" className="block text-sm font-medium text-slate-300 mb-2">
+                              Fecha de Entrada a la Empresa *
+                            </label>
+                            <input
+                              type="date"
+                              id="fecha_entrada_empresa"
+                              name="fecha_entrada_empresa"
+                              value={fechaEntradaEmpresa}
+                              onChange={(e) => setFechaEntradaEmpresa(e.target.value)}
+                              required
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p className="text-xs text-slate-400 mt-1">
+                              Fecha del primer contrato en este proyecto
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Cuarta fila: Resto de campos */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+
+                        {/* Tipo de Contrato */}
+                        <div>
+                          <label htmlFor="contract_type" className="block text-sm font-medium text-slate-300 mb-2">
+                            Tipo de Contrato *
+                          </label>
+                          <select
+                            id="contract_type"
+                            name="contract_type"
+                            value={contractFormData.contract_type}
+                            onChange={handleContractFormChange}
+                            required
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="por_dia">Por día</option>
+                            <option value="a_trato">A trato</option>
+                          </select>
+                        </div>
+
+                        {/* Tarifa Diaria (solo si es por día) */}
+                        {contractFormData.contract_type === 'por_dia' && (
+                          <div>
+                            <label htmlFor="daily_rate" className="block text-sm font-medium text-slate-300 mb-2">
+                              Tarifa Diaria *
+                            </label>
+                            <input
+                              type="number"
+                              id="daily_rate"
+                              name="daily_rate"
+                              value={contractFormData.daily_rate}
+                              onChange={handleContractFormChange}
+                              min="0"
+                              step="1000"
+                              required
+                              placeholder="Ingrese la tarifa diaria"
+                              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+
+                        {/* Estado */}
+                        <div>
+                          <label htmlFor="status" className="block text-sm font-medium text-slate-300 mb-2">
+                            Estado
+                          </label>
+                          <select
+                            id="status"
+                            name="status"
+                            value={contractFormData.status}
+                            onChange={handleContractFormChange}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="activo">Activo</option>
+                            <option value="finalizado">Finalizado</option>
+                            <option value="cancelado">Cancelado</option>
+                          </select>
+                        </div>
+
+                        {/* Número de Contrato */}
+                        <div>
+                          <label htmlFor="contract_number" className="block text-sm font-medium text-slate-300 mb-2">
+                            Número de Contrato
+                          </label>
+                          <input
+                            type="text"
+                            id="contract_number"
+                            name="contract_number"
+                            value={contractFormData.contract_number}
+                            onChange={handleContractFormChange}
+                            placeholder={editingContract ? "Ej: CONT-2024-001 (opcional)" : "Se genera automáticamente"}
+                            readOnly={!editingContract}
+                            className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${!editingContract ? 'opacity-75 cursor-not-allowed' : ''
+                              }`}
+                          />
+                          {!editingContract && (
+                            <p className="text-xs text-slate-400 mt-1">
+                              Se genera automáticamente al seleccionar el proyecto
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Notas */}
+                      <div className="mt-4">
+                        <label htmlFor="notes" className="block text-sm font-medium text-slate-300 mb-2">
+                          Notas Adicionales
+                        </label>
+                        <textarea
+                          id="notes"
+                          name="notes"
+                          value={contractFormData.notes}
+                          onChange={handleContractFormChange}
+                          rows={3}
+                          placeholder="Información adicional del contrato..."
+                          className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Historial de Contratos del Trabajador */}
+                  {contractFormData.worker_id && (
+                    <div className="mt-6 bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+                      <h3 className="text-lg font-medium text-slate-100 mb-4">
+                        Historial de Contratos
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-slate-600">
+                          <thead className="bg-slate-800/50">
+                            <tr>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
+                                Proyecto
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
+                                Período
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
+                                Categoría
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
+                                Tipo
+                              </th>
+                              <th className="px-3 py-2 text-left text-xs font-medium text-slate-300 uppercase">
+                                Estado
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-600">
+                            {contracts
+                              .filter(c => c.worker_id === parseInt(contractFormData.worker_id))
+                              .sort((a, b) => new Date(b.fecha_inicio).getTime() - new Date(a.fecha_inicio).getTime())
+                              .map((contract) => (
+                                <tr key={contract.id} className="hover:bg-slate-700/30">
+                                  <td className="px-3 py-2 text-sm text-slate-100">
+                                    {contract.project_name}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-slate-100">
+                                    <div className="text-xs">
+                                      {contract.fecha_inicio} - {contract.fecha_termino || 'Indefinido'}
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 text-sm">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.is_renovacion
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-cyan-100 text-cyan-800'
+                                      }`}>
+                                      {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-sm">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.contract_type === 'por_dia'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-orange-100 text-orange-800'
+                                      }`}>
+                                      {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-sm">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.status === 'activo'
+                                      ? 'bg-green-100 text-green-800'
+                                      : contract.status === 'finalizado'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-gray-100 text-gray-800'
+                                      }`}>
+                                      {contract.status === 'activo' ? 'Activo' :
+                                        contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            {contracts.filter(c => c.worker_id === parseInt(contractFormData.worker_id)).length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="px-3 py-4 text-center text-slate-400 text-sm">
+                                  Este trabajador no tiene contratos previos
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botones */}
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-slate-600">
+                    <button
+                      type="button"
+                      onClick={handleCloseContractModal}
+                      className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                    >
+                      {editingContract ? 'Actualizar Contrato' : 'Crear Contrato'}
+                    </button>
+                  </div>
+                </form>
+              </Modal>
+            </>
+          )
+        }
+
+        {/* Modal de Generación de Pacto de Horas */}
+        {
+          showHoursModal && selectedContractForHours && (
+            <Modal
+              isOpen={showHoursModal}
+              onClose={handleCloseHoursModal}
+              title="Generar Pacto de Horas"
+              className="modal_pacto_horas"
+            >
+              <div className="space-y-4">
+                {/* Información del trabajador (solo lectura) */}
+                <div className="bg-slate-700/40 p-3 rounded-lg border border-slate-600">
+                  <h3 className="text-xs font-semibold text-slate-300 mb-2 flex items-center">
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    Información del Trabajador
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-xs text-slate-400">Trabajador:</span>
+                      <p className="text-slate-100 font-medium truncate">
+                        {workers.find(w => w.id === selectedContractForHours.worker_id)?.full_name}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-400">RUT:</span>
+                      <p className="text-slate-100 font-medium">
+                        {workers.find(w => w.id === selectedContractForHours.worker_id)?.rut}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-400">Proyecto:</span>
+                      <p className="text-slate-100 font-medium truncate">
+                        {projects.find(p => p.id === selectedContractForHours.project_id)?.name}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-400">Contrato N°:</span>
+                      <p className="text-slate-100 font-medium">
+                        {selectedContractForHours.contract_number}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selección de fechas del pacto */}
+                <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-600">
+                  <h3 className="text-xs font-semibold text-slate-300 mb-2 flex items-center">
+                    <Clock className="h-3.5 w-3.5 mr-1.5" />
+                    Período del Pacto de Horas
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="hours_fecha_inicio" className="block text-xs font-medium text-slate-300 mb-1.5">
+                        Fecha de Inicio *
+                      </label>
+                      <Input
+                        type="date"
+                        id="hours_fecha_inicio"
+                        value={hoursFormData.fecha_inicio}
+                        onChange={(e) => setHoursFormData(prev => ({ ...prev, fecha_inicio: e.target.value }))}
+                        required
+                        className="w-full text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="hours_fecha_termino" className="block text-xs font-medium text-slate-300 mb-1.5">
+                        Fecha de Término *
+                      </label>
+                      <Input
+                        type="date"
+                        id="hours_fecha_termino"
+                        value={hoursFormData.fecha_termino}
+                        onChange={(e) => setHoursFormData(prev => ({ ...prev, fecha_termino: e.target.value }))}
+                        required
+                        className="w-full text-sm"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    💡 Por ley, el pacto de horas tiene vigencia máxima de 3 meses.
+                  </p>
+                </div>
+
+                {/* Resumen */}
+                {hoursFormData.fecha_inicio && hoursFormData.fecha_termino && (
+                  <div className="bg-blue-900/20 border border-blue-700/50 p-3 rounded-lg">
+                    <h4 className="text-xs font-semibold text-blue-300 mb-1.5">📄 Resumen del Documento</h4>
+                    <p className="text-xs text-slate-300">
+                      Desde <strong>{formatDateToChilean(hoursFormData.fecha_inicio)}</strong> hasta <strong>{formatDateToChilean(hoursFormData.fecha_termino)}</strong>
+                    </p>
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex justify-end space-x-2 pt-3 border-t border-slate-600">
+                  <button
+                    type="button"
+                    onClick={handleCloseHoursModal}
+                    className="px-3 py-1.5 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmGenerateHours}
+                    disabled={!hoursFormData.fecha_inicio || !hoursFormData.fecha_termino}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-md transition-colors flex items-center"
+                  >
+                    <Clock className="h-3.5 w-3.5 mr-1.5" />
+                    Generar Pacto
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          )
+        }
+
+        {/* Modal de Historial de Contratos */}
+        {
+          showContractHistoryModal && selectedWorkerForHistory && (
+            <Modal
+              isOpen={showContractHistoryModal}
+              onClose={handleCloseContractHistoryModal}
+              title={`Historial de Contratos - ${selectedWorkerForHistory.full_name}`}
+              className="modal_contratos_wide"
+            >
+              <div className="space-y-4">
+                {/* Información del trabajador */}
+                <div className="bg-slate-700/40 p-4 rounded-lg border border-slate-600">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-slate-400">Nombre:</span>
+                      <p className="text-slate-100 font-medium">{selectedWorkerForHistory.full_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-slate-400">RUT:</span>
+                      <p className="text-slate-100 font-medium">{selectedWorkerForHistory.rut}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filtros */}
+                <div className="flex items-center space-x-4">
+                  <label className="text-sm font-medium text-slate-300">Filtrar por estado:</label>
+                  <select
+                    value={contractHistoryFilter}
+                    onChange={(e) => setContractHistoryFilter(e.target.value)}
+                    className="px-3 py-1 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">Todos</option>
+                    <option value="activo">Activos</option>
+                    <option value="finalizado">Finalizados</option>
+                    <option value="cancelado">Cancelados</option>
+                  </select>
+                </div>
+
+                {/* Tabla de contratos */}
+                <div className="bg-slate-800 rounded-lg border border-slate-600 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-600">
+                      <thead className="bg-slate-700">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Contrato
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Proyecto
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Fechas
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Duración
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Categoría
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Tipo
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                            Estado
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-slate-800 divide-y divide-slate-600">
+                        {getWorkerContracts().length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                              No se encontraron contratos
+                            </td>
+                          </tr>
+                        ) : (
+                          getWorkerContracts().map((contract) => (
+                            <tr key={contract.id} className="hover:bg-slate-700/50">
+                              <td className="px-4 py-3 text-sm text-slate-100 font-medium">
+                                {contract.contract_number || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-100">
+                                {contract.project_name}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-100">
+                                <div>
+                                  <div>Inicio: {contract.fecha_inicio}</div>
+                                  <div>
+                                    Término: {contract.fecha_termino || 'Indefinido'}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-100">
+                                <span className="text-xs font-medium text-slate-300">
+                                  {calculateContractDuration(contract.fecha_inicio, contract.fecha_termino)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.is_renovacion
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-cyan-100 text-cyan-800'
+                                  }`}>
+                                  {contract.is_renovacion ? 'Renovación' : 'Nuevo'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.contract_type === 'por_dia'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-orange-100 text-orange-800'
+                                  }`}>
+                                  {contract.contract_type === 'por_dia' ? 'Por día' : 'A trato'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${contract.status === 'activo'
+                                  ? 'bg-green-100 text-green-800'
+                                  : contract.status === 'finalizado'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                  {contract.status === 'activo' ? 'Activo' :
+                                    contract.status === 'finalizado' ? 'Finalizado' : 'Cancelado'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Botón de cerrar */}
+                <div className="flex justify-end pt-4 border-t border-slate-600">
+                  <button
+                    onClick={handleCloseContractHistoryModal}
+                    className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          )
+        }
         {/* Modal de creación de contrato */}
         {/* Modales de Confirmación */}
         <ConfirmationModal
@@ -2569,7 +2575,7 @@ export default function TrabajadoresPage() {
           workerId={selectedWorkerForEfficiency?.id || 0}
           workerName={selectedWorkerForEfficiency?.name || ''}
         />
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }

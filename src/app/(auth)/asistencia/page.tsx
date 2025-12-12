@@ -540,10 +540,15 @@ export default function AsistenciaPage() {
   return (
     <div className="w-full py-8 px-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">Control de Asistencia</h1>
-          <p className="text-slate-400 mt-1">Registra la asistencia diaria de los trabajadores</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+            <Calendar className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Control de Asistencia</h1>
+            <p className="text-slate-400">Registra y supervisa la asistencia diaria</p>
+          </div>
         </div>
 
         {/* Botón Refrescar Estadísticas */}

@@ -202,11 +202,14 @@ export default function ReportesPage() {
       <div className="w-full space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-100">Reportes Financieros</h1>
-            <p className="text-slate-400 mt-1">
-              Análisis de ganancias, gastos y progreso de proyectos
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-purple-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-purple-600/20">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-100 tracking-tight">Reportes Financieros</h1>
+              <p className="text-slate-400">Análisis de ganancias, gastos y progreso de proyectos</p>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">

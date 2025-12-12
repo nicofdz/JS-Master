@@ -558,7 +558,18 @@ export default function ApartamentosPage() {
 
   return (
     <div className="w-full py-8 px-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Gestión de Apartamentos</h1>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-cyan-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+            <Building className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Apartamentos</h1>
+            <p className="text-gray-500">Administra los departamentos y sus estados</p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between mb-6">
         <div className="flex flex-col sm:flex-row gap-4 flex-1">

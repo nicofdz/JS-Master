@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { WorkerForm } from '@/components/workers/WorkerForm'
 import { ContractGeneratorModal } from '@/components/contracts/ContractGeneratorModal'
-import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, Truck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -100,9 +100,14 @@ export default function TrabajadoresPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestión de Trabajadores</h1>
-            <p className="text-gray-600">Administra todos los trabajadores del sistema</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-600/20">
+              <Truck className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Equipos</h1>
+              <p className="text-gray-600">Administra la maquinaria y vehículos de la empresa</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3 w-full sm:w-auto">
             <Button
@@ -184,8 +189,8 @@ export default function TrabajadoresPage() {
             <button
               onClick={() => setContractTypeFilter('all')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${contractTypeFilter === 'all'
-                  ? 'bg-slate-600 text-slate-100 shadow-md'
-                  : 'text-slate-400 hover:text-slate-300'
+                ? 'bg-slate-600 text-slate-100 shadow-md'
+                : 'text-slate-400 hover:text-slate-300'
                 }`}
             >
               Todos
@@ -193,8 +198,8 @@ export default function TrabajadoresPage() {
             <button
               onClick={() => setContractTypeFilter('por_dia')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${contractTypeFilter === 'por_dia'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-300'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-300'
                 }`}
             >
               Por Día
@@ -202,8 +207,8 @@ export default function TrabajadoresPage() {
             <button
               onClick={() => setContractTypeFilter('a_trato')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${contractTypeFilter === 'a_trato'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-300'
+                ? 'bg-purple-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-300'
                 }`}
             >
               A Trato
@@ -237,8 +242,8 @@ export default function TrabajadoresPage() {
                     </div>
                     <div className="flex flex-col gap-1 items-end">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
                         }`}>
                         {worker.is_active ? 'Activo' : 'Inactivo'}
                       </span>
@@ -249,8 +254,8 @@ export default function TrabajadoresPage() {
                     <div>
                       <span className="text-gray-500 block text-xs">Contrato</span>
                       <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full mt-1 ${worker.contract_type === 'a_trato'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-blue-100 text-blue-800'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-blue-100 text-blue-800'
                         }`}>
                         {worker.contract_type === 'a_trato' ? 'A Trato' : 'Por Día'}
                       </span>
@@ -366,8 +371,8 @@ export default function TrabajadoresPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.contract_type === 'a_trato'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-blue-100 text-blue-800'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-blue-100 text-blue-800'
                             }`}>
                             {worker.contract_type === 'a_trato' ? 'A Trato' : 'Por Día'}
                           </span>
@@ -381,8 +386,8 @@ export default function TrabajadoresPage() {
                         )}
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
                             }`}>
                             {worker.is_active ? 'Activo' : 'Inactivo'}
                           </span>

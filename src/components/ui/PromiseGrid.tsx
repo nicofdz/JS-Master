@@ -48,7 +48,7 @@ export function PromiseGrid() {
                 <div className="grid lg:grid-cols-12 gap-12 items-start">
 
                     {/* Header Section (Left detailed column in desktop) */}
-                    <div className="lg:col-span-4 sticky top-24">
+                    <div className="lg:col-span-4 lg:sticky lg:top-24">
                         <RevealOnScroll>
                             <div className="pl-4 border-l-4 border-blue-500 mb-6">
                                 <span className="text-blue-400 font-bold tracking-widest uppercase text-xs">

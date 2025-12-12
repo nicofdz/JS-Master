@@ -285,6 +285,24 @@ export default function AuthLayout({
                   })}
                 </nav>
               </div>
+
+              {/* Usuario info Móvil */}
+              <div className="flex-shrink-0 flex border-t border-slate-700 p-4 bg-slate-800">
+                <div className="flex items-center justify-between w-full">
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-slate-100">{profile?.full_name}</p>
+                    <p className="text-xs text-slate-400">{profile?.role ? ROLE_LABELS[profile.role as keyof typeof ROLE_LABELS] : 'Usuario'}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSignOut}
+                    className="flex items-center gap-2 text-slate-400 hover:text-red-400 hover:bg-slate-700/50"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}

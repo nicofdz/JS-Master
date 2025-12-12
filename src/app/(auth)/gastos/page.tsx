@@ -659,9 +659,14 @@ export default function GastosPage() {
       <div className="w-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 sm:gap-0">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Gestión de Gastos</h1>
-            <p className="text-slate-400">Administra los gastos de la empresa por categorías</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-yellow-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-yellow-500/20">
+              <DollarSign className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight">Gestión de Gastos</h1>
+              <p className="text-slate-400">Administra los gastos de la empresa por categorías</p>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
 

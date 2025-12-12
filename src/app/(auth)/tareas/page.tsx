@@ -437,9 +437,16 @@ export default function TareasPage() {
   return (
     <div className="w-full px-4 py-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Gestión de Tareas</h1>
-        <p className="text-sm sm:text-base text-gray-600">Sistema avanzado de tareas con múltiples trabajadores</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-pink-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-pink-600/20">
+            <CheckSquare className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Tareas</h1>
+            <p className="text-gray-500">Sistema avanzado de tareas con múltiples trabajadores</p>
+          </div>
+        </div>
       </div>
 
       {/* Botones de acción */}
