@@ -54,18 +54,49 @@ export const useProjects = () => {
       setLoading(true)
       setError(null)
 
-      // Consulta SQL personalizada para obtener proyectos con progreso y conteo de torres
+      // 1. Obtener usuario actual y su rol
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user found')
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const isAdmin = profile?.role === 'admin'
+      let allowedProjectIds: number[] = []
+
+      // 2. Si no es admin, obtener proyectos permitidos
+      if (!isAdmin) {
+        const { data: assignments } = await supabase
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', user.id)
+
+        allowedProjectIds = assignments?.map(a => a.project_id) || []
+      }
+
+      // 3. Consulta SQL personalizada para obtener proyectos con progreso
       const { data, error } = await supabase.rpc('get_projects_with_progress')
 
       if (error) {
         throw error
       }
 
-      // Filtrar proyectos según includeDeleted
+      // 4. Filtrar y procesar datos
+      let filteredProjects = data || []
+
+      // Filtro de Acceso (Usuario vs Admin)
+      if (!isAdmin) {
+        filteredProjects = filteredProjects.filter((p: any) => allowedProjectIds.includes(p.id))
+      }
+
+      // Filtro de Soft Delete (Activo vs Eliminado)
       if (includeDeleted) {
-        setProjects(data || [])
+        setProjects(filteredProjects)
       } else {
-        setProjects((data || []).filter((p: any) => p.is_active !== false))
+        setProjects(filteredProjects.filter((p: any) => p.is_active !== false))
       }
     } catch (err: any) {
       console.error('Error fetching projects:', err)

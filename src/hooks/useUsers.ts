@@ -104,6 +104,72 @@ export function useUsers() {
         }
     }
 
+    const assignProjects = async (userId: string, projectIds: number[]) => {
+        try {
+            setLoading(true)
+
+            // 1. Obtener asignaciones actuales
+            const { data: currentAssignments } = await supabase
+                .from('user_projects')
+                .select('project_id')
+                .eq('user_id', userId)
+
+            const currentIds = currentAssignments?.map(a => a.project_id) || []
+
+            // 2. Calcular qué agregar y qué eliminar
+            const toAdd = projectIds.filter(id => !currentIds.includes(id))
+            const toRemove = currentIds.filter(id => !projectIds.includes(id))
+
+            // 3. Eliminar
+            if (toRemove.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('user_projects')
+                    .delete()
+                    .eq('user_id', userId)
+                    .in('project_id', toRemove)
+
+                if (deleteError) throw deleteError
+            }
+
+            // 4. Agregar
+            if (toAdd.length > 0) {
+                const { error: insertError } = await supabase
+                    .from('user_projects')
+                    .insert(
+                        toAdd.map(projectId => ({
+                            user_id: userId,
+                            project_id: projectId
+                        }))
+                    )
+
+                if (insertError) throw insertError
+            }
+
+            return { error: null }
+        } catch (err: any) {
+            console.error('Error assigning projects:', err)
+            return { error: err.message }
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const getUserProjects = async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from('user_projects')
+                .select('project_id')
+                .eq('user_id', userId)
+
+            if (error) throw error
+
+            return { data: data.map(item => item.project_id), error: null }
+        } catch (err: any) {
+            console.error('Error fetching user assignments:', err)
+            return { data: [], error: err.message }
+        }
+    }
+
     return {
         users,
         loading,
@@ -111,6 +177,8 @@ export function useUsers() {
         fetchUsers,
         updateUser,
         toggleUserStatus,
-        deleteUser
+        deleteUser,
+        assignProjects,
+        getUserProjects
     }
 }

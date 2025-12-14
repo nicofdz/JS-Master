@@ -14,19 +14,21 @@ import {
     Eye,
     Power,
     Trash2,
-    Users
+    Users,
+    Briefcase
 } from 'lucide-react'
 import { UserProfile, ROLE_LABELS } from '@/types/auth'
 import { UserModal } from '@/components/users/UserModal'
 import { UserDetailModal } from '@/components/users/UserDetailModal'
 import { CreateUserModal } from '@/components/users/CreateUserModal'
+import { AssignProjectsModal } from '@/components/users/AssignProjectsModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 
 export default function UsersPage() {
     const { profile, loading: authLoading } = useAuth()
-    const { users, loading: usersLoading, fetchUsers, updateUser, toggleUserStatus, deleteUser } = useUsers()
+    const { users, loading: usersLoading, fetchUsers, updateUser, toggleUserStatus, deleteUser, assignProjects, getUserProjects } = useUsers()
     const router = useRouter()
 
     const [searchTerm, setSearchTerm] = useState('')
@@ -34,6 +36,10 @@ export default function UsersPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+
+    // Assign Projects State
+    const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
+    const [userAssignments, setUserAssignments] = useState<number[]>([])
 
     // Confirm Dialog State
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
@@ -67,6 +73,27 @@ export default function UsersPage() {
     const handleView = (user: UserProfile) => {
         setSelectedUser(user)
         setIsDetailModalOpen(true)
+    }
+
+    const handleAssignProjects = async (user: UserProfile) => {
+        setSelectedUser(user)
+        // Cargar asignaciones actuales
+        const { data, error } = await getUserProjects(user.id)
+        if (error) {
+            toast.error('Error al cargar asignaciones')
+            return
+        }
+        setUserAssignments(data)
+        setIsAssignModalOpen(true)
+    }
+
+    const handleSaveAssignments = async (userId: string, projectIds: number[]) => {
+        const { error } = await assignProjects(userId, projectIds)
+        if (error) {
+            toast.error('Error al guardar asignaciones')
+        } else {
+            toast.success('Asignaciones actualizadas correctamente')
+        }
     }
 
     const handleToggleStatus = (user: UserProfile) => {
@@ -151,7 +178,6 @@ export default function UsersPage() {
             <div className="w-full space-y-6">
 
                 {/* Header */}
-                {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
@@ -229,6 +255,15 @@ export default function UsersPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
+                                                    onClick={() => handleAssignProjects(user)}
+                                                    className="hover:bg-transparent p-0 h-auto text-yellow-500 hover:text-yellow-400 hover:drop-shadow-[0_0_8px_rgba(234,179,8,0.8)] transition-all duration-300"
+                                                    title="Asignar Obras"
+                                                >
+                                                    <Briefcase className="w-5 h-5" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={() => handleEdit(user)}
                                                     className="hover:bg-transparent p-0 h-auto text-blue-500 hover:text-blue-400 hover:drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] transition-all duration-300"
                                                     title="Editar"
@@ -279,6 +314,14 @@ export default function UsersPage() {
                     )}
                 </Card>
             </div>
+
+            <AssignProjectsModal
+                isOpen={isAssignModalOpen}
+                onClose={() => setIsAssignModalOpen(false)}
+                user={selectedUser}
+                onSave={handleSaveAssignments}
+                initialAssignments={userAssignments}
+            />
 
             <UserModal
                 isOpen={isEditModalOpen}
