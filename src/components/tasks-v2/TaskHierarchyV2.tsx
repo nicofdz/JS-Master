@@ -20,6 +20,7 @@ interface Apartment {
     projects: {
       id: number
       name: string
+      is_active?: boolean
     }
     towers: {
       id: number
@@ -125,7 +126,7 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
   const hierarchy = useMemo(() => {
     const grouped: {
       [projectId: number]: {
-        project: { id: number; name: string }
+        project: { id: number; name: string; is_active?: boolean }
         towers: {
           [towerId: number]: {
             tower: { id: number; number: number; name: string }
@@ -163,7 +164,7 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
       // Initialize Project
       if (!grouped[projectId]) {
         grouped[projectId] = {
-          project: { id: projectId, name: project.name },
+          project: { id: projectId, name: project.name, is_active: project.is_active },
           towers: {}
         }
       }
@@ -230,7 +231,7 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
         // Initialize Project
         if (!grouped[projectId]) {
           grouped[projectId] = {
-            project: { id: projectId, name: task.project_name || 'Desconocido' },
+            project: { id: projectId, name: task.project_name || 'Desconocido' }, // Note: We might miss is_active here if not in task
             towers: {}
           }
         }
@@ -259,6 +260,51 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
         }
 
         grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId].tasks.push(task)
+      }
+    })
+
+    // 3. Filter empty entities for Inactive Projects (Contextual Visibility)
+    Object.keys(grouped).forEach(projectIdStr => {
+      const projectId = parseInt(projectIdStr)
+      const group = grouped[projectId]
+
+      // Only apply strict filtering for inactive projects
+      if (group.project.is_active === false) {
+        Object.keys(group.towers).forEach(towerIdStr => {
+          const towerId = parseInt(towerIdStr)
+          const tower = group.towers[towerId]
+
+          Object.keys(tower.floors).forEach(floorIdStr => {
+            const floorId = parseInt(floorIdStr)
+            const floor = tower.floors[floorId]
+
+            Object.keys(floor.apartments).forEach(aptIdStr => {
+              const aptId = parseInt(aptIdStr)
+              const apt = floor.apartments[aptId]
+
+              // Remove apartment if it has no tasks
+              // User request: "muestre solo lo necesario" -> for deleted projects, implies having associated history (tasks)
+              if (apt.tasks.length === 0) {
+                delete floor.apartments[aptId]
+              }
+            })
+
+            // Remove floor if it has no apartments
+            if (Object.keys(floor.apartments).length === 0) {
+              delete tower.floors[floorId]
+            }
+          })
+
+          // Remove tower if it has no floors
+          if (Object.keys(tower.floors).length === 0) {
+            delete group.towers[towerId]
+          }
+        })
+
+        // Remove project if it has no towers
+        if (Object.keys(group.towers).length === 0) {
+          delete grouped[projectId]
+        }
       }
     })
 
@@ -373,38 +419,46 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
           <div key={projectId} className={`space-y-4 ${projectIndex > 0 ? 'mt-8 pt-6 border-t-2 border-slate-600' : ''}`}>
             {/* Proyecto Header */}
             <div
-              className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
+              className={`rounded-lg border px-4 py-3 cursor-pointer transition-colors ${project.is_active === false
+                ? 'bg-red-900/10 border-red-500/30 hover:bg-red-900/20'
+                : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700/70'
+                }`}
               onClick={() => toggleProject(projectId)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {isProjectExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-slate-300" />
+                    <ChevronDown className={`w-4 h-4 ${project.is_active === false ? 'text-red-400' : 'text-slate-300'}`} />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                    <ChevronRight className={`w-4 h-4 ${project.is_active === false ? 'text-red-400' : 'text-slate-300'}`} />
                   )}
-                  <Building2 className="w-4 h-4 text-blue-400" />
-                  <p className="text-sm font-medium text-slate-200">
+                  <Building2 className={`w-4 h-4 ${project.is_active === false ? 'text-red-400' : 'text-blue-400'}`} />
+                  <p className={`text-sm font-medium ${project.is_active === false ? 'text-red-200' : 'text-slate-200'}`}>
                     {project.name}
                   </p>
+                  {project.is_active === false && (
+                    <span className="bg-red-500/20 text-red-300 text-xs px-2 py-0.5 rounded border border-red-500/30 font-medium">
+                      Eliminado ({completedProjectTasks} tareas completadas)
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400">Progreso:</span>
+                    <span className={project.is_active === false ? 'text-red-300/70' : 'text-slate-400'}>Progreso:</span>
                     <div className="flex items-center gap-1">
-                      <div className="w-16 bg-slate-800 rounded-full h-1.5">
+                      <div className={`w-16 rounded-full h-1.5 ${project.is_active === false ? 'bg-red-900/40' : 'bg-slate-800'}`}>
                         <div
-                          className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                          className={`h-1.5 rounded-full transition-all duration-300 ${project.is_active === false ? 'bg-red-500' : 'bg-blue-500'}`}
                           style={{ width: `${projectProgress}%` }}
                         />
                       </div>
-                      <span className="text-slate-300 font-medium w-8">{projectProgress}%</span>
+                      <span className={`font-medium w-8 ${project.is_active === false ? 'text-red-300' : 'text-slate-300'}`}>{projectProgress}%</span>
                     </div>
                   </div>
                   {totalProjectTasks > 0 && (
                     <div className="flex items-center gap-1">
-                      <span className="text-slate-400">Tareas:</span>
-                      <span className="text-slate-300 font-medium">{completedProjectTasks}/{totalProjectTasks}</span>
+                      <span className={project.is_active === false ? 'text-red-300/70' : 'text-slate-400'}>Tareas:</span>
+                      <span className={`font-medium ${project.is_active === false ? 'text-red-300' : 'text-slate-300'}`}>{completedProjectTasks}/{totalProjectTasks}</span>
                     </div>
                   )}
                 </div>

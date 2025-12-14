@@ -71,7 +71,7 @@ export function useDashboard() {
         apartmentsResponse,
         activitiesResponse
       ] = await Promise.all([
-        supabase.from('projects').select('*'),
+        supabase.from('projects').select('*').eq('is_active', true),
         supabase.from('floors').select('*'),
         supabase.from('apartments').select('*'),
         supabase.from('tasks').select('status').neq('status', 'cancelled').eq('is_deleted', false)

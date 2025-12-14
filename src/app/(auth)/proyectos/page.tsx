@@ -45,15 +45,21 @@ export default function ProyectosPage() {
   const [selectedProjectForTemplates, setSelectedProjectForTemplates] = useState<number | null>(null)
 
   const [showTrash, setShowTrash] = useState(false)
-  const [confirmDeleteProjectState, setConfirmDeleteProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
+  /* State for delete confirmation with warning */
+  const [confirmDeleteProjectState, setConfirmDeleteProjectState] = useState<{
+    isOpen: boolean,
+    projectId: number | null,
+    hasCompletedTasks?: boolean,
+    completedTasksCount?: number
+  }>({ isOpen: false, projectId: null })
+
   const [confirmRestoreProjectState, setConfirmRestoreProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
   const [confirmHardDeleteProjectState, setConfirmHardDeleteProjectState] = useState<{ isOpen: boolean, projectId: number | null }>({ isOpen: false, projectId: null })
 
-  // Recargar proyectos cuando cambia el modo papelera
+  // Refresh projects when toggling trash view to ensure we have the correct data
   React.useEffect(() => {
     refresh(showTrash)
-  }, [showTrash])
-
+  }, [showTrash, refresh])
 
   // Filtrar proyectos
   const filteredProjects = projects.filter(project => {
@@ -65,14 +71,20 @@ export default function ProyectosPage() {
 
     // Filtro de papelera
     const matchesTrash = showTrash
-      ? project.is_active === false
+      ? project.is_active === false && project.description !== 'ARCHIVADO'
       : project.is_active !== false
 
     return matchesSearch && matchesCardFilter && matchesTrash
   })
 
-  const handleDelete = (projectId: number) => {
-    setConfirmDeleteProjectState({ isOpen: true, projectId })
+  const handleDelete = (project: any) => {
+    const completedTasks = project.activities_completed || 0
+    setConfirmDeleteProjectState({
+      isOpen: true,
+      projectId: project.id,
+      hasCompletedTasks: completedTasks > 0,
+      completedTasksCount: completedTasks
+    })
   }
 
   const executeDeleteProject = async () => {
@@ -418,11 +430,28 @@ export default function ProyectosPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1 md:mb-2">
                             <h3 className="text-lg font-semibold text-slate-100 truncate">
-                              {project.name}
+                              {project.is_active === false
+                                ? project.name.replace(/^\[ELIMINADO\]\s*/, '')
+                                : project.name}
                             </h3>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusColor(project.status)}`}>
-                              {getStatusEmoji(project.status)} {PROJECT_STATUSES[project.status as keyof typeof PROJECT_STATUSES]}
-                            </span>
+                            {project.is_active === false && (
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/50 text-red-400 border border-red-500/50">
+                                  Eliminado
+                                </span>
+                                {(project.activities_completed || 0) > 0 && (
+                                  <span className="text-xs text-slate-400 flex items-center gap-1" title="Tareas completadas mantendrán visibilidad">
+                                    <CheckCircle className="w-3 h-3 text-emerald-500" />
+                                    {project.activities_completed} tareas completadas
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {project.is_active !== false && (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${getStatusColor(project.status)}`}>
+                                {getStatusEmoji(project.status)} {PROJECT_STATUSES[project.status as keyof typeof PROJECT_STATUSES]}
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-slate-400 truncate">
                             {project.address || 'Sin dirección'}
@@ -547,7 +576,7 @@ export default function ProyectosPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleDelete(project.id)
+                                  handleDelete(project)
                                 }}
                                 className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                 title="Eliminar"
@@ -1047,9 +1076,13 @@ export default function ProyectosPage() {
         isOpen={confirmDeleteProjectState.isOpen}
         onClose={() => setConfirmDeleteProjectState({ isOpen: false, projectId: null })}
         onConfirm={executeDeleteProject}
-        title="Eliminar Proyecto"
-        message="¿Estás seguro de que quieres eliminar este proyecto? Se moverá a la papelera."
-        confirmText="Eliminar"
+        title={confirmDeleteProjectState.hasCompletedTasks
+          ? "⚠️ Advertencia: Proyecto con Avance"
+          : "¿Mover a la papelera?"}
+        message={confirmDeleteProjectState.hasCompletedTasks
+          ? `Este proyecto tiene ${confirmDeleteProjectState.completedTasksCount} tareas completadas. Si lo envías a la papelera, estas tareas seguirán siendo visibles para mantener el historial, pero el proyecto se ocultará de las vistas principales. ¿Estás seguro de continuar?`
+          : "¿Estás seguro de que deseas mover este proyecto a la papelera? Podrás restaurarlo después."}
+        confirmText="Mover a Papelera"
         type="danger"
       />
 

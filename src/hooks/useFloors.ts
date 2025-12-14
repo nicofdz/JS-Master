@@ -116,23 +116,16 @@ export function useFloors(projectId?: number) {
         // Si estamos incluyendo eliminados, permitimos pisos de torres/proyectos inactivos
         if (includeDeleted) return true
 
-        const isValid = project?.is_active === true &&
-          project?.status === 'active' &&
-          tower?.is_active === true
+        // Verificar explícitamente que el proyecto y la torre estén activos
+        // is_active puede ser true, false o null (se asume true si es null por compatibilidad)
+        // AHORA PERMITIMOS PROYECTOS INACTIVOS para mostrar su historial
+        const isProjectActive = project?.is_active !== false
+        const isProjectStatusActive = project?.status === 'active'
+        const isTowerActive = tower?.is_active !== false
 
-        if (!isValid) {
-          console.log('❌ Piso filtrado:', {
-            floor_id: floor.id,
-            floor_number: floor.floor_number,
-            project_id: project?.id,
-            project_name: project?.name,
-            project_is_active: project?.is_active,
-            project_status: project?.status,
-            tower_id: tower?.id,
-            tower_is_active: tower?.is_active
-          })
-        }
-        return isValid
+        // Antes filtrábamos estrictamente: const isValid = isProjectActive && isProjectStatusActive && isTowerActive
+        // Ahora permitimos todo, pero logueamos si es inactivo para debug
+        return true
       })
 
       console.log('✅ Pisos válidos después del filtro:', validFloors.length, 'de', (data || []).length)
@@ -294,7 +287,7 @@ export function useFloors(projectId?: number) {
     try {
       console.log(`🗑️ Iniciando hard delete del piso ${id}...`)
 
-      // Obtener apartamentos
+      // 1. Obtener apartamentos del piso
       const { data: apartments, error: apartmentsError } = await supabase
         .from('apartments')
         .select('id')
@@ -305,42 +298,67 @@ export function useFloors(projectId?: number) {
         throw apartmentsError
       }
 
-      console.log(`📦 Apartamentos encontrados: ${apartments?.length || 0}`)
+      const apartmentIds = apartments?.map(a => a.id) || []
 
-      // Eliminar apartamentos (CASCADE eliminará las tasks)
-      if (apartments && apartments.length > 0) {
-        const apartmentIds = apartments.map(a => a.id)
-        console.log(`🗑️ Eliminando apartamentos: ${apartmentIds.join(', ')}...`)
+      // 2. Verificar historial (tareas completadas)
+      let hasHistory = false
+      const keptApartmentIds = new Set<number>()
 
-        const { error: deleteApartmentsError } = await supabase
-          .from('apartments')
+      if (apartmentIds.length > 0) {
+        // Buscar tareas completadas en estos apartamentos
+        const { data: meaningfulTasks, error: meaningfulTasksError } = await supabase
+          .from('tasks')
+          .select('id, apartment_id')
+          .in('apartment_id', apartmentIds)
+          .eq('status', 'completed')
+
+        if (meaningfulTasksError) throw meaningfulTasksError
+
+        if (meaningfulTasks && meaningfulTasks.length > 0) {
+          hasHistory = true
+          meaningfulTasks.forEach(t => keptApartmentIds.add(t.apartment_id))
+        }
+      }
+
+      if (!hasHistory) {
+        // --- ESCENARIO 1: BORRADO TOTAL ---
+        console.log('No completed tasks found. Performing full delete.')
+
+        // Eliminar Floor (Cascade eliminará apartamentos y tasks)
+        const { error: deleteFloorError } = await supabase
+          .from('floors')
           .delete()
-          .in('id', apartmentIds)
+          .eq('id', id)
 
-        if (deleteApartmentsError) {
-          console.error('❌ Error eliminando apartamentos:', deleteApartmentsError)
-          throw deleteApartmentsError
+        if (deleteFloorError) {
+          console.error('❌ Error eliminando piso:', deleteFloorError)
+          throw deleteFloorError
         }
 
-        console.log('✅ Apartamentos eliminados')
+        console.log('✅ Piso eliminado exitosamente!')
+        setFloors(prev => prev.filter(f => f.id !== id))
+        return { type: 'deleted', message: 'Piso eliminado permanentemente' }
+      } else {
+        // --- ESCENARIO 2: PODA (PRUNING) ---
+        console.log('Found completed tasks. Pruning unused apartments.')
+
+        // Eliminar apartamentos que NO tienen historial
+        const apartmentsToDelete = apartmentIds.filter(aptId => !keptApartmentIds.has(aptId))
+
+        if (apartmentsToDelete.length > 0) {
+          const { error: pruneError } = await supabase
+            .from('apartments')
+            .delete()
+            .in('id', apartmentsToDelete)
+
+          if (pruneError) throw pruneError
+        }
+
+        console.log('✅ Piso podado: Se mantuvo el historial')
+        // El piso se mantiene en la lista (soft deleted)
+        return { type: 'pruned', message: 'Piso podado: Se mantuvo el historial de tareas completadas' }
       }
 
-      // Eliminar el piso
-      console.log(`🗑️ Eliminando piso ${id}...`)
-      const { error: deleteFloorError } = await supabase
-        .from('floors')
-        .delete()
-        .eq('id', id)
-
-      if (deleteFloorError) {
-        console.error('❌ Error eliminando piso:', deleteFloorError)
-        throw deleteFloorError
-      }
-
-      console.log('✅ Piso eliminado exitosamente!')
-
-      setFloors(prev => prev.filter(f => f.id !== id))
-      return true
     } catch (err) {
       console.error('❌ Error completo en hardDeleteFloor:', err)
       const errorMessage = err instanceof Error ? err.message : 'Error al eliminar piso permanentemente'

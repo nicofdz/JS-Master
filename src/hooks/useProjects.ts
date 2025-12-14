@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export interface Project {
@@ -12,6 +12,7 @@ export interface Project {
   estimated_completion?: string
   actual_completion?: string
   status: string
+  description?: string
   plan_pdf?: string
   plan_image_url?: string
   created_at: string
@@ -48,7 +49,7 @@ export const useProjects = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProjects = async (includeDeleted = false) => {
+  const fetchProjects = useCallback(async (includeDeleted = false) => {
     try {
       setLoading(true)
       setError(null)
@@ -72,7 +73,7 @@ export const useProjects = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const createProject = async (projectData: any) => {
     try {
@@ -165,16 +166,11 @@ export const useProjects = () => {
       // Obtener el proyecto actual para agregar prefijo al nombre
       const project = projects.find(p => p.id === id)
       const currentName = project?.name || ''
-      const newName = currentName.startsWith('[ELIMINADO] ')
-        ? currentName
-        : `[ELIMINADO] ${currentName}`
-
-      // Soft delete: marcar como eliminado usando is_active y actualizar nombre
+      // Soft delete: marcar como eliminado usando is_active
       const { error } = await supabase
         .from('projects')
         .update({
-          is_active: false,
-          name: newName
+          is_active: false
         })
         .eq('id', id)
 
@@ -335,8 +331,17 @@ export const useProjects = () => {
           await supabase.from('towers').delete().in('id', towersToDelete)
         }
 
-        // El proyecto SE MANTIENE, pero nos aseguramos que siga inactivo
-        // No necesitamos cambiar nada en el proyecto, ya está soft-deleted
+        // El proyecto SE MANTIENE, pero nos aseguramos que siga inactivo y lo marcamos como ARCHIVADO
+        // Actualizamos la descripción para marcarlo (esto nos permite filtrarlo en la papelera)
+        const { error: updateError } = await supabase
+          .from('projects')
+          .update({
+            is_active: false,
+            description: 'ARCHIVADO'
+          })
+          .eq('id', id)
+
+        if (updateError) throw updateError
 
         return { type: 'pruned', message: 'Proyecto podado: Se mantuvo el historial de tareas completadas' }
       }

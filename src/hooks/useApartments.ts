@@ -86,10 +86,13 @@ export function useApartments(floorId?: number) {
             towers!inner(
               id,
               tower_number,
+              tower_number,
               name,
+              is_active,
               projects!inner(
                 id,
-                name
+                name,
+                is_active
               )
             )
           ),
@@ -132,6 +135,7 @@ export function useApartments(floorId?: number) {
           tower_name: tower?.name || `Torre ${tower?.tower_number || 0}`,
           project_id: project?.id || 0,
           project_name: project?.name || 'Proyecto Desconocido',
+          project_is_active: project?.is_active !== false,
           tasks_count: totalTasks,
           progress_percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
         }
@@ -248,58 +252,56 @@ export function useApartments(floorId?: number) {
 
   const hardDeleteApartment = async (id: number) => {
     try {
-      // Verificar que el departamento esté desactivado antes de eliminar definitivamente
-      const { data: aptData, error: fetchError } = await supabase
-        .from('apartments')
-        .select('is_active, apartment_number')
-        .eq('id', id)
-        .single()
-
-      if (fetchError) {
-        console.error('Error obteniendo apartamento:', fetchError)
-        throw fetchError
-      }
-
-      if (aptData?.is_active) {
-        throw new Error('No se puede eliminar definitivamente un departamento activo. Primero debe ser eliminado (soft delete).')
-      }
-
-      // Eliminar definitivamente las tareas que NO están completadas
-      // Las tareas completadas se mantienen para preservar el historial financiero
-      // NOTA: En el nuevo sistema, las tareas usan soft delete, pero para eliminación permanente
-      // del apartamento, eliminamos físicamente las tareas no completadas
-      const { error: tasksDeleteError } = await supabase
+      // 1. Verificar historial (tareas completadas)
+      const { data: completedTasks, error: tasksError } = await supabase
         .from('tasks')
-        .delete()
+        .select('id')
         .eq('apartment_id', id)
-        .neq('status', 'completed')
-        .eq('is_deleted', false)
+        .eq('status', 'completed')
 
-      if (tasksDeleteError) {
-        console.error('Error eliminando tareas no completadas:', tasksDeleteError)
-        // No lanzamos error aquí, solo lo registramos
-        // Continuamos con la eliminación del departamento
+      if (tasksError) throw tasksError
+
+      const hasHistory = completedTasks && completedTasks.length > 0
+
+      if (!hasHistory) {
+        // --- ESCENARIO 1: BORRADO TOTAL ---
+        console.log('No completed tasks found. Performing full delete.')
+
+        // Eliminar Apartamento (Cascade eliminará tasks)
+        const { error: deleteAptError } = await supabase
+          .from('apartments')
+          .delete()
+          .eq('id', id)
+
+        if (deleteAptError) {
+          console.error('❌ Error eliminando apartamento:', deleteAptError)
+          throw deleteAptError
+        }
+
+        console.log('✅ Apartamento eliminado exitosamente!')
+        setApartments(prev => prev.filter(a => a.id !== id))
+        return { type: 'deleted', message: 'Apartamento eliminado permanentemente' }
       } else {
-        console.log('✅ Tareas no completadas eliminadas definitivamente')
+        // --- ESCENARIO 2: PODA (PRUNING) ---
+        console.log('Found completed tasks. Pruning non-completed tasks.')
+
+        // Eliminar tareas NO completadas (para limpiar)
+        const { error: pruneError } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('apartment_id', id)
+          .neq('status', 'completed')
+
+        if (pruneError) {
+          console.warn('⚠️ Error pruning non-completed tasks:', pruneError)
+          // No detenemos el proceso por esto
+        }
+
+        console.log('✅ Apartamento podado: Se mantuvo el historial')
+        // El apartamento se mantiene en la lista (soft deleted)
+        return { type: 'pruned', message: 'Apartamento podado: Se mantuvo el historial de tareas completadas' }
       }
 
-      // Eliminar definitivamente el departamento
-      // Las tareas completadas se mantendrán con apartment_id = NULL gracias al constraint ON DELETE SET NULL
-      const { error } = await supabase
-        .from('apartments')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        console.error('Error de Supabase al eliminar definitivamente apartamento:', error)
-        throw error
-      }
-
-      // Actualizar la lista local
-      setApartments(prev => prev.filter(a => a.id !== id))
-
-      console.log('✅ Departamento eliminado definitivamente. Las tareas completadas se mantienen con apartment_id = NULL')
-      return true
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al eliminar definitivamente apartamento'
       console.error('Error completo en hardDeleteApartment:', err)
@@ -509,6 +511,7 @@ export function useApartments(floorId?: number) {
           tower_name: tower?.name || `Torre ${tower?.tower_number || 0}`,
           project_id: project?.id || 0,
           project_name: project?.name || 'Proyecto Desconocido',
+          project_is_active: project?.is_active !== false,
           tasks_count: totalTasks,
           progress_percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
         }

@@ -15,6 +15,8 @@ export interface Contract {
   status: 'activo' | 'finalizado' | 'cancelado'
   notes?: string
   contract_number?: string
+  termination_reason?: string
+  termination_type?: string
   is_active: boolean
   is_renovacion: boolean
   created_at: string
@@ -607,6 +609,45 @@ export const useContracts = () => {
     }
   }
 
+  // Terminar contrato anticipadamente
+  const terminateContract = async (contractId: number, terminationData: { date: string, type: string, reason: string }) => {
+    try {
+      const { data, error } = await supabase
+        .from('contract_history')
+        .update({
+          fecha_termino: terminationData.date,
+          status: 'finalizado',
+          is_active: true,
+          termination_type: terminationData.type,
+          termination_reason: terminationData.reason,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contractId)
+        .select(`
+          *,
+          workers!inner(full_name, rut),
+          projects!inner(name)
+        `)
+        .single()
+
+      if (error) throw error
+
+      const updatedContract = {
+        ...data,
+        worker_name: data.workers?.full_name,
+        worker_rut: data.workers?.rut,
+        project_name: data.projects?.name
+      }
+
+      setContracts(prev => prev.map(c => c.id === contractId ? updatedContract : c))
+
+      return updatedContract
+    } catch (err: any) {
+      console.error('Error terminating contract:', err)
+      throw new Error(err.message || 'Error al terminar el contrato')
+    }
+  }
+
   return {
     contracts,
     loading,
@@ -617,6 +658,7 @@ export const useContracts = () => {
     deleteContract,
     restoreContract,
     hardDeleteContract,
+    terminateContract,
     validateContractBeforeCreate,
     getActiveContractsByWorker,
     checkExpiringContracts,

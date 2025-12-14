@@ -704,6 +704,7 @@ export default function ApartamentosPage() {
                 acc[projectId] = {
                   projectId,
                   projectName: apartment.project_name || 'Proyecto Desconocido',
+                  isProjectActive: (apartment as any).project_is_active,
                   towers: {} as Record<number, {
                     towerId: number
                     towerNumber: number
@@ -739,6 +740,7 @@ export default function ApartamentosPage() {
             }, {} as Record<number, {
               projectId: number
               projectName: string
+              isProjectActive?: boolean
               towers: Record<number, {
                 towerId: number
                 towerNumber: number
@@ -764,6 +766,7 @@ export default function ApartamentosPage() {
             (Object.values(apartmentsByProject) as Array<{
               projectId: number
               projectName: string
+              isProjectActive?: boolean
               towers: Record<number, {
                 towerId: number
                 towerNumber: number
@@ -786,9 +789,22 @@ export default function ApartamentosPage() {
               })
             })
 
+            // Filter for Contextual Visibility (Inactive Projects)
+            Object.keys(apartmentsByProject).forEach(projectIdStr => {
+              const projectId = parseInt(projectIdStr)
+              const project = apartmentsByProject[projectId]
+
+              if (project.isProjectActive === false) {
+                // User requested to hide deleted projects from all views except Tasks
+                // So we strictly remove any inactive project from the Apartamentos view
+                delete apartmentsByProject[projectId]
+              }
+            })
+
             return (Object.values(apartmentsByProject) as Array<{
               projectId: number
               projectName: string
+              isProjectActive?: boolean
               towers: Record<number, {
                 towerId: number
                 towerNumber: number
@@ -820,7 +836,10 @@ export default function ApartamentosPage() {
                 <div key={projectGroup.projectId} className={`space-y-4 ${projectIndex > 0 ? 'mt-8 pt-6 border-t-2 border-slate-600' : ''}`}>
                   {/* Header de Proyecto - Colapsable */}
                   <div
-                    className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
+                    className={`rounded-lg border px-4 py-3 cursor-pointer transition-colors ${projectGroup.isProjectActive === false
+                      ? 'bg-red-900/10 border-red-500/30 hover:bg-red-900/20'
+                      : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700/70'
+                      }`}
                     onClick={() => toggleProjectExpansion(projectGroup.projectId)}
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -830,10 +849,15 @@ export default function ApartamentosPage() {
                         ) : (
                           <ChevronRight className="w-4 h-4 text-slate-300" />
                         )}
-                        <Building2 className="w-4 h-4 text-blue-400" />
-                        <p className="text-sm font-medium text-slate-200">
+                        <Building2 className={`w-4 h-4 ${projectGroup.isProjectActive === false ? 'text-red-400' : 'text-blue-400'}`} />
+                        <p className={`text-sm font-medium ${projectGroup.isProjectActive === false ? 'text-red-200' : 'text-slate-200'}`}>
                           {projectGroup.projectName}
                         </p>
+                        {projectGroup.isProjectActive === false && (
+                          <span className="bg-red-500/20 text-red-300 text-xs px-2 py-0.5 rounded border border-red-500/30 font-medium">
+                            Eliminado ({completedTasks} tareas completadas)
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs w-full sm:w-auto ml-6 sm:ml-0">
                         <div className="flex items-center gap-2">

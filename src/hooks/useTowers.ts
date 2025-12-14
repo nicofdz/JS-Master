@@ -358,7 +358,9 @@ export function useTowers(projectId?: number) {
 
   const hardDeleteTower = async (id: number) => {
     try {
-      // 1. Obtener pisos de la torre
+      console.log(`🗑️ Iniciando hard delete de la torre ${id}...`)
+
+      // 1. Obtener toda la estructura (pisos y departamentos)
       const { data: floors, error: floorsError } = await supabase
         .from('floors')
         .select('id')
@@ -366,56 +368,85 @@ export function useTowers(projectId?: number) {
 
       if (floorsError) throw floorsError
 
-      if (floors && floors.length > 0) {
-        const floorIds = floors.map(f => f.id)
+      const floorIds = floors?.map(f => f.id) || []
 
-        // 2. Obtener apartamentos de estos pisos
+      let apartmentIds: number[] = []
+      if (floorIds.length > 0) {
         const { data: apartments, error: apartmentsError } = await supabase
           .from('apartments')
-          .select('id')
+          .select('id, floor_id')
           .in('floor_id', floorIds)
 
         if (apartmentsError) throw apartmentsError
-
-        if (apartments && apartments.length > 0) {
-          const apartmentIds = apartments.map(a => a.id)
-
-          console.log(`Hard delete: Eliminando ${apartmentIds.length} apartamentos de la torre ${id}...`)
-
-          // Eliminar apartamentos directamente
-          // Las tareas deberían ser manejadas por la base de datos (CASCADE o SET NULL)
-          const { error: deleteApartmentsError } = await supabase
-            .from('apartments')
-            .delete()
-            .in('id', apartmentIds)
-
-          if (deleteApartmentsError) {
-            console.error('Error al eliminar apartamentos:', deleteApartmentsError)
-            throw deleteApartmentsError
-          }
-
-          console.log('Apartamentos eliminados exitosamente')
-        }
-
-        // 5. Eliminar pisos
-        await supabase
-          .from('floors')
-          .delete()
-          .in('id', floorIds)
+        apartmentIds = apartments?.map(a => a.id) || []
       }
 
-      // 6. Eliminar la torre
-      const { error } = await supabase
-        .from('towers')
-        .delete()
-        .eq('id', id)
+      // 2. Verificar historial (tareas completadas)
+      const keptApartmentIds = new Set<number>()
 
-      if (error) throw error
+      if (apartmentIds.length > 0) {
+        const { data: meaningfulTasks, error: meaningfulTasksError } = await supabase
+          .from('tasks')
+          .select('id, apartment_id')
+          .in('apartment_id', apartmentIds)
+          .eq('status', 'completed')
 
-      // Actualizar la lista local
-      setTowers(prev => prev.filter(t => t.id !== id))
+        if (meaningfulTasksError) throw meaningfulTasksError
 
-      return true
+        meaningfulTasks?.forEach(t => keptApartmentIds.add(t.apartment_id))
+      }
+
+      const hasHistory = keptApartmentIds.size > 0
+
+      if (!hasHistory) {
+        // --- ESCENARIO 1: BORRADO TOTAL ---
+        console.log('No completed tasks found. Performing full delete of tower.')
+
+        // Borrar torre (Cascade borrará pisos, deptos y tareas)
+        const { error: deleteTowerError } = await supabase
+          .from('towers')
+          .delete()
+          .eq('id', id)
+
+        if (deleteTowerError) throw deleteTowerError
+
+        console.log('✅ Torre eliminada permanentemente')
+        setTowers(prev => prev.filter(t => t.id !== id))
+        return { type: 'deleted', message: 'Torre eliminada permanentemente' }
+      } else {
+        // --- ESCENARIO 2: PODA (PRUNING) ---
+        console.log(`Found history in ${keptApartmentIds.size} apartments. Pruning tower.`)
+
+        // a. Eliminar departamentos sin historial
+        const apartmentsToDelete = apartmentIds.filter(id => !keptApartmentIds.has(id))
+        if (apartmentsToDelete.length > 0) {
+          await supabase.from('apartments').delete().in('id', apartmentsToDelete)
+        }
+
+        // b. Identificar pisos a mantener (los que tienen deptos con historial)
+        // Necesitamos saber qué piso corresponde a qué depto, o volver a consultar
+        // O más fácil: Consultar los pisos de los departamentos guardados
+        // Pero ya tenemos floorIds, podemos verificar cuáles quedan vacíos.
+        // Simplificación: Un piso se queda SI tiene algún apartmentId en keptApartmentIds
+        // Requerimos mapeo aptId -> floorId.
+        // Recuperemos esa data
+        const { data: keptApartmentsFloors } = await supabase
+          .from('apartments')
+          .select('floor_id')
+          .in('id', Array.from(keptApartmentIds))
+
+        const keptFloorIds = new Set(keptApartmentsFloors?.map(a => a.floor_id))
+
+        // c. Eliminar pisos que NO están en keptFloorIds
+        const floorsToDelete = floorIds.filter(fid => !keptFloorIds.has(fid))
+        if (floorsToDelete.length > 0) {
+          await supabase.from('floors').delete().in('id', floorsToDelete)
+        }
+
+        console.log('✅ Torre podada: Se mantuvo el historial')
+        return { type: 'pruned', message: 'Torre podada: Se mantuvo el historial de tareas completadas' }
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar torre definitivamente')
       throw err

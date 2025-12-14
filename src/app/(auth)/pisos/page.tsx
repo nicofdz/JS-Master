@@ -677,6 +677,7 @@ export default function PisosPage() {
                 acc[projectId] = {
                   projectId,
                   projectName: floor.project_name || 'Proyecto Desconocido',
+                  isProjectActive: (floor.projects as any)?.is_active !== false,
                   towers: {} as Record<number, { towerId: number; towerNumber: number; towerName: string; floors: typeof filteredFloors }>
                 }
               }
@@ -700,12 +701,27 @@ export default function PisosPage() {
             }, {} as Record<number, {
               projectId: number
               projectName: string
+              isProjectActive: boolean
               towers: Record<number, { towerId: number; towerNumber: number; towerName: string; floors: typeof filteredFloors }>
             }>)
+
+            // Filter for Contextual Visibility (Inactive Projects)
+            // Show "lo necesario": only entities with history (tasks)
+            Object.keys(floorsByProject).forEach(projectIdStr => {
+              const projectId = parseInt(projectIdStr)
+              const project = floorsByProject[projectId]
+
+              if (!project.isProjectActive) {
+                // User requested to hide deleted projects from all views except Tasks
+                // So we strictly remove any inactive project from the Pisos view
+                delete floorsByProject[projectId]
+              }
+            })
 
             return (Object.values(floorsByProject) as Array<{
               projectId: number
               projectName: string
+              isProjectActive: boolean
               towers: Record<number, { towerId: number; towerNumber: number; towerName: string; floors: typeof filteredFloors }>
             }>).map((projectGroup, index) => {
               const isProjectExpanded = expandedProjects.has(projectGroup.projectId)
@@ -726,43 +742,52 @@ export default function PisosPage() {
                 <div key={projectGroup.projectId} className={`space-y-4 ${index > 0 ? 'mt-8 pt-6 border-t-2 border-slate-600' : ''}`}>
                   {/* Separador de Proyecto - Colapsable */}
                   <div
-                    className="bg-slate-700/50 rounded-lg border border-slate-600 px-4 py-3 cursor-pointer hover:bg-slate-700/70 transition-colors"
+                    className={`rounded-lg border px-4 py-3 cursor-pointer transition-colors ${projectGroup.isProjectActive === false
+                      ? 'bg-red-900/10 border-red-500/30 hover:bg-red-900/20'
+                      : 'bg-slate-700/50 border-slate-600 hover:bg-slate-700/70'
+                      }`}
                     onClick={() => toggleProjectExpansion(projectGroup.projectId)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {isProjectExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-slate-300" />
+                          <ChevronDown className={`w-4 h-4 ${projectGroup.isProjectActive === false ? 'text-red-400' : 'text-slate-300'}`} />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-slate-300" />
+                          <ChevronRight className={`w-4 h-4 ${projectGroup.isProjectActive === false ? 'text-red-400' : 'text-slate-300'}`} />
                         )}
-                        <Building2 className="w-4 h-4 text-blue-400" />
-                        <p className="text-sm font-medium text-slate-200">
+                        <Building2 className={`w-4 h-4 ${projectGroup.isProjectActive === false ? 'text-red-400' : 'text-blue-400'}`} />
+                        <p className={`text-sm font-medium ${projectGroup.isProjectActive === false ? 'text-red-200' : 'text-slate-200'}`}>
                           {projectGroup.projectName}
                         </p>
+                        {projectGroup.isProjectActive === false && (
+                          <span className="bg-red-500/20 text-red-300 text-xs px-2 py-0.5 rounded border border-red-500/30 flex items-center gap-1 font-medium">
+                            <Trash2 className="w-3 h-3" />
+                            Eliminado ({completedTasks} tareas completadas)
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-xs">
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-400">Progreso:</span>
+                          <span className={projectGroup.isProjectActive === false ? 'text-red-300/70' : 'text-slate-400'}>Progreso:</span>
                           <div className="flex items-center gap-1">
-                            <div className="w-16 bg-slate-800 rounded-full h-1.5">
+                            <div className={`w-16 rounded-full h-1.5 ${projectGroup.isProjectActive === false ? 'bg-red-900/40' : 'bg-slate-800'}`}>
                               <div
-                                className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                                className={`h-1.5 rounded-full transition-all duration-300 ${projectGroup.isProjectActive === false ? 'bg-red-500' : 'bg-blue-500'}`}
                                 style={{ width: `${averageProgress}%` }}
                               />
                             </div>
-                            <span className="text-slate-300 font-medium w-8">{averageProgress}%</span>
+                            <span className={`font-medium w-8 ${projectGroup.isProjectActive === false ? 'text-red-300' : 'text-slate-300'}`}>{averageProgress}%</span>
                           </div>
                         </div>
                         {totalTasks > 0 && (
                           <div className="flex items-center gap-1">
-                            <span className="text-slate-400">Tareas:</span>
-                            <span className="text-slate-300 font-medium">{completedTasks}/{totalTasks}</span>
+                            <span className={projectGroup.isProjectActive === false ? 'text-red-300/70' : 'text-slate-400'}>Tareas:</span>
+                            <span className={`font-medium ${projectGroup.isProjectActive === false ? 'text-red-300' : 'text-slate-300'}`}>{completedTasks}/{totalTasks}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
-                          <span className="text-slate-400">Pisos:</span>
-                          <span className="text-slate-300 font-medium">{totalFloors}</span>
+                          <span className={projectGroup.isProjectActive === false ? 'text-red-300/70' : 'text-slate-400'}>Pisos:</span>
+                          <span className={`font-medium ${projectGroup.isProjectActive === false ? 'text-red-300' : 'text-slate-300'}`}>{totalFloors}</span>
                         </div>
                       </div>
                     </div>

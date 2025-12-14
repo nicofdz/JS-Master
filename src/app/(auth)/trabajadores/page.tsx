@@ -9,18 +9,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { WorkerForm } from '@/components/workers/WorkerForm'
-import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp, UserMinus } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { ContractFiltersSidebar } from '@/components/workers/ContractFiltersSidebar'
 import { WorkerEfficiencyModal } from '@/components/workers/WorkerEfficiencyModal'
+import { TerminateContractModal } from '@/components/workers/TerminateContractModal'
 import { formatDateToChilean } from '@/lib/contracts'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function TrabajadoresPage() {
   const { workers, loading, error, createWorker, updateWorker, deleteWorker, restoreWorker, hardDeleteWorker, toggleWorkerStatus, refresh, refreshAll } = useWorkers()
-  const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, fetchContracts, checkAllContracts } = useContracts()
+  const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, terminateContract, fetchContracts, checkAllContracts } = useContracts()
   const { projects } = useProjects()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -91,9 +92,13 @@ export default function TrabajadoresPage() {
 
   const [showWorkerTrash, setShowWorkerTrash] = useState(false) // Nuevo estado para papelera de trabajadores
   const [confirmDeleteContractState, setConfirmDeleteContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
-  // Nuevos estados para confirmación de contratos
+  // Estados para confirmación de contratos
   const [confirmRestoreContractState, setConfirmRestoreContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
   const [confirmHardDeleteContractState, setConfirmHardDeleteContractState] = useState<{ isOpen: boolean, contractId: number | null }>({ isOpen: false, contractId: null })
+
+  // Estado para terminación de contrato
+  const [showTerminateContractModal, setShowTerminateContractModal] = useState(false)
+  const [contractToTerminate, setContractToTerminate] = useState<Contract | null>(null)
 
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
@@ -393,6 +398,24 @@ export default function TrabajadoresPage() {
       toast.success('Contrato eliminado permanentemente')
     } catch (error: any) {
       toast.error(error.message || 'Error al eliminar contrato')
+    }
+  }
+
+  const handleTerminateContract = (contract: Contract) => {
+    setContractToTerminate(contract)
+    setShowTerminateContractModal(true)
+  }
+
+  const executeTerminateContract = async (data: { date: string; type: string; reason: string }) => {
+    if (!contractToTerminate) return
+
+    try {
+      await terminateContract(contractToTerminate.id, data)
+      toast.success('Contrato terminado exitosamente')
+      setShowTerminateContractModal(false)
+      setContractToTerminate(null)
+    } catch (error: any) {
+      toast.error(error.message || 'Error al terminar contrato')
     }
   }
 
@@ -1621,6 +1644,9 @@ export default function TrabajadoresPage() {
                               <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-slate-700">
                                 <Clock className="h-4 w-4" />
                               </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleTerminateContract(contract)} className="h-8 w-8 p-0 text-orange-400 hover:text-orange-300 hover:bg-slate-700" title="Terminar contrato anticipadamente">
+                                <UserMinus className="h-4 w-4" />
+                              </Button>
                               <Button size="sm" variant="ghost" onClick={() => handleDeleteContract(contract.id)} className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-slate-700">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1745,6 +1771,13 @@ export default function TrabajadoresPage() {
                                       title="Generar solo Pacto de Horas (renovación cada 3 meses)"
                                     >
                                       <Clock className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleTerminateContract(contract)}
+                                      className="text-orange-600 hover:text-orange-900"
+                                      title="Terminar contrato anticipadamente"
+                                    >
+                                      <UserMinus className="h-4 w-4" />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteContract(contract.id)}
@@ -2340,6 +2373,16 @@ export default function TrabajadoresPage() {
             </Modal>
           )
         }
+
+        <TerminateContractModal
+          isOpen={showTerminateContractModal}
+          onClose={() => {
+            setShowTerminateContractModal(false)
+            setContractToTerminate(null)
+          }}
+          onConfirm={executeTerminateContract}
+          startDate={contractToTerminate?.fecha_inicio}
+        />
 
         {/* Modal de Historial de Contratos */}
         {

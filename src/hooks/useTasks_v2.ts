@@ -190,7 +190,8 @@ export function useTasksV2() {
             tower_id,
             projects!inner(
               id,
-              name
+              name,
+              is_active
             ),
             towers!inner(
               id,
@@ -231,8 +232,6 @@ export function useTasksV2() {
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('is_active', true)
-        .eq('status', 'active')
         .order('name')
 
       if (error) throw error
