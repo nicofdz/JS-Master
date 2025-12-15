@@ -279,7 +279,6 @@ export function useAuthState(): AuthContextType {
     user,
     profile,
     session,
-    session,
     loading,
     assignedProjectIds,
     signIn,
