@@ -155,7 +155,7 @@ export default function AuthLayout({
 
     // If supervisor, filter specific items
     if (profile?.role === 'supervisor') {
-      const allowedItems = ['Tareas', 'Asistencia', 'Herramientas', 'Trabajadores/Contratos', 'Materiales']
+      const allowedItems = ['Pisos', 'Apartamentos', 'Tareas', 'Asistencia', 'Herramientas', 'Trabajadores/Contratos', 'Materiales']
       const filteredItems = section.items.filter(item => allowedItems.includes(item.name))
 
       // Return section only if it has items

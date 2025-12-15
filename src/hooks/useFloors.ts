@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 
 type Floor = any & {
   project_name?: string
@@ -19,10 +20,13 @@ type Floor = any & {
 type FloorInsert = any
 
 export function useFloors(projectId?: number) {
+  const { user, profile, assignedProjectIds } = useAuth()
   const [floors, setFloors] = useState<Floor[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const userRole = profile?.role || null
 
   const fetchProjects = async () => {
     try {
@@ -65,7 +69,24 @@ export function useFloors(projectId?: number) {
       }
 
       if (projectId) {
+        // Security Check
+        if (userRole && userRole !== 'admin' && !assignedProjectIds.includes(projectId)) {
+          setFloors([])
+          setLoading(false)
+          return
+        }
         query = query.eq('project_id', projectId)
+      } else {
+        // General filter
+        if (userRole && userRole !== 'admin') {
+          if (assignedProjectIds.length > 0) {
+            query = query.in('project_id', assignedProjectIds)
+          } else {
+            setFloors([])
+            setLoading(false)
+            return
+          }
+        }
       }
 
       const { data, error } = await query
@@ -688,9 +709,11 @@ export function useFloors(projectId?: number) {
   }
 
   useEffect(() => {
-    fetchProjects()
-    fetchFloors()
-  }, [projectId])
+    if (userRole) {
+      fetchProjects()
+      fetchFloors()
+    }
+  }, [projectId, userRole, assignedProjectIds])
 
   return {
     floors,

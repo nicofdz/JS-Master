@@ -33,15 +33,17 @@ interface DeletedTasksListProps {
   loading: boolean
   onRestore: (taskId: number) => Promise<void>
   onHardDelete?: (taskId: number) => Promise<void>
+  onEmptyTrash?: () => Promise<void>
   onRefresh: () => void
 }
 
-export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelete, onRefresh }: DeletedTasksListProps) {
+export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelete, onEmptyTrash, onRefresh }: DeletedTasksListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedTask, setSelectedTask] = useState<DeletedTask | null>(null)
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
-  const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false) // Nuevo estado
+  const [showHardDeleteConfirm, setShowHardDeleteConfirm] = useState(false)
+  const [showEmptyTrashConfirm, setShowEmptyTrashConfirm] = useState(false) // Nuevo estado
   const [taskToRestore, setTaskToRestore] = useState<number | null>(null)
   const [showAssignmentsModal, setShowAssignmentsModal] = useState(false)
   const [selectedTaskAssignments, setSelectedTaskAssignments] = useState<DeletedTask | null>(null)
@@ -102,6 +104,22 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelet
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
+      </div>
+
+      {/* Acciones Globales */}
+      <div className="flex justify-between items-center">
+        <div className="text-sm text-slate-400">
+          {filteredTasks.length} tareas encontradas
+        </div>
+        {onEmptyTrash && deletedTasks.length > 0 && (
+          <button
+            onClick={() => setShowEmptyTrashConfirm(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md transition-colors border border-transparent hover:border-red-900/30"
+          >
+            <Trash2 className="w-4 h-4" />
+            Vaciar Papelera
+          </button>
+        )}
       </div>
 
       {/* Lista de tareas eliminadas */}
@@ -299,6 +317,24 @@ export function DeletedTasksList({ deletedTasks, loading, onRestore, onHardDelet
         title="Eliminar Definitivamente"
         message="¿Estás seguro de que deseas eliminar esta tarea permanentemente? Esta acción NO se puede deshacer."
         confirmText="Eliminar Definitivamente"
+        cancelText="Cancelar"
+        variant="danger"
+      />
+
+      {/* Modal de confirmación de Vaciar Papelera */}
+      <ConfirmModalV2
+        isOpen={showEmptyTrashConfirm}
+        onClose={() => setShowEmptyTrashConfirm(false)}
+        onConfirm={async () => {
+          if (onEmptyTrash) {
+            await onEmptyTrash()
+            setShowEmptyTrashConfirm(false)
+            onRefresh()
+          }
+        }}
+        title="Vaciar Papelera"
+        message="¿Estás seguro de que deseas eliminar PERMANENTEMENTE todas las tareas de la papelera? Esta acción no se puede deshacer."
+        confirmText="Sí, vaciar papelera"
         cancelText="Cancelar"
         variant="danger"
       />

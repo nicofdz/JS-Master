@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 
 export interface Tower {
   id: number
@@ -23,9 +24,12 @@ type TowerInsert = {
 }
 
 export function useTowers(projectId?: number) {
+  const { user, profile, assignedProjectIds } = useAuth()
   const [towers, setTowers] = useState<Tower[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const userRole = profile?.role || null
 
   const fetchTowers = async (includeDeleted = false) => {
     try {
@@ -46,7 +50,24 @@ export function useTowers(projectId?: number) {
       }
 
       if (projectId) {
+        // Security Check
+        if (userRole && userRole !== 'admin' && !assignedProjectIds.includes(projectId)) {
+          setTowers([])
+          setLoading(false)
+          return
+        }
         query = query.eq('project_id', projectId)
+      } else {
+        // General filter if no project specified
+        if (userRole && userRole !== 'admin') {
+          if (assignedProjectIds.length > 0) {
+            query = query.in('project_id', assignedProjectIds)
+          } else {
+            setTowers([])
+            setLoading(false)
+            return
+          }
+        }
       }
 
       const { data, error } = await query
@@ -512,8 +533,11 @@ export function useTowers(projectId?: number) {
   }
 
   useEffect(() => {
-    fetchTowers()
-  }, [projectId])
+    // Only fetch if access info is loaded (userRole is available via profile from useAuth)
+    if (userRole) {
+      fetchTowers()
+    }
+  }, [projectId, userRole, assignedProjectIds])
 
   return {
     towers,

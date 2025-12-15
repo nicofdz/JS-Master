@@ -19,6 +19,7 @@ export interface AuthContextType {
   profile: UserProfile | null
   session: any | null
   loading: boolean
+  assignedProjectIds: number[]
   signIn: (email: string, password: string) => Promise<{ data?: any, error?: any }>
   signUp: (email: string, password: string, fullName: string, role?: UserRole, options?: { redirectTo?: string }) => Promise<{ data?: any, error?: any }>
   signOut: () => Promise<void>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react'
 import { authService, onAuthStateChange } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import type { UserProfile, AuthContextType } from '@/types/auth'
 import type { User, Session } from '@supabase/supabase-js'
 
@@ -23,6 +24,7 @@ export function useAuthState(): AuthContextType {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [session, setSession] = useState<Session | null>(null)
+  const [assignedProjectIds, setAssignedProjectIds] = useState<number[]>([])
 
   // Cargar perfil del usuario
   const loadUserProfile = async (userId: string) => {
@@ -55,6 +57,18 @@ export function useAuthState(): AuthContextType {
         return
       }
       setProfile(data)
+
+      // Load assignments if not admin
+      if (data.role !== 'admin') {
+        const { data: assignments } = await supabase // access supabase directly or via authService? authService wraps simple methods.
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', user.id)
+
+        if (assignments) {
+          setAssignedProjectIds(assignments.map(a => a.project_id))
+        }
+      }
     } catch (error) {
       console.error('Error al crear perfil:', error)
     }
@@ -114,9 +128,50 @@ export function useAuthState(): AuthContextType {
         } else {
           await createUserProfile(session.user)
         }
+
+        // Helper to load assignments
+        const loadAssignments = async () => {
+          if (existingProfile?.role && existingProfile.role !== 'admin') {
+            const { data: assignments } = await supabase
+              .from('user_projects')
+              .select('project_id')
+              .eq('user_id', session.user.id)
+
+            if (assignments) {
+              setAssignedProjectIds(assignments.map(a => a.project_id))
+            }
+          }
+        }
+
+        // Initial load
+        await loadAssignments()
+
+        // Realtime subscription for assignments
+        const assignmentsSubscription = supabase
+          .channel('user-assignments-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*', // Listen to all events (INSERT, DELETE, UPDATE)
+              schema: 'public',
+              table: 'user_projects',
+              filter: `user_id=eq.${session.user.id}`
+            },
+            async () => {
+              console.log('⚡ Cambios en asignaciones detectados, actualizando...')
+              await loadAssignments()
+            }
+          )
+          .subscribe()
+
+        return () => {
+          assignmentsSubscription.unsubscribe()
+        }
+
       } else {
         setUser(null)
         setProfile(null)
+        setAssignedProjectIds([])
       }
 
       setLoading(false)
@@ -224,7 +279,9 @@ export function useAuthState(): AuthContextType {
     user,
     profile,
     session,
+    session,
     loading,
+    assignedProjectIds,
     signIn,
     signUp,
     signOut,

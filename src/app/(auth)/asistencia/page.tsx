@@ -44,6 +44,45 @@ export default function AsistenciaPage() {
   const [selectedProjectForModal, setSelectedProjectForModal] = useState<{ id: number; name: string } | null>(null)
   const [workersChangedToAbsent, setWorkersChangedToAbsent] = useState<Set<number>>(new Set())
 
+  // Access Control State
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [assignedProjectIds, setAssignedProjectIds] = useState<number[]>([])
+
+  // Fetch access control info on mount
+  useEffect(() => {
+    const fetchUserAccess = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Get role
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        const role = profile?.role || 'worker'
+        setUserRole(role)
+
+        // Get assigned projects
+        if (role !== 'admin') {
+          const { data: assignments } = await supabase
+            .from('user_projects')
+            .select('project_id')
+            .eq('user_id', user.id)
+
+          if (assignments) {
+            setAssignedProjectIds(assignments.map(a => a.project_id))
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user access:', err)
+      }
+    }
+    fetchUserAccess()
+  }, [])
+
   // Obtener fecha actual en zona horaria de Chile
   const getChileDate = () => {
     const now = new Date()
@@ -165,7 +204,24 @@ export default function AsistenciaPage() {
 
       // Filtrar por proyecto si está seleccionado
       if (historyProjectId) {
+        // Security check
+        if (userRole !== 'admin' && !assignedProjectIds.includes(historyProjectId)) {
+          setHistoryAttendances([])
+          setHistoryLoading(false)
+          return
+        }
         query = query.eq('project_id', historyProjectId)
+      } else {
+        // General access control for history
+        if (userRole && userRole !== 'admin') {
+          if (assignedProjectIds.length > 0) {
+            query = query.in('project_id', assignedProjectIds)
+          } else {
+            setHistoryAttendances([])
+            setHistoryLoading(false)
+            return
+          }
+        }
       }
 
       // Filtrar por trabajador si está seleccionado
@@ -199,7 +255,7 @@ export default function AsistenciaPage() {
     } finally {
       setHistoryLoading(false)
     }
-  }, [historyProjectId, historyWorkerFilter])
+  }, [historyProjectId, historyWorkerFilter, userRole, assignedProjectIds])
 
   // Cargar asistencias de un rango amplio (solo en modo historial)
   useEffect(() => {

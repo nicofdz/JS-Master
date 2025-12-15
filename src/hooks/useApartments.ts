@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/lib/supabase'
 import { useFloors } from './useFloors'
+import { useAuth } from './useAuth'
 
 type Apartment = any & {
   floor_number?: number
@@ -16,11 +17,14 @@ type Apartment = any & {
 type ApartmentInsert = any
 
 export function useApartments(floorId?: number) {
+  const { user, profile, assignedProjectIds } = useAuth()
   const [apartments, setApartments] = useState<Apartment[]>([])
   const [floors, setFloors] = useState<any[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const userRole = profile?.role || null
 
   // Obtener la función para actualizar el status del piso
   const { updateFloorStatusFromApartments } = useFloors()
@@ -41,10 +45,21 @@ export function useApartments(floorId?: number) {
 
   const fetchFloors = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('floors')
         .select('id, floor_number, project_id, projects!inner(id, name)')
         .order('floor_number', { ascending: true })
+
+      if (userRole && userRole !== 'admin') {
+        if (assignedProjectIds.length > 0) {
+          query = query.in('project_id', assignedProjectIds)
+        } else {
+          setFloors([])
+          return
+        }
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error('❌ Error en fetchFloors:', error)
@@ -115,10 +130,28 @@ export function useApartments(floorId?: number) {
         throw error
       }
 
-      console.log('✅ Datos de apartamentos obtenidos:', data?.length, 'apartamentos')
+      // Security Filter: Filter by assignedProjectIds
+      let filteredData = data || []
+      if (userRole && userRole !== 'admin') {
+        if (assignedProjectIds.length === 0) {
+          filteredData = []
+        } else {
+          filteredData = filteredData.filter((apt: any) => {
+            // Traverse the nested structure: apartment -> floors -> towers -> projects -> id
+            // Note: The structure in 'data' follows the select query structure.
+            // floors is an object (single because it's many-to-one from apt perspective) 
+            // but typically Supabase returns it as array or object depending on relation.
+            // Here !inner implies one parent.
+            const projectId = apt.floors?.towers?.projects?.id
+            return assignedProjectIds.includes(projectId)
+          })
+        }
+      }
+
+      console.log('✅ Datos de apartamentos obtenidos:', filteredData.length, 'apartamentos')
 
       // Procesar datos para incluir información adicional
-      const processedApartments = (data || []).map(apartment => {
+      const processedApartments = filteredData.map(apartment => {
         const floor = apartment.floors as any
         const tower = floor?.towers as any
         const project = tower?.projects as any
@@ -482,6 +515,34 @@ export function useApartments(floorId?: number) {
 
       if (floorId) {
         query = query.eq('floor_id', floorId)
+      } else {
+        // If fetching ALL apartments (global view), check access
+        if (userRole && userRole !== 'admin') {
+          if (assignedProjectIds.length > 0) {
+            // Option 1: Filter using join. This works if we trust the inner join to filter correctly
+            // We need to filter based on the project of the apartment
+            // projects!inner is already in the select
+            // We can use the !inner join on projects to filter by id
+
+            // Supabase JS filter on foreign table:
+            // .filter('floors.towers.projects.id', 'in', `(${assignedProjectIds.join(',')})`)
+            // But multiple joins specific syntax is tricky.
+
+            // Simplified: relying on !inner joins if we can constraints.
+            // But let's simple filtering in memory for now OR try filtering on the top level if possible, but apartment doesn't have project_id directly.
+
+            // Better approach:
+            // We can't easily filter deep relation 'floors.towers.projects.id' with .in() at top level with standard Supabase client easily unless we rely on raw postgrest syntax.
+
+            // ALTERNATIVE: Filter in memory (client-side) after fetch.
+            // Since we're fetching everything, let's fetch then filter in Javascript.
+
+          } else {
+            setApartments([])
+            setLoading(false)
+            return
+          }
+        }
       }
 
       const { data, error } = await query
@@ -489,6 +550,17 @@ export function useApartments(floorId?: number) {
       if (error) {
         console.error('❌ Error en fetchAllApartments:', error)
         throw error
+      }
+
+      // Client-side filtering for security fallback
+      let filteredData = data || []
+      if (userRole && userRole !== 'admin' && assignedProjectIds.length > 0) {
+        filteredData = filteredData.filter((apt: any) => {
+          const pid = apt.floors?.towers?.projects?.id
+          return assignedProjectIds.includes(pid)
+        })
+      } else if (userRole && userRole !== 'admin' && assignedProjectIds.length === 0) {
+        filteredData = []
       }
 
       console.log('✅ Datos de apartamentos obtenidos (incluyendo inactivos):', data?.length, 'apartamentos')
@@ -652,10 +724,12 @@ export function useApartments(floorId?: number) {
   }
 
   useEffect(() => {
-    fetchProjects()
-    fetchFloors()
-    fetchApartments()
-  }, [floorId])
+    if (userRole) {
+      fetchProjects()
+      fetchFloors()
+      fetchApartments()
+    }
+  }, [floorId, userRole, assignedProjectIds])
 
   return {
     apartments,

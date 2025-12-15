@@ -99,7 +99,9 @@ export async function middleware(req: NextRequest) {
       '/asistencia',
       '/herramientas',
       '/trabajadores',
-      '/materiales'
+      '/materiales',
+      '/pisos',
+      '/apartamentos'
     ]
 
     // Si es supervisor

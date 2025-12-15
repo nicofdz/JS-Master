@@ -120,6 +120,11 @@ export function useUsers() {
             const toAdd = projectIds.filter(id => !currentIds.includes(id))
             const toRemove = currentIds.filter(id => !projectIds.includes(id))
 
+            console.log('assignProjects: ProjectIDs:', projectIds)
+            console.log('assignProjects: Current:', currentIds)
+            console.log('assignProjects: Adding:', toAdd)
+            console.log('assignProjects: Removing:', toRemove)
+
             // 3. Eliminar
             if (toRemove.length > 0) {
                 const { error: deleteError } = await supabase

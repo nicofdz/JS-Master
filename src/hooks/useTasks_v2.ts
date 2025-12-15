@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
+import { useAuth } from './useAuth'
 
 // Helper function to calculate days delayed
 function calculateDaysDelayed(task: any): number {
@@ -95,6 +96,10 @@ export interface TaskStats {
 }
 
 export function useTasksV2() {
+  // Use centralized Auth Context
+  const { user, profile, assignedProjectIds } = useAuth()
+  const userRole = profile?.role || null
+
   const [tasks, setTasks] = useState<TaskV2[]>([])
   const [apartments, setApartments] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
@@ -111,13 +116,30 @@ export function useTasksV2() {
     delayed: 0
   })
 
+
   // Fetch tasks from tasks_with_workers_v2 view
   const fetchTasks = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      if (!userRole) return // Wait for role
+
+      let query = supabase
         .from('tasks_with_workers_v2')
         .select('*')
         .order('created_at', { ascending: false })
+
+      // Aplicar filtro de seguridad
+      if (userRole !== 'admin') {
+        if (assignedProjectIds.length > 0) {
+          query = query.in('project_id', assignedProjectIds)
+        } else {
+          // Si no es admin y no tiene proyectos, no ver nada
+          setTasks([])
+          return
+        }
+      }
+
+      const { data, error } = await query
+
 
       if (error) throw error
 
@@ -174,12 +196,16 @@ export function useTasksV2() {
       console.error('Error fetching tasks:', err)
       setError(err.message)
     }
-  }, [])
+  }, [userRole, assignedProjectIds])
 
   // Fetch apartments
   const fetchApartments = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      // Aplicar filtro de seguridad (via floors -> projects)
+      // Supabase supports filtering on joined tables? Yes via !inner
+      // But filtering apartments by project ID of floor...
+
+      let query = supabase
         .from('apartments')
         .select(`
           *,
@@ -203,12 +229,38 @@ export function useTasksV2() {
         .eq('is_active', true)
         .order('apartment_number')
 
+      // Filtro manual post-fetch o en query si es posible.
+      // Filtering deep nested relations in Supabase is tricky.
+      // Easiest is to fetch and filter in memory if dataset is not huge, 
+      // OR use !inner join with filter.
+
+      // Intentamos filtrar por floors -> project_id 
+      if (userRole !== 'admin' && assignedProjectIds.length > 0) {
+        // Esto asume que podemos filtrar por floors.project_id
+        // query = query.in('floors.project_id', assignedProjectIds) // Syntax might differ
+        // Mejor filtramos en memoria para asegurar no romper la query compleja
+      }
+
+      const { data, error } = await query
       if (error) throw error
-      setApartments(data || [])
+
+      let filteredData = data || []
+
+      if (userRole !== 'admin') {
+        if (assignedProjectIds.length === 0) {
+          setApartments([])
+          return
+        }
+        filteredData = filteredData.filter((apt: any) =>
+          assignedProjectIds.includes(apt.floors?.project_id)
+        )
+      }
+
+      setApartments(filteredData)
     } catch (err: any) {
       console.error('Error fetching apartments:', err)
     }
-  }, [])
+  }, [userRole, assignedProjectIds])
 
   // Fetch workers
   const fetchWorkers = useCallback(async () => {
@@ -229,22 +281,32 @@ export function useTasksV2() {
   // Fetch projects
   const fetchProjects = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      if (!userRole) return
+
+      let query = supabase
         .from('projects')
         .select('*')
         .order('name')
 
+      if (userRole !== 'admin' && assignedProjectIds.length > 0) {
+        query = query.in('id', assignedProjectIds)
+      } else if (userRole !== 'admin' && assignedProjectIds.length === 0) {
+        setProjects([])
+        return
+      }
+
+      const { data, error } = await query
       if (error) throw error
       setProjects(data || [])
     } catch (err: any) {
       console.error('Error fetching projects:', err)
     }
-  }, [])
+  }, [userRole, assignedProjectIds])
 
   // Fetch floors
   const fetchFloors = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('floors')
         .select(`
           *,
@@ -256,18 +318,56 @@ export function useTasksV2() {
         .eq('is_active', true)
         .order('floor_number')
 
+      // Filtro post-fetch para simplificar query
+      const { data, error } = await query
+
       if (error) throw error
-      setFloors(data || [])
+
+      let filteredData = data || []
+      if (userRole !== 'admin') {
+        if (assignedProjectIds.length === 0) {
+          setFloors([])
+          return
+        }
+        filteredData = filteredData.filter((f: any) => assignedProjectIds.includes(f.project_id))
+      }
+
+      setFloors(filteredData)
     } catch (err: any) {
       console.error('Error fetching floors:', err)
     }
-  }, [])
+  }, [userRole, assignedProjectIds])
 
   // Fetch task statistics
   const fetchTaskStats = useCallback(async (projectId?: number) => {
     try {
+      // Logic for Project ID(s) assignment
+      let projectIdsToFetch: number[] | null = null
+
+      if (projectId) {
+        // If specific project requested, verify access if not admin
+        if (userRole !== 'admin' && !assignedProjectIds.includes(projectId)) {
+          console.warn('Access denied to project stats')
+          return
+        }
+        projectIdsToFetch = [projectId]
+      } else {
+        // Global view
+        if (userRole === 'admin') {
+          projectIdsToFetch = null // All projects
+        } else {
+          if (assignedProjectIds.length === 0) {
+            setTaskStats({
+              total: 0, pending: 0, inProgress: 0, completed: 0, blocked: 0, delayed: 0
+            })
+            return
+          }
+          projectIdsToFetch = assignedProjectIds
+        }
+      }
+
       const { data, error } = await supabase.rpc('get_task_stats', {
-        p_project_id: projectId || null
+        p_project_ids: projectIdsToFetch
       })
 
       if (error) throw error
@@ -286,7 +386,7 @@ export function useTasksV2() {
     } catch (err: any) {
       console.error('Error fetching task stats:', err)
     }
-  }, [])
+  }, [userRole, assignedProjectIds])
 
   // Create task
   const createTask = async (taskData: any) => {
@@ -421,12 +521,22 @@ export function useTasksV2() {
   }
 
   // Fetch deleted tasks
-  const fetchDeletedTasks = async () => {
+  const fetchDeletedTasks = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deleted_tasks_view')
         .select('*')
         .order('deleted_at', { ascending: false })
+
+      if (userRole !== 'admin') {
+        if (assignedProjectIds.length > 0) {
+          query = query.in('project_id', assignedProjectIds)
+        } else {
+          return []
+        }
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       return data || []
@@ -435,15 +545,25 @@ export function useTasksV2() {
       toast.error(`Error al cargar tareas eliminadas: ${err.message}`)
       return []
     }
-  }
+  }, [userRole, assignedProjectIds])
 
   // Get deleted tasks count only (without loading all data)
-  const getDeletedTasksCount = async () => {
+  const getDeletedTasksCount = useCallback(async () => {
     try {
-      const { count, error } = await supabase
-        .from('tasks')
+      // Use view for easy filtering by project_id
+      let query = supabase
+        .from('deleted_tasks_view')
         .select('*', { count: 'exact', head: true })
-        .eq('is_deleted', true)
+
+      if (userRole !== 'admin') {
+        if (assignedProjectIds.length > 0) {
+          query = query.in('project_id', assignedProjectIds)
+        } else {
+          return 0
+        }
+      }
+
+      const { count, error } = await query
 
       if (error) throw error
       return count || 0
@@ -451,7 +571,7 @@ export function useTasksV2() {
       console.error('Error fetching deleted tasks count:', err)
       return 0
     }
-  }
+  }, [userRole, assignedProjectIds])
 
   // Restore task
   const restoreTask = async (taskId: number) => {
@@ -468,6 +588,39 @@ export function useTasksV2() {
     } catch (err: any) {
       console.error('Error restoring task:', err)
       toast.error(`Error al restaurar tarea: ${err.message}`)
+      throw err
+    }
+  }
+
+  // Empty trash (permanently delete all deleted tasks)
+  const emptyTrash = async () => {
+    try {
+      // Logic for Project ID(s) assignment
+      let projectIdsToEmpty: number[] | null = null
+
+      if (userRole === 'admin') {
+        projectIdsToEmpty = null // All projects
+      } else {
+        if (assignedProjectIds.length === 0) {
+          // If no projects assigned, nothing to empty strictly speaking, 
+          // or we can pass empty array which results in 0 deletions.
+          return
+        }
+        projectIdsToEmpty = assignedProjectIds
+      }
+
+      const { error } = await supabase.rpc('empty_trash', {
+        p_project_ids: projectIdsToEmpty
+      })
+
+      if (error) throw error
+
+      toast.success('Papelera vaciada exitosamente')
+      await fetchTasks() // In case some lists need refresh (though these are deleted items)
+      await fetchTaskStats()
+    } catch (err: any) {
+      console.error('Error emptying trash:', err)
+      toast.error(`Error al vaciar papelera: ${err.message}`)
       throw err
     }
   }
@@ -707,7 +860,7 @@ export function useTasksV2() {
     }
 
     loadData()
-  }, [fetchTasks, fetchApartments, fetchWorkers, fetchProjects, fetchFloors, fetchTaskStats])
+  }, [fetchTasks, fetchApartments, fetchWorkers, fetchProjects, fetchFloors, fetchTaskStats, userRole, assignedProjectIds])
 
   return {
     tasks,
@@ -732,6 +885,7 @@ export function useTasksV2() {
     fetchDeletedTasks,
     getDeletedTasksCount,
     restoreTask,
+    emptyTrash,
     refreshTasks: fetchTasks,
     refreshStats: fetchTaskStats
   }

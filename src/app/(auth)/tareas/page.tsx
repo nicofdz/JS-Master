@@ -32,7 +32,8 @@ export default function TareasPage() {
     fetchDeletedTasks,
     getDeletedTasksCount,
     restoreTask,
-    hardDeleteTask
+    hardDeleteTask,
+    emptyTrash
   } = useTasksV2()
 
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
@@ -55,10 +56,10 @@ export default function TareasPage() {
   const [initialTaskData, setInitialTaskData] = useState<{ projectId: number; towerId: number; floorId: number; apartmentId: number } | null>(null)
   const [massCreateData, setMassCreateData] = useState<{ projectId: number; towerId: number } | null>(null)
 
-  // Cargar conteo de tareas eliminadas al iniciar
+  // Cargar conteo de tareas eliminadas cuando cambia la función de conteo (ej: al cargar rol)
   useEffect(() => {
     loadDeletedTasksCount()
-  }, [])
+  }, [getDeletedTasksCount])
 
   // Cargar tareas eliminadas cuando se cambia al tab de papelera
   useEffect(() => {
@@ -670,6 +671,11 @@ export default function TareasPage() {
             await hardDeleteTask(taskId)
             await loadDeletedTasks() // Recargar lista
             await loadDeletedTasksCount() // Actualizar conteo
+          }}
+          onEmptyTrash={async () => {
+            await emptyTrash()
+            await loadDeletedTasks()
+            await loadDeletedTasksCount()
           }}
           onRefresh={loadDeletedTasks}
         />

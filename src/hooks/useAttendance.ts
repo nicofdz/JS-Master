@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
+import { useAuth } from './useAuth'
 
 // Función helper para obtener la hora actual en zona horaria de Chile
 const getChileDateTime = () => {
@@ -81,6 +82,10 @@ export interface AttendanceFormData {
 }
 
 export function useAttendance() {
+  // Use centralized Auth Context
+  const { user, profile, assignedProjectIds } = useAuth()
+  const userRole = profile?.role || null
+
   const [attendances, setAttendances] = useState<WorkerAttendance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -112,7 +117,24 @@ export function useAttendance() {
 
       // Filtrar por proyecto si se proporciona
       if (projectId !== undefined && projectId !== null) {
+        // Security check: If not admin, verify access to requested project
+        if (userRole && userRole !== 'admin' && !assignedProjectIds.includes(projectId)) {
+          setAttendances([])
+          setLoading(false)
+          return
+        }
         query = query.eq('project_id', projectId)
+      } else {
+        // If no project specified, apply general access control
+        if (userRole && userRole !== 'admin') {
+          if (assignedProjectIds.length > 0) {
+            query = query.in('project_id', assignedProjectIds)
+          } else {
+            setAttendances([])
+            setLoading(false)
+            return
+          }
+        }
       }
 
       // Ordenar DESPUÉS de los filtros
@@ -140,7 +162,7 @@ export function useAttendance() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userRole, assignedProjectIds])
 
   // Crear o actualizar asistencia
   const markAttendance = useCallback(async (data: AttendanceFormData, options?: { skipToast?: boolean }) => {

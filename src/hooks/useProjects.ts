@@ -65,16 +65,23 @@ export const useProjects = () => {
         .single()
 
       const isAdmin = profile?.role === 'admin'
+      console.log('useProjects: Role:', profile?.role, 'IsAdmin:', isAdmin)
+
       let allowedProjectIds: number[] = []
 
       // 2. Si no es admin, obtener proyectos permitidos
       if (!isAdmin) {
-        const { data: assignments } = await supabase
+        const { data: assignments, error: assignmentsError } = await supabase
           .from('user_projects')
           .select('project_id')
           .eq('user_id', user.id)
 
+        if (assignmentsError) {
+          console.error('useProjects: Error fetching assignments', assignmentsError)
+        }
+
         allowedProjectIds = assignments?.map(a => a.project_id) || []
+        console.log('useProjects: Allowed IDs:', allowedProjectIds)
       }
 
       // 3. Consulta SQL personalizada para obtener proyectos con progreso

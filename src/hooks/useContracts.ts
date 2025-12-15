@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { notifyContractExpiring, notifyContractExpired } from '@/lib/notifications'
+import { useAuth } from './useAuth'
 
 export interface Contract {
   id: number
@@ -41,6 +42,10 @@ export interface ContractFormData {
 }
 
 export const useContracts = () => {
+  // Use centralized Auth Context
+  const { user, profile, assignedProjectIds } = useAuth()
+  const userRole = profile?.role || null
+
   const [contracts, setContracts] = useState<Contract[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,7 +57,7 @@ export const useContracts = () => {
       setError(null)
 
       // Cargar TODOS los contratos (incluidos los eliminados)
-      const { data, error } = await supabase
+      let query = supabase
         .from('contract_history')
         .select(`
           *,
@@ -60,6 +65,20 @@ export const useContracts = () => {
           projects!inner(name)
         `)
         .order('created_at', { ascending: false })
+
+      // Access Control
+      if (userRole && userRole !== 'admin') {
+        if (assignedProjectIds.length > 0) {
+          query = query.in('project_id', assignedProjectIds)
+        } else {
+          // No projects assigned -> No contracts visible
+          setContracts([])
+          setLoading(false)
+          return
+        }
+      }
+
+      const { data, error } = await query
 
       if (error) {
         throw error
@@ -124,6 +143,13 @@ export const useContracts = () => {
       setLoading(false)
     }
   }
+
+  // Reload when access info changes
+  useEffect(() => {
+    if (userRole) {
+      fetchContracts()
+    }
+  }, [userRole, assignedProjectIds])
 
   // Validar si el trabajador ya tiene un contrato activo en el proyecto
   const validateContractBeforeCreate = async (workerId: number, projectId: number): Promise<{
