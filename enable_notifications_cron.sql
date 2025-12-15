@@ -135,10 +135,14 @@ $$;
 -- Desprogramar solo si existe (evita error si es la primera vez)
 SELECT cron.unschedule(jobid) 
 FROM cron.job 
-WHERE jobname = 'daily-notifications-job';
+WHERE jobname = 'daily-notifications-job'; -- Desprograma el trabajo antiguo si existe
 
+-- Programar para que se ejecute todos los días a las 10:00 UTC (7:00 AM hora Chile continental - verano)
+-- Nota: Chile varía entre UTC-3 (verano) y UTC-4 (invierno).
+-- Con UTC-3: 10:00 UTC = 07:00 AM Chile
+-- Con UTC-4: 10:00 UTC = 06:00 AM Chile (mejor temprano que tarde)
 SELECT cron.schedule(
-    'daily-notifications-job',
-    '0 12 * * *', -- 12:00 UTC = 09:00 Chile (aprox)
-    'SELECT check_daily_notifications()'
+    'daily-notifications-job', -- nombre del trabajo (manteniendo el mismo nombre para evitar duplicados)
+    '0 10 * * *',             -- cron expression (10:00 AM UTC diariamente)
+    $$SELECT check_daily_notifications()$$
 );
