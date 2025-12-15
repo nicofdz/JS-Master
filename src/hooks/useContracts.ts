@@ -84,9 +84,12 @@ export const useContracts = () => {
         throw error
       }
 
-      // Actualizar contratos expirados automáticamente
+      // La verificación de contratos expirados se maneja ahora vía Cron Job (check_daily_notifications)
+      // para evitar duplicados y asegurar ejecución diaria automática.
+
+      /* LÓGICA ANTERIOR (DESACTIVADA):
       const today = new Date()
-      today.setHours(0, 0, 0, 0) // Resetear a medianoche para comparación exacta
+      today.setHours(0, 0, 0, 0)
 
       const contractsToUpdate: number[] = []
 
@@ -134,8 +137,29 @@ export const useContracts = () => {
           .update({ status: 'finalizado', updated_at: new Date().toISOString() })
           .in('id', contractsToUpdate)
       }
+      */
 
-      setContracts(transformedData)
+      // Solo formateamos los datos para el estado local
+      const transformedData = data?.map(contract => {
+        // Si is_active = false, el status debe ser 'cancelado' visualmente si no lo es
+        if (!contract.is_active && contract.status !== 'cancelado') {
+          return {
+            ...contract,
+            status: 'cancelado' as const,
+            worker_name: contract.workers?.full_name,
+            worker_rut: contract.workers?.rut,
+            project_name: contract.projects?.name
+          }
+        }
+        return {
+          ...contract,
+          worker_name: contract.workers?.full_name,
+          worker_rut: contract.workers?.rut,
+          project_name: contract.projects?.name
+        }
+      })
+
+      setContracts(transformedData || [])
     } catch (err: any) {
       console.error('Error fetching contracts:', err)
       setError(err.message || 'Error al cargar contratos')

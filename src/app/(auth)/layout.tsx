@@ -190,7 +190,7 @@ export default function AuthLayout({
     })
   }
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <div className="text-center">
