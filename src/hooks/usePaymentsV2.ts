@@ -676,6 +676,25 @@ export function usePaymentsV2() {
         }
     }
 
+
+    const deletePayment = async (paymentId: number) => {
+        try {
+            const { error } = await supabase
+                .from('worker_payment_history')
+                .update({ is_deleted: true })
+                .eq('id', paymentId)
+
+            if (error) throw error
+
+            // Refresh data
+            await fetchAll()
+            return true
+        } catch (err: any) {
+            console.error('Error deleting payment:', err)
+            throw err
+        }
+    }
+
     return {
         metrics,
         projects,
@@ -685,6 +704,7 @@ export function usePaymentsV2() {
         error,
         refresh: fetchAll,
         fetchWorkerTasks,
-        fetchPaymentHistory
+        fetchPaymentHistory,
+        deletePayment
     }
 }

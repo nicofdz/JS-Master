@@ -27,10 +27,12 @@ import {
   Info,
   AlertCircle,
   XCircle,
-  Download
+  Download,
+  Trash2
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { WorkerTasksModal } from '@/components/payments/WorkerTasksModal'
+import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { WorkerAttendanceModal } from '@/components/payments/WorkerAttendanceModal'
 import { PaymentTasksModal } from '@/components/payments/PaymentTasksModal'
 import { PaymentDaysModal } from '@/components/payments/PaymentDaysModal'
@@ -184,7 +186,8 @@ export default function PagosPage() {
     error,
     refresh: refreshPayments,
     fetchWorkerTasks,
-    fetchPaymentHistory
+    fetchPaymentHistory,
+    deletePayment
   } = usePaymentsV2()
 
   const { workers: fetchedWorkers } = useWorkers()
@@ -234,6 +237,12 @@ export default function PagosPage() {
   const [showProcessPaymentModal, setShowProcessPaymentModal] = useState(false)
   const [showProcessDaysModal, setShowProcessDaysModal] = useState(false)
   const [showCustomPaymentModal, setShowCustomPaymentModal] = useState(false)
+
+  // Estado para modal de confirmación de eliminación
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [paymentToDeleteId, setPaymentToDeleteId] = useState<number | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const [selectedWorkerForModal, setSelectedWorkerForModal] = useState<{
     id: number
     name: string
@@ -982,6 +991,35 @@ export default function PagosPage() {
     return projectWorkers.length > 0
   })
 
+  // Función para abrir modal de eliminación
+  const handleDeletePayment = (paymentId: number) => {
+    setPaymentToDeleteId(paymentId)
+    setIsDeleteModalOpen(true)
+  }
+
+  // Función para confirmar eliminación
+  const onConfirmDelete = async () => {
+    if (!paymentToDeleteId) return
+
+    setIsDeleting(true)
+    try {
+      await toast.promise(
+        deletePayment(paymentToDeleteId),
+        {
+          loading: 'Eliminando pago...',
+          success: 'Pago eliminado exitosamente',
+          error: (err) => `Error al eliminar: ${err.message}`
+        }
+      )
+      setIsDeleteModalOpen(false)
+      setPaymentToDeleteId(null)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   // Función para exportar pagos pendientes a PDF
   const handleExportPendingPayments = () => {
     try {
@@ -1656,6 +1694,17 @@ export default function PagosPage() {
                           >
                             <FileText className="w-4 h-4" />
                           </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              handleDeletePayment(payment.id)
+                            }}
+                            className="p-2 rounded-full bg-red-900/30 text-red-400 border border-red-500 hover:bg-red-900/50"
+                            title="Eliminar pago"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1777,6 +1826,18 @@ export default function PagosPage() {
                                 title="Exportar PDF"
                               >
                                 <FileText className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleDeletePayment(payment.id)
+                                }}
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-900/30 text-red-400 border border-red-500 hover:bg-red-900/50 transition-colors"
+                                type="button"
+                                title="Eliminar pago"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -2007,6 +2068,23 @@ export default function PagosPage() {
         }}
         workers={fetchedWorkers.map(w => ({ id: w.id, name: w.full_name, rut: w.rut }))}
         projects={projects.map(p => ({ id: p.project_id, name: p.project_name }))}
+      />
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteModalOpen(false)
+            setPaymentToDeleteId(null)
+          }
+        }}
+        onConfirm={onConfirmDelete}
+        title="Eliminar Pago"
+        message="¿Estás seguro de eliminar este pago? Esta acción revertirá los fondos al dinero disponible y marcará las tareas/días asociados como NO pagados nuevamente."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+        isLoading={isDeleting}
       />
     </div>
   )
