@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { ModalV2 } from './ModalV2'
 import { useTasksV2 } from '@/hooks/useTasks_v2'
+import { useWorkers } from '@/hooks/useWorkers'
 import { useTowers } from '@/hooks/useTowers'
 import { useFloors } from '@/hooks/useFloors'
 import { useApartments } from '@/hooks/useApartments'
@@ -42,6 +43,7 @@ export function TaskFormModalV2({
   massCreateData
 }: TaskFormModalV2Props) {
   const { projects, createTask, updateTask, assignWorkerToTask, removeWorkerFromTask, getWorkersForProject, refreshTasks } = useTasksV2()
+  const { workers: allSystemWorkers } = useWorkers()
   const { templates } = useTaskTemplates()
 
   // Form states
@@ -87,7 +89,7 @@ export function TaskFormModalV2({
   const [workersSectionExpanded, setWorkersSectionExpanded] = useState(false)
   const [materialsSectionExpanded, setMaterialsSectionExpanded] = useState<Record<number, boolean>>({})
   const [activeWorkerTab, setActiveWorkerTab] = useState<'assigned' | 'available'>('assigned')
-  const [activeContractTypeTab, setActiveContractTypeTab] = useState<'por_dia' | 'a_trato' | null>(null)
+  const [activeContractTypeTab, setActiveContractTypeTab] = useState<'por_dia' | 'a_trato' | 'sin_contrato' | null>(null)
   const [taskCategories, setTaskCategories] = useState<{ id: number; name: string }[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false)
@@ -112,53 +114,65 @@ export function TaskFormModalV2({
     }
   }, [mode, task?.workers, availableWorkers])
 
-  // Unificar trabajadores para la vista (mezclar asignados y disponibles del proyecto)
+  // Unificar trabajadores para la vista (mezclar asignados y disponibles del proyecto con todos los del sistema)
   const unifiedWorkers = useMemo(() => {
-    // Crear un mapa de trabajadores asignados para acceso rápido
-    const assignedMap = new Map()
+    // Crear un mapa para evitar duplicados por ID
+    const workersMap = new Map()
+
+    // 1. Agregar asignados (preservando estado de asignación)
     if (mode === 'edit' && assignedWorkers.length > 0) {
       assignedWorkers.forEach((w: any) => {
-        assignedMap.set(w.id, w)
+        workersMap.set(w.id, { ...w, is_assigned: true })
       })
     }
 
-    // Usar availableWorkers (todos los del proyecto) como base
-    // Si estamos en modo editar, mapear para incluir info de asignación
-    const allWorkers = availableWorkers.map((worker: any) => {
-      if (assignedMap.has(worker.id)) {
-        return { ...worker, ...assignedMap.get(worker.id), is_assigned: true }
+    // 2. Agregar disponibles del proyecto (si no están ya)
+    availableWorkers.forEach((worker: any) => {
+      if (!workersMap.has(worker.id)) {
+        workersMap.set(worker.id, { ...worker, is_assigned: false })
+      } else {
+        // Asegurarse de tener la data más completa asignación
+        workersMap.set(worker.id, { ...workersMap.get(worker.id), ...worker })
       }
-      return { ...worker, is_assigned: false }
     })
 
-    // Asegurarse de incluir asignados que tal vez no estén en availableWorkers (casos borde)
-    if (mode === 'edit') {
-      assignedWorkers.forEach((assignedWorker: any) => {
-        if (!allWorkers.find(w => w.id === assignedWorker.id)) {
-          allWorkers.push({ ...assignedWorker, is_assigned: true })
+    // 3. Agregar resto de trabajadores del sistema
+    if (allSystemWorkers.length > 0) {
+      allSystemWorkers.forEach((worker: any) => {
+        if (!workersMap.has(worker.id)) {
+          workersMap.set(worker.id, {
+            ...worker,
+            is_assigned: false,
+            contract_type: !worker.is_active ? 'sin_contrato' : (worker.contract_type || 'sin_contrato')
+          })
         }
       })
     }
 
-    return allWorkers
-  }, [mode, availableWorkers, assignedWorkers])
+    return Array.from(workersMap.values())
+  }, [mode, availableWorkers, assignedWorkers, allSystemWorkers])
 
   // Separar trabajadores por tipo de contrato (Usando la lista unificada)
-  const { workersPorDia, workersATrato } = useMemo(() => {
+  const { workersPorDia, workersATrato, workersSinContrato } = useMemo(() => {
     const porDia: any[] = []
     const aTrato: any[] = []
+    const sinContrato: any[] = []
 
     unifiedWorkers.forEach((worker: any) => {
       const contractType = worker.contract_type || 'a_trato'
       if (contractType === 'por_dia') {
         porDia.push(worker)
-      } else {
+      } else if (contractType === 'a_trato') {
         aTrato.push(worker)
+      } else {
+        sinContrato.push(worker)
       }
     })
 
-    return { workersPorDia: porDia, workersATrato: aTrato }
+    return { workersPorDia: porDia, workersATrato: aTrato, workersSinContrato: sinContrato }
   }, [unifiedWorkers])
+
+
 
   // Detectar qué tipo de trabajadores están seleccionados
   const { hasPorDiaSelected, hasATratoSelected } = useMemo(() => {
@@ -1084,32 +1098,43 @@ export function TaskFormModalV2({
               </div>
 
               {/* Tabs */}
-              <div className="flex gap-2 border-b border-slate-600 mb-2">
+              {/* Tabs */}
+              <div className="flex gap-2 border-b border-slate-600 mb-2 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => {
-                    if (allowMixedContracts || !hasATratoSelected) setActiveContractTypeTab('por_dia')
+                    if (allowMixedContracts || (!hasATratoSelected && !selectedWorkers.some(id => workersSinContrato.find(w => w.id === id)))) setActiveContractTypeTab('por_dia')
                   }}
-                  disabled={!allowMixedContracts && hasATratoSelected}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeContractTypeTab === 'por_dia'
+                  disabled={!allowMixedContracts && (hasATratoSelected || selectedWorkers.some(id => workersSinContrato.find(w => w.id === id)))}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeContractTypeTab === 'por_dia'
                     ? 'border-yellow-400 text-yellow-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
-                    } ${!allowMixedContracts && hasATratoSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${!allowMixedContracts && (hasATratoSelected || selectedWorkers.some(id => workersSinContrato.find(w => w.id === id))) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   Por Día ({workersPorDia.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    if (allowMixedContracts || !hasPorDiaSelected) setActiveContractTypeTab('a_trato')
+                    if (allowMixedContracts || (!hasPorDiaSelected && !selectedWorkers.some(id => workersSinContrato.find(w => w.id === id)))) setActiveContractTypeTab('a_trato')
                   }}
-                  disabled={!allowMixedContracts && hasPorDiaSelected}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeContractTypeTab === 'a_trato'
+                  disabled={!allowMixedContracts && (hasPorDiaSelected || selectedWorkers.some(id => workersSinContrato.find(w => w.id === id)))}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeContractTypeTab === 'a_trato'
                     ? 'border-green-400 text-green-400'
                     : 'border-transparent text-slate-400 hover:text-slate-200'
-                    } ${!allowMixedContracts && hasPorDiaSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    } ${!allowMixedContracts && (hasPorDiaSelected || selectedWorkers.some(id => workersSinContrato.find(w => w.id === id))) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   A Trato ({workersATrato.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveContractTypeTab('sin_contrato')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeContractTypeTab === 'sin_contrato'
+                    ? 'border-slate-300 text-slate-100'
+                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    }`}
+                >
+                  Sin Contrato ({workersSinContrato.length})
                 </button>
               </div>
 
@@ -1118,95 +1143,98 @@ export function TaskFormModalV2({
                 <p className="text-slate-400 text-sm p-4 text-center">Cargando trabajadores...</p>
               ) : (
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                  {(activeContractTypeTab === 'por_dia' ? workersPorDia : workersATrato).length > 0 ? (
-                    (activeContractTypeTab === 'por_dia' ? workersPorDia : workersATrato).map(worker => {
-                      const isSelected = selectedWorkers.includes(worker.id)
-                      const isRemoved = worker.assignment_status === 'removed'
-                      const isAssigned = worker.is_assigned
+                  {(() => {
+                    const activeList = activeContractTypeTab === 'por_dia' ? workersPorDia : (activeContractTypeTab === 'a_trato' ? workersATrato : workersSinContrato);
+                    return activeList.length > 0 ? (
+                      activeList.map(worker => {
+                        const isSelected = selectedWorkers.includes(worker.id)
+                        const isRemoved = worker.assignment_status === 'removed'
+                        const isAssigned = worker.is_assigned
 
-                      return (
-                        <div key={worker.id} className={`p-3 rounded-md border ${isSelected ? 'bg-slate-700 border-slate-500' : 'bg-slate-800 border-slate-700'}`}>
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              disabled={!isSelected && !allowMixedContracts && (
-                                (worker.contract_type === 'por_dia' && hasATratoSelected) ||
-                                (worker.contract_type === 'a_trato' && hasPorDiaSelected)
-                              )}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  if (!allowMixedContracts) {
-                                    if (worker.contract_type === 'por_dia' && hasATratoSelected) {
-                                      toast.error('No se pueden mezclar tipos de contrato.')
-                                      return
+                        return (
+                          <div key={worker.id} className={`p-3 rounded-md border ${isSelected ? 'bg-slate-700 border-slate-500' : 'bg-slate-800 border-slate-700'}`}>
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                disabled={!isSelected && !allowMixedContracts && (
+                                  (worker.contract_type === 'por_dia' && hasATratoSelected) ||
+                                  (worker.contract_type === 'a_trato' && hasPorDiaSelected)
+                                )}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    if (!allowMixedContracts) {
+                                      if (worker.contract_type === 'por_dia' && hasATratoSelected) {
+                                        toast.error('No se pueden mezclar tipos de contrato.')
+                                        return
+                                      }
+                                      if (worker.contract_type === 'a_trato' && hasPorDiaSelected) {
+                                        toast.error('No se pueden mezclar tipos de contrato.')
+                                        return
+                                      }
                                     }
-                                    if (worker.contract_type === 'a_trato' && hasPorDiaSelected) {
-                                      toast.error('No se pueden mezclar tipos de contrato.')
-                                      return
-                                    }
+                                    setSelectedWorkers(prev => [...prev, worker.id])
+                                  } else {
+                                    setSelectedWorkers(prev => prev.filter(id => id !== worker.id))
                                   }
-                                  setSelectedWorkers(prev => [...prev, worker.id])
-                                } else {
-                                  setSelectedWorkers(prev => prev.filter(id => id !== worker.id))
-                                }
-                              }}
-                              className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-blue-600 focus:ring-blue-500"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className={`text-sm font-medium ${isRemoved ? 'text-red-400 line-through' : 'text-slate-200'}`}>
-                                  {worker.full_name}
-                                </span>
-                                {isRemoved && <span className="text-xs text-red-400">(Removido)</span>}
-                              </div>
-                              <div className="text-xs text-slate-400">
-                                {worker.rut} • {worker.contract_type === 'por_dia' ? 'Por Día' : 'A Trato'}
+                                }}
+                                className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-sm font-medium ${isRemoved ? 'text-red-400 line-through' : 'text-slate-200'}`}>
+                                    {worker.full_name}
+                                  </span>
+                                  {isRemoved && <span className="text-xs text-red-400">(Removido)</span>}
+                                </div>
+                                <div className="text-xs text-slate-400">
+                                  {worker.rut} • {worker.contract_type === 'por_dia' ? 'Por Día' : (worker.contract_type === 'a_trato' ? 'A Trato' : 'Sin Contrato')}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Edit Mode: Timestamps */}
-                          {mode === 'edit' && isSelected && !isRemoved && worker.assignment_id && (
-                            <div className="mt-3 pt-3 border-t border-slate-600 grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="block text-xs text-slate-400 mb-1">Inicio</label>
-                                <input
-                                  type="datetime-local"
-                                  value={workerTimestamps[worker.assignment_id]?.started_at?.split('.')[0] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value ? new Date(e.target.value).toISOString() : ''
-                                    setWorkerTimestamps(prev => ({
-                                      ...prev,
-                                      [worker.assignment_id]: { ...prev[worker.assignment_id], started_at: val }
-                                    }))
-                                  }}
-                                  className="w-full px-2 py-1 text-xs border border-slate-600 bg-slate-700 rounded text-slate-200"
-                                />
+                            {/* Edit Mode: Timestamps */}
+                            {mode === 'edit' && isSelected && !isRemoved && worker.assignment_id && (
+                              <div className="mt-3 pt-3 border-t border-slate-600 grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-xs text-slate-400 mb-1">Inicio</label>
+                                  <input
+                                    type="datetime-local"
+                                    value={workerTimestamps[worker.assignment_id]?.started_at?.split('.')[0] || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value ? new Date(e.target.value).toISOString() : ''
+                                      setWorkerTimestamps(prev => ({
+                                        ...prev,
+                                        [worker.assignment_id]: { ...prev[worker.assignment_id], started_at: val }
+                                      }))
+                                    }}
+                                    className="w-full px-2 py-1 text-xs border border-slate-600 bg-slate-700 rounded text-slate-200"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-slate-400 mb-1">Fin</label>
+                                  <input
+                                    type="datetime-local"
+                                    value={workerTimestamps[worker.assignment_id]?.completed_at?.split('.')[0] || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value ? new Date(e.target.value).toISOString() : ''
+                                      setWorkerTimestamps(prev => ({
+                                        ...prev,
+                                        [worker.assignment_id]: { ...prev[worker.assignment_id], completed_at: val }
+                                      }))
+                                    }}
+                                    className="w-full px-2 py-1 text-xs border border-slate-600 bg-slate-700 rounded text-slate-200"
+                                  />
+                                </div>
                               </div>
-                              <div>
-                                <label className="block text-xs text-slate-400 mb-1">Fin</label>
-                                <input
-                                  type="datetime-local"
-                                  value={workerTimestamps[worker.assignment_id]?.completed_at?.split('.')[0] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value ? new Date(e.target.value).toISOString() : ''
-                                    setWorkerTimestamps(prev => ({
-                                      ...prev,
-                                      [worker.assignment_id]: { ...prev[worker.assignment_id], completed_at: val }
-                                    }))
-                                  }}
-                                  className="w-full px-2 py-1 text-xs border border-slate-600 bg-slate-700 rounded text-slate-200"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })
-                  ) : (
-                    <p className="text-sm text-slate-500 text-center py-4">No hay trabajadores disponibles en esta categoría.</p>
-                  )}
+                            )}
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <p className="text-sm text-slate-500 text-center py-4">No hay trabajadores disponibles en esta categoría.</p>
+                    )
+                  })()}
                 </div>
               )}
             </div>

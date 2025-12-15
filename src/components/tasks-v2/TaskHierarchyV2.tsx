@@ -666,31 +666,33 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                                             onClick={() => toggleApartment(apartmentId)}
                                           >
                                             <div className="flex items-center justify-between">
-                                              <div className="flex items-center gap-2">
-                                                {isApartmentExpanded ? (
-                                                  <ChevronDown className="w-3 h-3 text-slate-400" />
-                                                ) : (
-                                                  <ChevronRight className="w-3 h-3 text-slate-400" />
-                                                )}
-                                                <Home className="w-3 h-3 text-blue-400" />
-                                                <span className="text-xs font-medium text-slate-300">Depto {apartment.number}</span>
-                                              </div>
-                                              <div className="flex items-center gap-3 text-xs">
-                                                {onAddTask && (
-                                                  <button
-                                                    onClick={(e) => {
-                                                      e.stopPropagation()
-                                                      onAddTask(projectId, towerId, floorId, apartmentId)
-                                                    }}
-                                                    className="p-1 hover:bg-slate-700/80 rounded-full text-blue-400 hover:text-blue-300 transition-colors border border-transparent hover:border-slate-600"
-                                                    title="Agregar Tarea"
-                                                  >
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                  </button>
-                                                )}
+                                              <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                  <span className="text-slate-400">Tareas:</span>
-                                                  <span className="text-slate-300 font-medium">{completedApartmentTasks}/{apartment.tasks.length}</span>
+                                                  {isApartmentExpanded ? (
+                                                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                                                  ) : (
+                                                    <ChevronRight className="w-3 h-3 text-slate-400" />
+                                                  )}
+                                                  <Home className="w-3 h-3 text-blue-400" />
+                                                  <span className="text-xs font-medium text-slate-300">Depto {apartment.number}</span>
+                                                  {onAddTask && (
+                                                    <button
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        onAddTask(projectId, towerId, floorId, apartmentId)
+                                                      }}
+                                                      className="p-1 hover:bg-slate-700/80 rounded-full text-blue-400 hover:text-blue-300 transition-colors border border-transparent hover:border-slate-600 ml-1"
+                                                      title="Agregar Tarea"
+                                                    >
+                                                      <Plus className="w-3.5 h-3.5" />
+                                                    </button>
+                                                  )}
+                                                </div>
+                                                <div className="flex items-center gap-3 text-xs">
+                                                  <div className="flex items-center gap-2">
+                                                    <span className="text-slate-400">Tareas:</span>
+                                                    <span className="text-slate-300 font-medium">{completedApartmentTasks}/{apartment.tasks.length}</span>
+                                                  </div>
                                                 </div>
                                               </div>
                                             </div>
