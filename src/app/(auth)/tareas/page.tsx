@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Plus, Search, Building2, User } from 'lucide-react'
@@ -37,6 +38,7 @@ export default function TareasPage() {
   } = useTasksV2()
 
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
+  const searchParams = useSearchParams()
 
   const [activeTab, setActiveTab] = useState<'active' | 'trash'>('active')
   const [searchTerm, setSearchTerm] = useState('')
@@ -119,25 +121,50 @@ export default function TareasPage() {
     setShowCreateModal(true)
   }
 
-  // Cargar filtros desde localStorage al iniciar
+  // Cargar filtros desde localStorage al iniciar Y leer URL params
   useEffect(() => {
     try {
       const savedFilters = localStorage.getItem('tareas-filters')
       if (savedFilters) {
         const filters = JSON.parse(savedFilters)
-        if (filters.selectedProjectId) setSelectedProjectId(filters.selectedProjectId)
         if (filters.workerFilter) setWorkerFilter(filters.workerFilter)
-        if (filters.statusFilter) setStatusFilter(filters.statusFilter)
+
+        // Priorizar URL param sobre localStorage si existe
+        const urlStatus = searchParams.get('status')
+        if (urlStatus && ['all', 'pending', 'in_progress', 'completed', 'blocked', 'cancelled', 'on_hold', 'delayed'].includes(urlStatus)) {
+          setStatusFilter(urlStatus as any)
+        } else if (filters.statusFilter) {
+          setStatusFilter(filters.statusFilter)
+        }
+
+        const urlProject = searchParams.get('project')
+        if (urlProject) {
+          setSelectedProjectId(urlProject)
+        } else if (filters.selectedProjectId) {
+          setSelectedProjectId(filters.selectedProjectId)
+        }
+
         if (filters.towerFilter) setTowerFilter(filters.towerFilter)
         if (filters.floorFilter) setFloorFilter(filters.floorFilter)
         if (filters.apartmentFilter) setApartmentFilter(filters.apartmentFilter)
         if (filters.searchTerm) setSearchTerm(filters.searchTerm)
         if (filters.activeTab) setActiveTab(filters.activeTab)
+      } else {
+        // Si no hay localStorage, check URL param anyway
+        const urlStatus = searchParams.get('status')
+        if (urlStatus && ['all', 'pending', 'in_progress', 'completed', 'blocked', 'cancelled', 'on_hold', 'delayed'].includes(urlStatus)) {
+          setStatusFilter(urlStatus as any)
+        }
+
+        const urlProject = searchParams.get('project')
+        if (urlProject) {
+          setSelectedProjectId(urlProject)
+        }
       }
     } catch (error) {
       console.error('Error loading filters from localStorage:', error)
     }
-  }, []) // Solo al montar el componente
+  }, [searchParams]) // Add searchParams dependency
 
   // Guardar filtros en localStorage cuando cambian
   useEffect(() => {

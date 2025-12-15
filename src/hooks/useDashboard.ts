@@ -114,7 +114,7 @@ export function useDashboard() {
               apartments!inner(
                 id,
                 status,
-                tasks(status, is_delayed, delay_reason)
+                tasks(status, is_delayed, delay_reason, end_date)
               )
             `)
             .eq('project_id', project.id)
@@ -146,15 +146,26 @@ export function useDashboard() {
                     if (task.status === 'completed') {
                       completedTasks++
                     }
-                    // Contar tareas atrasadas (EXCLUIR tareas bloqueadas y canceladas)
-                    if (task.is_delayed === true && task.status !== 'blocked' && task.status !== 'cancelled') {
+
+                    // Contar tareas atrasadas (Check DB flag OR date calculation)
+                    // Logic: is_delayed is TRUE OR (end_date < today AND status != completed)
+                    const end = task.end_date ? new Date(task.end_date) : null;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    // Normalize end date to midnight for fair comparison if needed, or keeping precise.
+                    // Assuming end_date is just YYYY-MM-DD usually, so it comes as UTC midnight.
+
+                    const isOverdue = end && end < today && task.status !== 'completed' && task.status !== 'finished';
+
+                    if ((task.is_delayed === true || isOverdue) && task.status !== 'blocked' && task.status !== 'cancelled') {
                       delayedTasks++
-                      console.log('🔴 Tarea retrasada encontrada:', {
+                      /* console.log('🔴 Tarea retrasada encontrada:', {
                         task_name: (task as any).task_name,
                         status: task.status,
                         is_delayed: task.is_delayed,
-                        delay_reason: task.delay_reason
-                      })
+                        is_overdue: isOverdue
+                      }) */
                     }
                   })
                 }
@@ -176,9 +187,14 @@ export function useDashboard() {
 
 
           // Determinar si el proyecto está retrasado
-          // Solo marcar como retrasado si hay tareas retrasadas Y el porcentaje es mayor a 0
-          const delayPercentage = totalTasks > 0 ? Math.round((delayedTasks / totalTasks) * 100) : 0
-          const isDelayed = delayedTasks > 0 && delayPercentage > 0
+          // Asegurar que si hay tareas retrasadas, el porcentaje sea al menos 1% y isDelayed sea true
+          let delayPercentage = totalTasks > 0 ? Math.round((delayedTasks / totalTasks) * 100) : 0
+
+          if (delayedTasks > 0 && delayPercentage === 0) {
+            delayPercentage = 1
+          }
+
+          const isDelayed = delayedTasks > 0 // Si hay tareas retrasadas, el proyecto tiene retraso
 
           return {
             id: project.id,

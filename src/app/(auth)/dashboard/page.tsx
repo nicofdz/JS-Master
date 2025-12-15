@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { ChevronUp, ChevronDown, LayoutDashboard } from 'lucide-react'
 import { DashboardStats } from '@/components/dashboard/DashboardStats'
@@ -132,8 +133,16 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         {project.is_delayed && (
-                          <div className="mb-2 p-2 bg-red-900/20 border border-red-700 rounded text-xs text-red-400">
-                            ⚠️ Proyecto retrasado un {project.delay_percentage}% - Revisar tareas pendientes
+                          <div className="mb-2 p-3 bg-red-900/20 border border-red-700/50 rounded-lg flex justify-between items-center gap-2">
+                            <span className="text-xs text-red-400">
+                              ⚠️ Proyecto retrasado un {project.delay_percentage}%
+                            </span>
+                            <Link
+                              href={`/tareas?status=delayed&project=${project.id}`}
+                              className="text-xs bg-red-600/20 hover:bg-red-600/40 text-red-300 px-2 py-1 rounded border border-red-500/30 transition-colors whitespace-nowrap"
+                            >
+                              Ver tareas
+                            </Link>
                           </div>
                         )}
                         <div className="w-full bg-slate-700 rounded-full h-2">
