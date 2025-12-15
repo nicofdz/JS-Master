@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useWorkers, Worker } from '@/hooks/useWorkers'
 import { useContracts, Contract } from '@/hooks/useContracts'
 import { useProjects } from '@/hooks/useProjects'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
@@ -20,6 +21,7 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function TrabajadoresPage() {
+  const { profile } = useAuth()
   const { workers, loading, error, createWorker, updateWorker, deleteWorker, restoreWorker, hardDeleteWorker, toggleWorkerStatus, refresh, refreshAll } = useWorkers()
   const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, terminateContract, fetchContracts, checkAllContracts } = useContracts()
   const { projects } = useProjects()
@@ -246,8 +248,15 @@ export default function TrabajadoresPage() {
       (cardFilter === 'active' && isWorkerActive) ||
       (cardFilter === 'inactive' && !isWorkerActive)
 
-    return matchesSearch && matchesStatus && matchesContractType && matchesCardFilter
-  }), [workers, searchTerm, statusFilter, contractTypeFilter, cardFilter, contracts, showWorkerTrash])
+    // Filtro de Seguridad para Supervisores (Visibilidad)
+    // Solo mostrar trabajadores que tengan contratos en los proyectos asignados (presentes en la lista 'contracts')
+    let isVisibleForSupervisor = true
+    if (profile?.role !== 'admin') {
+      isVisibleForSupervisor = contracts.some(c => c.worker_id === worker.id)
+    }
+
+    return matchesSearch && matchesStatus && matchesContractType && matchesCardFilter && isVisibleForSupervisor
+  }), [workers, searchTerm, statusFilter, contractTypeFilter, cardFilter, contracts, showWorkerTrash, profile])
 
   // Filtrar contratos con useMemo para performance
   const filteredContracts = useMemo(() => contracts.filter(contract => {
