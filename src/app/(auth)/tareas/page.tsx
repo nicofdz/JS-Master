@@ -53,7 +53,7 @@ export default function TareasPage() {
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [deletedTasksCount, setDeletedTasksCount] = useState(0)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
-  const [initialTaskData, setInitialTaskData] = useState<{ projectId: number; towerId: number; floorId: number; apartmentId: number } | null>(null)
+  const [initialTaskData, setInitialTaskData] = useState<{ projectId: number; towerId: number; floorId: number; apartmentId: number | null } | null>(null)
   const [massCreateData, setMassCreateData] = useState<{ projectId: number; towerId: number } | null>(null)
 
   // Cargar conteo de tareas eliminadas cuando cambia la función de conteo (ej: al cargar rol)
@@ -109,7 +109,7 @@ export default function TareasPage() {
     }
   }
 
-  const handleAddTask = (projectId: number, towerId: number, floorId: number, apartmentId: number) => {
+  const handleAddTask = (projectId: number, towerId: number, floorId: number, apartmentId: number | null) => {
     setInitialTaskData({ projectId, towerId, floorId, apartmentId })
     setShowCreateModal(true)
   }

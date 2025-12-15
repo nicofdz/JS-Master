@@ -1300,6 +1300,9 @@ export default function TrabajadoresPage() {
                           Contacto
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
+                          Proyecto
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider border-r border-slate-600">
                           Estado
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">
@@ -1310,7 +1313,7 @@ export default function TrabajadoresPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredWorkers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                          <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                             {searchTerm || statusFilter !== 'all'
                               ? 'No se encontraron trabajadores con los filtros aplicados'
                               : 'No hay trabajadores registrados'
@@ -1318,100 +1321,114 @@ export default function TrabajadoresPage() {
                           </td>
                         </tr>
                       ) : (
-                        filteredWorkers.map((worker) => (
-                          <tr key={worker.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10">
-                                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <User className="h-5 w-5 text-blue-600" />
+                        filteredWorkers.map((worker) => {
+                          const activeContract = contracts.find(c =>
+                            c.worker_id === worker.id &&
+                            c.status === 'activo' &&
+                            c.is_active
+                          )
+                          return (
+                            <tr key={worker.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10">
+                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                      <User className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {worker.full_name}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="ml-4">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {worker.full_name}
-                                  </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-mono text-gray-900">
+                                  {worker.rut}
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-mono text-gray-900">
-                                {worker.rut}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {worker.email && (
-                                  <div className="text-blue-600">{worker.email}</div>
-                                )}
-                                {worker.phone && (
-                                  <div className="text-gray-500">{worker.phone}</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                                }`}>
-                                {worker.is_active ? 'Activo' : 'Inactivo'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex space-x-2">
-                                {!showWorkerTrash ? (
-                                  <>
-                                    <button
-                                      onClick={() => handleEdit(worker)}
-                                      className="text-blue-600 hover:text-blue-900"
-                                      title="Editar trabajador"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleShowContractHistory(worker)}
-                                      className="text-blue-600 hover:text-blue-900"
-                                      title="Ver historial de contratos"
-                                    >
-                                      <History className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleShowEfficiency(worker)}
-                                      className="text-amber-600 hover:text-amber-800"
-                                      title="Ver reporte de eficiencia"
-                                    >
-                                      <TrendingUp className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDelete(worker.id)}
-                                      className="text-red-600 hover:text-red-900"
-                                      title="Eliminar trabajador"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button
-                                      onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })}
-                                      className="text-green-600 hover:text-green-900"
-                                      title="Restaurar trabajador"
-                                    >
-                                      <RotateCcw className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })}
-                                      className="text-red-600 hover:text-red-900"
-                                      title="Eliminar permanentemente"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">
+                                  {worker.email && (
+                                    <div className="text-blue-600">{worker.email}</div>
+                                  )}
+                                  {worker.phone && (
+                                    <div className="text-gray-500">{worker.phone}</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {activeContract?.project_name || (
+                                    <span className="text-gray-400 italic">Sin asignar</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${worker.is_active
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-red-100 text-red-800'
+                                  }`}>
+                                  {worker.is_active ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div className="flex space-x-2">
+                                  {!showWorkerTrash ? (
+                                    <>
+                                      <button
+                                        onClick={() => handleEdit(worker)}
+                                        className="text-blue-600 hover:text-blue-900"
+                                        title="Editar trabajador"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleShowContractHistory(worker)}
+                                        className="text-blue-600 hover:text-blue-900"
+                                        title="Ver historial de contratos"
+                                      >
+                                        <History className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleShowEfficiency(worker)}
+                                        className="text-amber-600 hover:text-amber-800"
+                                        title="Ver reporte de eficiencia"
+                                      >
+                                        <TrendingUp className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDelete(worker.id)}
+                                        className="text-red-600 hover:text-red-900"
+                                        title="Eliminar trabajador"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => setConfirmRestoreWorkerState({ isOpen: true, workerId: worker.id })}
+                                        className="text-green-600 hover:text-green-900"
+                                        title="Restaurar trabajador"
+                                      >
+                                        <RotateCcw className="h-4 w-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmHardDeleteWorkerState({ isOpen: true, workerId: worker.id })}
+                                        className="text-red-600 hover:text-red-900"
+                                        title="Eliminar permanentemente"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
                       )}
                     </tbody>
                   </table>

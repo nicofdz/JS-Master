@@ -57,7 +57,7 @@ export interface Worker {
 
 export interface TaskV2 {
   id: number
-  apartment_id: number
+  apartment_id?: number | null // Ahora opcional para tareas de piso
   task_name: string
   task_description?: string
   task_category: string
@@ -77,13 +77,16 @@ export interface TaskV2 {
   apartment_code?: string | null
   apartment_number?: string
   floor_number?: number
-  floor_id?: number
+  floor_id?: number // Ahora explícito
   tower_number?: number
   tower_id?: number
+  tower_name?: string
   project_name?: string
   project_id?: number
+  project_is_active?: boolean
   workers: Worker[]
   progress_photos?: any[]
+
 }
 
 export interface TaskStats {
@@ -395,6 +398,7 @@ export function useTasksV2() {
         .from('tasks')
         .insert({
           apartment_id: taskData.apartment_id,
+          floor_id: taskData.floor_id,
           task_name: taskData.task_name,
           task_description: taskData.task_description || null,
           task_category: taskData.task_category,

@@ -26,9 +26,9 @@ interface TaskFiltersSidebarProps {
     // Data
     projects: { id: number; name: string }[]
     workers: { id: number; full_name: string }[]
-    towers: { id: number; number: number; name?: string }[]
-    floors: { id: number; floor_number: number }[]
-    apartments: { id: number; number: string }[]
+    towers: any[]
+    floors: any[]
+    apartments: any[]
 }
 
 export function TaskFiltersSidebar({

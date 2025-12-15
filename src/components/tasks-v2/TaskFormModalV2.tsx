@@ -20,7 +20,7 @@ interface TaskFormModalV2Props {
   initialProjectId?: number
   initialTowerId?: number
   initialFloorId?: number
-  initialApartmentId?: number
+  initialApartmentId?: number | null
   isMassCreate?: boolean
   massCreateData?: {
     projectId: number
@@ -672,8 +672,8 @@ export function TaskFormModalV2({
       toast.error('El proyecto es requerido')
       return
     }
-    if (!isMassCreate && !formData.apartment_id) {
-      toast.error('El departamento es requerido')
+    if (!isMassCreate && !formData.apartment_id && !formData.floor_id) {
+      toast.error('Debe seleccionar al menos un Piso o un Departamento')
       return
     }
 
@@ -765,7 +765,8 @@ export function TaskFormModalV2({
           project_id: parseInt(formData.project_id),
           tower_id: parseInt(formData.tower_id),
           floor_id: parseInt(formData.floor_id),
-          apartment_id: parseInt(formData.apartment_id)
+          // Si apartment_id es vacío, enviamos null (tarea de piso), sino el ID parseado
+          apartment_id: formData.apartment_id ? parseInt(formData.apartment_id) : null
         }
 
         let taskId: number
@@ -915,6 +916,7 @@ export function TaskFormModalV2({
                       }
                     }}
                     className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                   >
                     <option value="">Seleccionar...</option>
                     {taskCategories.map(cat => (
@@ -1016,7 +1018,7 @@ export function TaskFormModalV2({
                   disabled={!formData.floor_id || loadingApartments}
                   className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  <option value="">Seleccionar...</option>
+                  <option value="">Seleccionar (Opcional)...</option>
                   {availableApartments.map(apt => (
                     <option key={apt.id} value={apt.id}>{apt.apartment_number}</option>
                   ))}
@@ -1267,6 +1269,6 @@ export function TaskFormModalV2({
           </button>
         </div>
       </form>
-    </ModalV2>
+    </ModalV2 >
   )
 }

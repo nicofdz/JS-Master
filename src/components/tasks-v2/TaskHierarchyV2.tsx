@@ -35,7 +35,7 @@ interface TaskHierarchyV2Props {
   apartments: Apartment[] // List of apartments to render (already filtered)
   floors: any[] // Kept for legacy compatibility if needed, but likely unused now
   onTaskUpdate?: () => void
-  onAddTask?: (projectId: number, towerId: number, floorId: number, apartmentId: number) => void
+  onAddTask?: (projectId: number, towerId: number, floorId: number, apartmentId: number | null) => void
   onAddMassTask?: (projectId: number, towerId: number) => void
 }
 
@@ -133,6 +133,8 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
             floors: {
               [floorId: number]: {
                 floor_number: number
+                // Tareas del piso (Áreas comunes)
+                tasks: Task[]
                 apartments: {
                   [apartmentId: number]: {
                     id: number
@@ -181,6 +183,7 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
       if (!grouped[projectId].towers[towerId].floors[floorId]) {
         grouped[projectId].towers[towerId].floors[floorId] = {
           floor_number: floor.floor_number,
+          tasks: [], // Inicializar array de tareas de piso
           apartments: {}
         }
       }
@@ -206,60 +209,59 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
 
     tasks.forEach(task => {
       // Validar IDs
-      if (!task.project_id || !task.tower_id || !task.floor_id || !task.apartment_id) return
+      if (!task.project_id || !task.tower_id || !task.floor_id) return
 
-      const projectId = task.project_id
-      const towerId = task.tower_id
-      const floorId = task.floor_id
-      const apartmentId = task.apartment_id
+      const pId = task.project_id
+      const tId = task.tower_id
+      const fId = task.floor_id
+      const aId = task.apartment_id
 
-      // If structure exists, add task
-      if (
-        grouped[projectId] &&
-        grouped[projectId].towers[towerId] &&
-        grouped[projectId].towers[towerId].floors[floorId] &&
-        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId]
-      ) {
-        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId].tasks.push(task)
-      } else {
-        // Fallback: If apartment wasn't in the 'apartments' list but we have a task for it, 
-        // we might want to create the structure on the fly OR ignore it.
-        // Given the requirement "Show all apartments", the 'apartments' list should be the master.
-        // However, if search finds a task, we want to see it.
-        // So we should probably construct on fly if missing.
+      // Asegurar que la estructura existe (especialmente para tareas de piso sin depto)
+      // Nota: Si el piso no existe en 'apartments' (porque no tiene deptos), esta tarea podría quedar huérfana
+      // a menos que iteremos 'floors' también. Por seguridad, verificamos existencia.
 
-        // Initialize Project
-        if (!grouped[projectId]) {
-          grouped[projectId] = {
-            project: { id: projectId, name: task.project_name || 'Desconocido' }, // Note: We might miss is_active here if not in task
-            towers: {}
-          }
+      // Initialize Project if not exists (for tasks whose apartment might not be in the initial 'apartments' list)
+      if (!grouped[pId]) {
+        grouped[pId] = {
+          project: { id: pId, name: task.project_name || 'Desconocido', is_active: task.project_is_active },
+          towers: {}
         }
-        // Initialize Tower
-        if (!grouped[projectId].towers[towerId]) {
-          grouped[projectId].towers[towerId] = {
-            tower: { id: towerId, number: task.tower_number || 0, name: task.tower_number?.toString() || '' },
-            floors: {}
-          }
+      }
+      // Initialize Tower if not exists
+      if (!grouped[pId].towers[tId]) {
+        grouped[pId].towers[tId] = {
+          tower: { id: tId, number: task.tower_number || 0, name: task.tower_name || '' },
+          floors: {}
         }
-        // Initialize Floor
-        if (!grouped[projectId].towers[towerId].floors[floorId]) {
-          grouped[projectId].towers[towerId].floors[floorId] = {
-            floor_number: task.floor_number || 0,
-            apartments: {}
-          }
+      }
+      // Initialize Floor if not exists
+      if (!grouped[pId].towers[tId].floors[fId]) {
+        grouped[pId].towers[tId].floors[fId] = {
+          floor_number: task.floor_number || 0,
+          tasks: [], // Initialize floor tasks
+          apartments: {}
         }
-        // Initialize Apartment
-        if (!grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId]) {
-          grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId] = {
-            id: apartmentId,
+      }
+
+      const projectGroup = grouped[pId]
+      const towerGroup = projectGroup.towers[tId]
+      const floorGroup = towerGroup.floors[fId]
+
+      // Si tiene apartment_id, va al depto. Si no, va al piso.
+      if (aId) {
+        // Initialize Apartment if not exists
+        if (!floorGroup.apartments[aId]) {
+          floorGroup.apartments[aId] = {
+            id: aId,
             number: formatApartmentNumber(task.apartment_code, task.apartment_number || ''),
             originalNumber: task.apartment_number || '0',
             tasks: []
           }
         }
-
-        grouped[projectId].towers[towerId].floors[floorId].apartments[apartmentId].tasks.push(task)
+        floorGroup.apartments[aId].tasks.push(task)
+      } else {
+        // Tarea de área común (Piso)
+        floorGroup.tasks.push(task)
       }
     })
 
@@ -289,8 +291,8 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
               }
             })
 
-            // Remove floor if it has no apartments
-            if (Object.keys(floor.apartments).length === 0) {
+            // Remove floor if it has no apartments AND no floor-level tasks
+            if (Object.keys(floor.apartments).length === 0 && floor.tasks.length === 0) {
               delete tower.floors[floorId]
             }
           })
@@ -399,14 +401,14 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
         // Calcular total de tareas del proyecto
         const totalProjectTasks = Object.values(projectData.towers).reduce((sum, towerData) =>
           sum + Object.values(towerData.floors).reduce((floorSum, floorData) =>
-            floorSum + Object.values(floorData.apartments).reduce((aptSum, apt) => aptSum + apt.tasks.length, 0)
+            floorSum + floorData.tasks.length + Object.values(floorData.apartments).reduce((aptSum, apt) => aptSum + apt.tasks.length, 0)
             , 0)
           , 0)
 
         // Calcular tareas completadas del proyecto
         const completedProjectTasks = Object.values(projectData.towers).reduce((sum, towerData) =>
           sum + Object.values(towerData.floors).reduce((floorSum, floorData) =>
-            floorSum + Object.values(floorData.apartments).reduce((aptSum, apt) =>
+            floorSum + floorData.tasks.filter(t => t.status === 'completed').length + Object.values(floorData.apartments).reduce((aptSum, apt) =>
               aptSum + apt.tasks.filter(t => t.status === 'completed').length, 0)
             , 0)
           , 0)
@@ -478,11 +480,11 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                   const isTowerExpanded = expandedTowers.has(towerId)
 
                   const totalTasks = Object.values(towerData.floors).reduce((sum, floorData) =>
-                    sum + Object.values(floorData.apartments).reduce((aptSum, apt) => aptSum + apt.tasks.length, 0)
+                    sum + floorData.tasks.length + Object.values(floorData.apartments).reduce((aptSum, apt) => aptSum + apt.tasks.length, 0)
                     , 0)
 
                   const completedTasks = Object.values(towerData.floors).reduce((sum, floorData) =>
-                    sum + Object.values(floorData.apartments).reduce((aptSum, apt) =>
+                    sum + floorData.tasks.filter(t => t.status === 'completed').length + Object.values(floorData.apartments).reduce((aptSum, apt) =>
                       aptSum + apt.tasks.filter(t => t.status === 'completed').length, 0)
                     , 0)
 
@@ -547,8 +549,8 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                             const floorData = towerData.floors[floorId]
                             const isFloorExpanded = expandedFloors.has(floorId)
 
-                            const floorTaskCount = Object.values(floorData.apartments).reduce((sum, apt) => sum + apt.tasks.length, 0)
-                            const floorCompletedTasks = Object.values(floorData.apartments).reduce((sum, apt) =>
+                            const floorTaskCount = floorData.tasks.length + Object.values(floorData.apartments).reduce((sum, apt) => sum + apt.tasks.length, 0)
+                            const floorCompletedTasks = floorData.tasks.filter(t => t.status === 'completed').length + Object.values(floorData.apartments).reduce((sum, apt) =>
                               sum + apt.tasks.filter(t => t.status === 'completed').length, 0)
 
                             const floorProgress = floorTaskCount > 0
@@ -573,6 +575,18 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                                       <p className="text-xs font-medium text-slate-300">
                                         Piso {floorData.floor_number}
                                       </p>
+                                      {onAddTask && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            onAddTask(projectId, towerId, floorId, null)
+                                          }}
+                                          className="ml-2 p-1 hover:bg-slate-600 rounded-full text-green-400 hover:text-green-300 transition-colors border border-transparent hover:border-slate-500"
+                                          title="Agregar Tarea al Piso"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                     </div>
                                     <div className="flex items-center gap-3 text-xs">
                                       <div className="flex items-center gap-1">
@@ -596,6 +610,29 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                                 {/* Piso Content - Apartamentos */}
                                 {isFloorExpanded && (
                                   <div className="space-y-2 ml-2 md:ml-4">
+                                    {/* Tareas de Piso (Áreas Comunes) */}
+                                    {floorData.tasks.length > 0 && (
+                                      <div className="mb-4 pl-4 border-l-2 border-indigo-500/30">
+                                        <h4 className="text-xs uppercase tracking-wider text-indigo-400 font-semibold mb-2 flex items-center gap-2">
+                                          <Layers className="w-3 h-3" />
+                                          Áreas Comunes / Piso {floorData.floor_number}
+                                        </h4>
+                                        <div className="bg-slate-800/50 rounded-lg p-2 space-y-2">
+                                          {floorData.tasks.map(task => (
+                                            <TaskRowV2
+                                              key={task.id}
+                                              task={task}
+                                              isExpanded={expandedTasks.has(task.id)}
+                                              onToggleExpand={() => toggleTask(task.id)}
+                                              onTaskUpdate={onTaskUpdate}
+
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Departamentos */}
                                     {Object.keys(floorData.apartments).map(Number).sort((a, b) => {
                                       // Ordenar por el número original del departamento (extraer número del string)
                                       const aptA = floorData.apartments[a]
