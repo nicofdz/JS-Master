@@ -44,7 +44,7 @@ export interface PaymentHistoryItem {
     worker_rut: string
     project_id: number | null
     project_name: string | null
-    type: 'a_trato' | 'por_dia'
+    type: 'a_trato' | 'por_dia' | 'custom'
     total_amount: number
     tasks_count?: number
     days_count?: number
@@ -571,13 +571,17 @@ export function usePaymentsV2() {
                     const project = Array.isArray(payment.projects) ? payment.projects[0] : payment.projects
 
                     // Determinar tipo: si es null, asumir a_trato (legacy) o inferir por tasks_count > 0
-                    let type: 'a_trato' | 'por_dia' = (payment.contract_type as any)
+                    let type: 'a_trato' | 'por_dia' | 'custom' = (payment.contract_type as any)
 
                     if (!type) {
                         if ((payment.tasks_count || 0) > 0) {
                             type = 'a_trato'
+                        } else if (payment.days_count && payment.days_count > 0) {
+                            type = 'por_dia'
                         } else {
-                            type = 'por_dia' // Default fallback, o 'a_trato' según preferencia
+                            // Si no hay tareas ni días, y no tiene tipo, podría ser custom o legacy
+                            // Asumimos custom si tiene monto pero no tareas/dias
+                            type = 'custom'
                         }
                     }
 

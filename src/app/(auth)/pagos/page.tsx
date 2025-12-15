@@ -36,7 +36,9 @@ import { PaymentTasksModal } from '@/components/payments/PaymentTasksModal'
 import { PaymentDaysModal } from '@/components/payments/PaymentDaysModal'
 import { ProcessTaskPaymentModal } from '@/components/payments/ProcessTaskPaymentModal'
 import { ProcessDaysPaymentModal } from '@/components/payments/ProcessDaysPaymentModal'
+import { CustomPaymentModal } from '@/components/payments/CustomPaymentModal'
 import { PaymentFiltersSidebar } from '@/components/payments/PaymentFiltersSidebar'
+import { useWorkers } from '@/hooks/useWorkers'
 
 // Datos mockup (se usarán solo si loading es true o hay error)
 const mockMetrics = {
@@ -185,6 +187,8 @@ export default function PagosPage() {
     fetchPaymentHistory
   } = usePaymentsV2()
 
+  const { workers: fetchedWorkers } = useWorkers()
+
   const [currentView, setCurrentView] = useState<'pending' | 'history'>('pending')
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(new Set())
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
@@ -229,12 +233,15 @@ export default function PagosPage() {
   const [showPaymentDaysModal, setShowPaymentDaysModal] = useState(false)
   const [showProcessPaymentModal, setShowProcessPaymentModal] = useState(false)
   const [showProcessDaysModal, setShowProcessDaysModal] = useState(false)
+  const [showCustomPaymentModal, setShowCustomPaymentModal] = useState(false)
   const [selectedWorkerForModal, setSelectedWorkerForModal] = useState<{
     id: number
     name: string
     rut: string
     type: 'a_trato' | 'por_dia'
   } | null>(null)
+
+
   const [workerAttendanceData, setWorkerAttendanceData] = useState<{
     attendances: any[]
     contracts: any[]
@@ -1147,13 +1154,29 @@ export default function PagosPage() {
         </div>
 
         {currentView === 'pending' && (
-          <Button
-            onClick={handleExportPendingPayments}
-            className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Exportar PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowProcessPaymentModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <DollarSign className="w-4 h-4" />
+              Procesar Tareas
+            </Button>
+            <Button
+              onClick={() => setShowCustomPaymentModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            >
+              <Users className="w-4 h-4" />
+              Pago Personalizado
+            </Button>
+            <Button
+              onClick={handleExportPendingPayments}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Exportar PDF
+            </Button>
+          </div>
         )}
       </div>
 
@@ -1973,6 +1996,17 @@ export default function PagosPage() {
           setHistoryProject('all')
           setActiveFilter(null)
         }}
+      />
+      {/* Modal de Pago Personalizado */}
+      <CustomPaymentModal
+        isOpen={showCustomPaymentModal}
+        onClose={() => setShowCustomPaymentModal(false)}
+        onPaymentSuccess={() => {
+          refreshPayments()
+          setShowCustomPaymentModal(false)
+        }}
+        workers={fetchedWorkers.map(w => ({ id: w.id, name: w.full_name, rut: w.rut }))}
+        projects={projects.map(p => ({ id: p.project_id, name: p.project_name }))}
       />
     </div>
   )

@@ -857,8 +857,18 @@ export function TaskFormModalV2({
       title={mode === 'create' ? 'Crear Nueva Tarea' : 'Editar Tarea'}
       size="xl"
       headerRight={mode === 'create' ? (
-        <div className="flex items-center gap-2">
-          {/* Template Select would go here */}
+        <div className="flex items-center gap-3 mr-8">
+          <span className="text-sm text-slate-400 hidden sm:inline">Plantilla:</span>
+          <select
+            value={selectedTemplateId}
+            onChange={(e) => handleTemplateSelect(e.target.value)}
+            className="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+          >
+            <option value="">-- Seleccionar Plantilla --</option>
+            {templates.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
         </div>
       ) : null}
     >
