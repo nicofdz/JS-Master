@@ -19,7 +19,7 @@ export default function Home() {
             <Link href="/" className="flex items-center gap-3 group cursor-pointer">
               <div className="relative w-12 h-12 group-hover:scale-105 transition-transform">
                 <Image
-                  src="/logo/logo jsmaster.png"
+                  src="/logo/logo_jsmaster.png"
                   alt="JS Master Logo"
                   fill
                   className="object-contain"
@@ -270,7 +270,7 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-6">
                 <div className="relative w-8 h-8">
                   <Image
-                    src="/logo/logo jsmaster.png"
+                    src="/logo/logo_jsmaster.png"
                     alt="JS Master Logo"
                     fill
                     className="object-contain"

@@ -7,8 +7,11 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Sistema de Control de Terminaciones",
+  title: "JS Master",
   description: "Sistema web para el control y seguimiento de terminaciones en proyectos de construcción",
+  icons: {
+    icon: '/logo/logo_jsmaster.png',
+  }
 };
 
 export default function RootLayout({

@@ -421,7 +421,7 @@ export default function AuthLayout({
 
               <Link href="/">
                 <Image
-                  src="/logo/logo jsmaster.png"
+                  src="/logo/logo_jsmaster.png"
                   alt="JS Master Logo"
                   width={80}
                   height={30}

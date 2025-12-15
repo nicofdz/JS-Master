@@ -11,7 +11,7 @@ export default function ConfirmedPage() {
         <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
             <div className="mb-8 relative w-48 h-16">
                 <Image
-                    src="/logo/logo jsmaster.png"
+                    src="/logo/logo_jsmaster.png"
                     alt="JS Master Logo"
                     fill
                     className="object-contain"
