@@ -11,6 +11,8 @@ export const metadata: Metadata = {
   description: "Sistema web para el control y seguimiento de terminaciones en proyectos de construcción",
   icons: {
     icon: '/logo/logo_jsmaster.png',
+    shortcut: '/logo/logo_jsmaster.png',
+    apple: '/logo/logo_jsmaster.png',
   }
 };
 
