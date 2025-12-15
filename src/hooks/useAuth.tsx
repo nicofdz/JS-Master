@@ -59,7 +59,7 @@ export function useAuthState(): AuthContextType {
       setProfile(data)
 
       // Load assignments if not admin
-      if (data.role !== 'admin') {
+      if (data && data.role !== 'admin') {
         const { data: assignments } = await supabase // access supabase directly or via authService? authService wraps simple methods.
           .from('user_projects')
           .select('project_id')
