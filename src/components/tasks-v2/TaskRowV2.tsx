@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, ChevronRight, MoreVertical, Edit, Trash2, Users, Calendar, DollarSign, Eye, AlertCircle, Clock, CheckCircle, UserPlus, UserMinus, Image, Package, History } from 'lucide-react'
-import { getStatusColor, getStatusText, formatCurrency, formatDate } from '@/lib/utils'
+import { getStatusColor, getStatusText, formatCurrency, formatDate, calculateBusinessDuration } from '@/lib/utils'
 import { TaskDetailModalV2 } from './TaskDetailModalV2'
 import { TaskFormModalV2 } from './TaskFormModalV2'
 import { AdjustDistributionModalV2 } from './AdjustDistributionModalV2'
@@ -89,9 +89,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
     // Calcular el tiempo total sumando todas las asignaciones completadas
     let totalMs = 0
     completedAssignments.forEach((worker: any) => {
-      const start = new Date(worker.started_at!).getTime()
-      const end = new Date(worker.completed_at!).getTime()
-      totalMs += (end - start)
+      totalMs += calculateBusinessDuration(worker.started_at, worker.completed_at)
     })
 
     // Calcular promedio si hay múltiples trabajadores

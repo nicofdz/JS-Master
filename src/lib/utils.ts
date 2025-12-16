@@ -117,3 +117,96 @@ export function formatApartmentNumber(apartment_code: string | null | undefined,
   }
   return apartment_number.toString()
 }
+// ... existing code ...
+
+/**
+ * Calcula la duración en milisegundos considerando solo horas laborales (08:00 - 17:00)
+ * @param start - Fecha de inicio
+ * @param end - Fecha de término
+ * @returns Duración en milisegundos
+ */
+export function calculateBusinessDuration(start: Date | string, end: Date | string): number {
+  if (!start || !end) return 0
+
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+
+  if (startDate > endDate) return 0
+
+  // Constantes de horario laboral
+  const WORK_START_HOUR = 8
+  const WORK_END_HOUR = 17
+  const MS_PER_HOUR = 1000 * 60 * 60
+
+  // Normalizar fechas
+  let current = new Date(startDate)
+  const target = new Date(endDate)
+  let totalMs = 0
+
+  // Si es el mismo día
+  if (current.toDateString() === target.toDateString()) {
+    const startHour = Math.max(current.getHours(), WORK_START_HOUR)
+    const endHour = Math.min(target.getHours(), WORK_END_HOUR)
+
+    // Si la hora de fin es menor a la de inicio después de ajustar (ej: trabajo fuera de horario), retornar 0
+    if (endHour <= startHour) return 0
+
+    // Ajustar minutos
+    const startMs = new Date(current).setHours(startHour, current.getMinutes(), 0, 0)
+    let endMs = new Date(target).setHours(endHour, target.getMinutes(), 0, 0)
+
+    // Si la hora original estaba fuera del rango laboral, ajustar
+    if (current.getHours() < WORK_START_HOUR) {
+      // Si empezó antes de las 8, cuenta desde las 8
+      // startMs ya está ajustado arriba por startHour
+    }
+
+    // Caso especial: si terminó después de las 17:00, ajustar a 17:00
+    if (target.getHours() >= WORK_END_HOUR) {
+      endMs = new Date(target).setHours(WORK_END_HOUR, 0, 0, 0)
+    }
+
+    return Math.max(0, endMs - startMs)
+  }
+
+  // Si son días diferentes
+  while (current <= target) {
+    const isStartDay = current.toDateString() === startDate.toDateString()
+    const isEndDay = current.toDateString() === target.toDateString()
+
+    if (isStartDay) {
+      // Calcular tiempo restante del primer día (hasta las 17:00)
+      let hours = current.getHours()
+      if (hours < WORK_END_HOUR) {
+        const effectiveStartHour = Math.max(hours, WORK_START_HOUR)
+        const startMs = new Date(current).setHours(effectiveStartHour, current.getMinutes(), 0, 0)
+        const endMs = new Date(current).setHours(WORK_END_HOUR, 0, 0, 0)
+        totalMs += Math.max(0, endMs - startMs)
+      }
+    } else if (isEndDay) {
+      // Calcular tiempo transcurrido del último día (desde las 08:00)
+      let hours = target.getHours()
+      if (hours >= WORK_START_HOUR) {
+        const effectiveEndHour = Math.min(hours, WORK_END_HOUR)
+        const startMs = new Date(target).setHours(WORK_START_HOUR, 0, 0, 0)
+        // Si termina después de las 17:00, cortar ahí
+        let endMs
+        if (hours >= WORK_END_HOUR) {
+          endMs = new Date(target).setHours(WORK_END_HOUR, 0, 0, 0)
+        } else {
+          endMs = new Date(target).setHours(effectiveEndHour, target.getMinutes(), 0, 0)
+        }
+        totalMs += Math.max(0, endMs - startMs)
+      }
+    } else {
+      // Días intermedios completos (9 horas)
+      totalMs += (WORK_END_HOUR - WORK_START_HOUR) * MS_PER_HOUR
+    }
+
+    // Avanzar al siguiente día
+    current.setDate(current.getDate() + 1)
+    current.setHours(WORK_START_HOUR, 0, 0, 0)
+  }
+
+  return totalMs
+}
