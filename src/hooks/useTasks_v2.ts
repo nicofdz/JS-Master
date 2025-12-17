@@ -88,6 +88,8 @@ export interface TaskV2 {
   progress_photos?: any[]
   actual_duration_minutes?: number
   estimated_hours?: number
+  created_by?: string
+  created_by_name?: string
 
 
 }
@@ -186,6 +188,8 @@ export function useTasksV2() {
         const processedTask = {
           ...task,
           id: task.task_id || task.id, // Mapear task_id → id
+          created_by: task.created_by,
+          created_by_name: task.created_by_name || 'Desconocido',
           workers: Array.isArray(workers) ? workers : []
         }
 

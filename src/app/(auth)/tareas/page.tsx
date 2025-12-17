@@ -12,6 +12,9 @@ import { DeletedTasksList } from '@/components/tasks-v2/DeletedTasksList'
 import { TaskTemplatesModal } from '@/components/tasks-v2/TaskTemplatesModal'
 import { Clock, Play, CheckCircle, Lock, AlertCircle, Layers, Trash2, CheckSquare, FileText, Filter, XCircle } from 'lucide-react'
 import { TaskFiltersSidebar } from '@/components/tasks-v2/TaskFiltersSidebar'
+// import { RecentTasksModal } from '@/components/tasks-v2/RecentTasksModal' // Removing Modal import
+import { RecentTasksList } from '@/components/tasks-v2/RecentTasksList'
+import { TaskDetailModalV2 } from '@/components/tasks-v2/TaskDetailModalV2'
 import { useTasksV2 } from '@/hooks'
 import { useProjectFilter } from '@/hooks/useProjectFilter'
 import { formatApartmentNumber } from '@/lib/utils'
@@ -40,8 +43,9 @@ export default function TareasPage() {
   const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
   const searchParams = useSearchParams()
 
-  const [activeTab, setActiveTab] = useState<'active' | 'trash'>('active')
+  const [activeTab, setActiveTab] = useState<'active' | 'trash' | 'recent'>('active')
   const [searchTerm, setSearchTerm] = useState('')
+  const [recentTasksProjectFilter, setRecentTasksProjectFilter] = useState<string | null>(null) // Filtro aislado para tab reciente
   const [workerFilter, setWorkerFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'blocked' | 'cancelled' | 'on_hold' | 'delayed'>('all')
   const [towerFilter, setTowerFilter] = useState<string>('all')
@@ -64,6 +68,8 @@ export default function TareasPage() {
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<{ projectId: number; towerId: number; floorId: number; apartmentId: number | null } | null>(null)
   const [massCreateData, setMassCreateData] = useState<{ projectId: number; towerId: number } | null>(null)
+  // const [showRecentTasksModal, setShowRecentTasksModal] = useState(false) // Removed
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<any | null>(null)
 
   // Cargar conteo de tareas eliminadas cuando cambia la función de conteo (ej: al cargar rol)
   useEffect(() => {
@@ -252,24 +258,8 @@ export default function TareasPage() {
     }
   }, [selectedProjectId]) // Removido getWorkersForProject de dependencias
 
-  // Reset cascada de filtros
-  useEffect(() => {
-    setTowerFilter('all')
-    setFloorFilter('all')
-    setApartmentFilter('all')
-    setWorkerFilter('all')
-  }, [selectedProjectId])
 
-  useEffect(() => {
-    setFloorFilter('all')
-    setApartmentFilter('all')
-  }, [towerFilter])
 
-  useEffect(() => {
-    setApartmentFilter('all')
-  }, [floorFilter])
-
-  // Obtener torres únicas del proyecto seleccionado (desde las tareas que ya tienen tower_id y tower_number)
   const availableTowers = useMemo(() => {
     if (!selectedProjectId || selectedProjectId === 'all') return []
 
@@ -544,8 +534,8 @@ export default function TareasPage() {
         )}
       </div>
 
-      {/* Filtros - Solo mostrar en tab activo */}
-      {activeTab === 'active' && (
+      {/* Filtros - Mostrar en tab activo y recientes */}
+      {(activeTab === 'active' || activeTab === 'recent') && (
         <div className="mb-6 flex flex-col xl:flex-row gap-4 justify-between">
           <div className="flex flex-col md:flex-row gap-4 flex-1">
             {/* Búsqueda */}
@@ -569,34 +559,42 @@ export default function TareasPage() {
             >
               <Filter className="w-5 h-5" />
               Filtros
-              {(selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all' ? (
+              {(activeTab === 'recent' && recentTasksProjectFilter && recentTasksProjectFilter !== 'all') ||
+                (activeTab !== 'recent' && ((selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all')) ? (
                 <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
                   !
                 </span>
               ) : null}
             </Button>
 
-            {((selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all') && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setSelectedProjectId(null)
-                  setWorkerFilter('all')
-                  setTowerFilter('all')
-                  setFloorFilter('all')
-                  setApartmentFilter('all')
+            {((activeTab === 'recent' && recentTasksProjectFilter && recentTasksProjectFilter !== 'all') ||
+              (activeTab !== 'recent' && ((selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all'))) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (activeTab === 'recent') {
+                      setRecentTasksProjectFilter(null)
+                    } else {
+                      setSelectedProjectId(null)
+                      setWorkerFilter('all')
+                      setTowerFilter('all')
+                      setFloorFilter('all')
+                      setApartmentFilter('all')
 
-                  setStatusFilter('all')
-                  setDateFilterType('all')
-                  setDateStart('')
-                  setDateEnd('')
-                }}
-                className="text-slate-400 hover:text-white hover:bg-slate-800"
-                title="Limpiar filtros"
-              >
-                <XCircle className="w-5 h-5" />
-              </Button>
-            )}
+                      setStatusFilter('all')
+                      setDateFilterType('all')
+                      setDateStart('')
+                      setDateEnd('')
+                    }
+                  }}
+                  className="text-slate-400 hover:text-white hover:bg-slate-800"
+                  title="Limpiar filtros"
+                >
+                  <XCircle className="w-5 h-5" />
+                </Button>
+              )}
+
+
           </div>
         </div>
       )}
@@ -604,14 +602,31 @@ export default function TareasPage() {
       <TaskFiltersSidebar
         isOpen={isFilterSidebarOpen}
         onClose={() => setIsFilterSidebarOpen(false)}
-        currentProjectFilter={selectedProjectId || 'all'}
-        onProjectFilterChange={(val) => setSelectedProjectId(val === 'all' ? null : val)}
+        currentProjectFilter={activeTab === 'recent' ? (recentTasksProjectFilter || 'all') : (selectedProjectId || 'all')}
+        onProjectFilterChange={(val) => {
+          if (activeTab === 'recent') {
+            setRecentTasksProjectFilter(val === 'all' ? null : val)
+          } else {
+            setSelectedProjectId(val === 'all' ? null : val)
+            setTowerFilter('all')
+            setFloorFilter('all')
+            setApartmentFilter('all')
+            setWorkerFilter('all')
+          }
+        }}
         currentWorkerFilter={workerFilter}
         onWorkerFilterChange={setWorkerFilter}
         currentTowerFilter={towerFilter}
-        onTowerFilterChange={setTowerFilter}
+        onTowerFilterChange={(val) => {
+          setTowerFilter(val)
+          setFloorFilter('all')
+          setApartmentFilter('all')
+        }}
         currentFloorFilter={floorFilter}
-        onFloorFilterChange={setFloorFilter}
+        onFloorFilterChange={(val) => {
+          setFloorFilter(val)
+          setApartmentFilter('all')
+        }}
         currentApartmentFilter={apartmentFilter}
         onApartmentFilterChange={setApartmentFilter}
 
@@ -627,6 +642,8 @@ export default function TareasPage() {
         onDateStartChange={setDateStart}
         dateEnd={dateEnd}
         onDateEndChange={setDateEnd}
+
+        showOnlyProject={activeTab === 'recent'}
       />
 
       {/* Tabs */}
@@ -646,6 +663,23 @@ export default function TareasPage() {
             <CheckSquare className="w-4 h-4" />
             Tareas Activas
           </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('recent')
+              // No persistimos 'recent' en localStorage para volver siempre a 'active' por defecto, o sí? Dejémoslo sin persistir por ahora o igual que los otros.
+              const savedFilters = JSON.parse(localStorage.getItem('tareas-filters') || '{}')
+              localStorage.setItem('tareas-filters', JSON.stringify({ ...savedFilters, activeTab: 'recent' }))
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${activeTab === 'recent'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            <Clock className="w-4 h-4" />
+            Últimas Creadas
+          </button>
+
           <button
             onClick={() => {
               setActiveTab('trash')
@@ -752,6 +786,30 @@ export default function TareasPage() {
             />
           </div>
         </>
+      ) : activeTab === 'recent' ? (
+        <RecentTasksList
+          tasks={tasks}
+          onTaskSelect={(taskId) => {
+            const task = tasks.find(t => t.id === taskId)
+            if (task) {
+              setSelectedTaskForDetail(task)
+            }
+          }}
+          onGoToLocation={(task) => {
+            // 1. Set filters based on task location
+            if (task.project_id) setSelectedProjectId(task.project_id.toString())
+            if (task.tower_id) setTowerFilter(task.tower_id.toString())
+            if (task.floor_id) setFloorFilter(task.floor_id.toString())
+            if (task.apartment_id) setApartmentFilter(task.apartment_id.toString())
+
+            // 2. Switch to 'active' tab
+            setActiveTab('active')
+
+            // 3. Clear searching to ensure specific location is visible
+            setSearchTerm('')
+          }}
+          selectedProjectId={recentTasksProjectFilter && recentTasksProjectFilter !== 'all' ? Number(recentTasksProjectFilter) : undefined}
+        />
       ) : (
         <DeletedTasksList
           deletedTasks={deletedTasks}
@@ -802,6 +860,20 @@ export default function TareasPage() {
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}
       />
+
+      {/* Modal de Tareas Recientes REMOVED */}
+
+      {/* Modal de Detalle de Tarea (para navegación desde recientes) */}
+      {selectedTaskForDetail && (
+        <TaskDetailModalV2
+          isOpen={true}
+          task={selectedTaskForDetail}
+          onClose={() => setSelectedTaskForDetail(null)}
+          onEdit={() => {
+            setSelectedTaskForDetail(null)
+          }}
+        />
+      )}
     </div>
   )
 }

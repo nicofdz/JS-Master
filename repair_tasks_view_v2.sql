@@ -1,5 +1,5 @@
 -- =====================================================
--- FIX: Repair tasks_with_workers_v2 to include floor tasks and creator info
+-- FIX v2: Repair tasks_with_workers_v2 to include PRECISE contract type causing NO duplicates
 -- =====================================================
 
 DROP VIEW IF EXISTS public.tasks_with_workers_v2 CASCADE;
@@ -30,10 +30,10 @@ SELECT
   -- Creator info
   up.full_name AS created_by_name,
 
-  -- Apartment info (can be null for floor tasks)
+  -- Apartment info
   a.apartment_number,
   
-  -- Floor info (from task directly or via apartment)
+  -- Floor info
   f.id AS floor_id,
   f.floor_number,
   
@@ -68,7 +68,18 @@ SELECT
             'started_at', ta.started_at,
             'completed_at', ta.completed_at,
             'is_paid', ta.is_paid,
-            'contract_type', COALESCE(ch.contract_type, w.contract_type)
+            -- FIX: Use correlated subquery to fetch ONE contract type safely
+            'contract_type', COALESCE(
+              (
+                SELECT ch.contract_type 
+                FROM contract_history ch 
+                WHERE ch.worker_id = w.id 
+                  AND ch.project_id = p.id 
+                  AND ch.is_active = TRUE 
+                LIMIT 1
+              ), 
+              w.contract_type
+            )
           )
         ELSE NULL
       END
@@ -77,20 +88,13 @@ SELECT
   ) AS workers
   
 FROM tasks t
--- LEFT JOIN because apartment_id might be NULL for floor tasks
 LEFT JOIN apartments a ON t.apartment_id = a.id
--- JOIN floors using either direct floor_id or apartment's floor_id
 INNER JOIN floors f ON f.id = COALESCE(t.floor_id, a.floor_id)
 INNER JOIN towers tw ON f.tower_id = tw.id
 INNER JOIN projects p ON tw.project_id = p.id
 LEFT JOIN task_assignments ta ON t.id = ta.task_id AND ta.is_deleted = FALSE
 LEFT JOIN workers w ON ta.worker_id = w.id
 LEFT JOIN user_profiles up ON t.created_by = up.id
--- FIX: Join contract_history to get PROJECT SPECIFIC contract type
-LEFT JOIN contract_history ch ON 
-  ch.worker_id = w.id AND 
-  ch.project_id = p.id AND 
-  ch.is_active = TRUE
 
 WHERE t.is_deleted = FALSE
 
@@ -129,4 +133,4 @@ GROUP BY
 ORDER BY t.created_at DESC;
 
 COMMENT ON VIEW public.tasks_with_workers_v2 IS 
-'Vista de tareas corregida para incluir detalle de creador, proyecto y duración real.';
+'Vista de tareas corregida v2: Evita duplicados por contratos múltiples.';

@@ -19,9 +19,9 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Inicializar distribuciones desde la tarea
+  // Inicializar distribuciones desde la tarea al abrir el modal
   useEffect(() => {
-    if (task && task.workers && task.total_budget) {
+    if (isOpen && task && task.workers && task.total_budget) {
       const activeWorkers = task.workers.filter((worker: any) =>
         worker.assignment_status !== 'removed' &&
         worker.contract_type !== 'por_dia'
@@ -42,29 +42,47 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
         }
       })
       setDistributions(initialDistributions)
+      setReason('') // Limpiar razón al abrir
     }
-  }, [task])
+  }, [task, isOpen])
 
-  const handleAmountChange = (workerId: number, newAmount: number) => {
+  const handlePercentageChange = (workerId: number, newPercentage: number) => {
     if (!task) return
-    // Simple clamp purely for sanity, though budget overflow is checked at validation
-    const clampedAmount = Math.max(0, newAmount)
 
-    setDistributions(prev => prev.map(d => {
-      if (d.worker_id === workerId) {
-        // Recalcular porcentaje referencial
-        const newPct = (clampedAmount / task.total_budget) * 100
-        return { ...d, amount: clampedAmount, percentage: newPct }
+    // Clamp new percentage between 0 and 100
+    const clampedPercentage = Math.max(0, Math.min(100, newPercentage))
+    const calculatedAmount = (task.total_budget * clampedPercentage) / 100
+
+    setDistributions(prev => {
+      // Si hay exactamente 2 trabajadores, el otro se ajusta automáticamente
+      if (prev.length === 2) {
+        return prev.map(d => {
+          if (d.worker_id === workerId) {
+            return { ...d, percentage: clampedPercentage, amount: calculatedAmount }
+          } else {
+            // El "otro" trabajador toma el restante
+            const remainingPercentage = Math.max(0, 100 - clampedPercentage)
+            const remainingAmount = (task.total_budget * remainingPercentage) / 100
+            return { ...d, percentage: remainingPercentage, amount: remainingAmount }
+          }
+        })
       }
-      return d
-    }))
+
+      // Si no son 2, comportamiento estándar (solo actualiza el modificado)
+      return prev.map(d => {
+        if (d.worker_id === workerId) {
+          return { ...d, percentage: clampedPercentage, amount: calculatedAmount }
+        }
+        return d
+      })
+    })
   }
 
   const totalAmount = distributions.reduce((sum, d) => sum + d.amount, 0)
-  // Validation: Amount must match budget (allowing slight float tolerance for display checks, but backend will enforce)
-  // User wants EXACT payment, so we compare directly logic mostly.
-  const diff = Math.abs(totalAmount - (task?.total_budget || 0))
-  const isValid = diff < 1 // Allow < 1 peso diff? Or strictly 0.01? Let's say < 1 for UI feedback, hook is 0.01.
+  const totalPercentage = distributions.reduce((sum, d) => sum + d.percentage, 0)
+
+  // Validation: Percentages must sum to 100% (allowing tolerance)
+  const isValid = Math.abs(totalPercentage - 100) < 0.05
 
   const handleSave = async () => {
     if (!task || !isValid) return
@@ -124,10 +142,10 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
               <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-yellow-400 mb-1">
-                  Trabajadores &quot;Por Día&quot; en esta tarea
+                  Trabajadores "Por Día" en esta tarea
                 </p>
                 <p className="text-xs text-yellow-300/80">
-                  Los trabajadores &quot;Por Día&quot; no aparecen en esta distribución ya que no reciben pago por tarea.
+                  Los trabajadores "Por Día" no aparecen en esta distribución ya que no reciben pago por tarea.
                 </p>
               </div>
             </div>
@@ -137,13 +155,13 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
         {/* Distribución Actual - Grid 3 Columnas */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-semibold text-slate-200">Distribución de Montos</h4>
-            <span className="text-xs text-slate-400">Edita los montos exactos ($)</span>
+            <h4 className="text-sm font-semibold text-slate-200">Distribución de Pagos</h4>
+            <span className="text-xs text-slate-400">Edita los porcentajes (%)</span>
           </div>
 
           {distributions.length === 0 ? (
             <div className="text-center py-8 text-slate-400">
-              <p className="text-sm">No hay trabajadores &quot;A Trato&quot; disponibles.</p>
+              <p className="text-sm">No hay trabajadores "A Trato" disponibles.</p>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-4">
@@ -167,22 +185,24 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
                       </div>
 
                       <div className="mb-3">
-                        <label className="block text-xs text-slate-400 mb-1">Monto Exacto ($)</label>
+                        <label className="block text-xs text-slate-400 mb-1">Porcentaje (%)</label>
                         <input
                           type="number"
                           min="0"
-                          step="1"
-                          value={amount}
-                          onChange={(e) => handleAmountChange(worker.id, parseInt(e.target.value) || 0)}
+                          max="100"
+                          step="0.01"
+                          onFocus={(e) => e.target.select()}
+                          value={percentage}
+                          onChange={(e) => handlePercentageChange(worker.id, parseFloat(e.target.value) || 0)}
                           className="w-full px-3 py-2 border border-slate-600 bg-slate-800 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm font-bold"
                         />
                       </div>
 
                       <div className="flex justify-between items-end">
-                        <div>
-                          <label className="block text-xs text-slate-500 mb-1">Porcentaje (Ref)</label>
-                          <p className="text-xs text-slate-400">
-                            {percentage.toFixed(2)}%
+                        <div className="w-full">
+                          <label className="block text-xs text-slate-500 mb-1">Monto (Calculado)</label>
+                          <p className="text-sm font-medium text-green-400">
+                            ${amount.toLocaleString('es-CL')}
                           </p>
                         </div>
                       </div>
@@ -204,13 +224,13 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
         {/* Total y Validación */}
         <div className={`border rounded-lg p-4 transition-colors ${isValid ? 'bg-slate-700 border-slate-600' : 'bg-red-900/10 border-red-500/50'}`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-slate-200">Total Asignado:</span>
+            <span className="text-sm font-medium text-slate-200">Total Porcentaje:</span>
             <div className="flex items-center gap-3">
               <span className={`text-lg font-bold ${isValid ? 'text-green-400' : 'text-red-400'}`}>
-                ${totalAmount.toLocaleString('es-CL')}
+                {totalPercentage.toFixed(2)}%
               </span>
               <span className="text-sm text-slate-400">
-                / ${(taskData.total_budget).toLocaleString('es-CL')}
+                / 100%
               </span>
             </div>
           </div>
@@ -218,13 +238,19 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
             <div className="flex items-center gap-2 text-sm text-red-400 mt-2">
               <AlertCircle className="w-4 h-4" />
               <span>
-                {totalAmount < taskData.total_budget
-                  ? `Faltan $${(taskData.total_budget - totalAmount).toLocaleString('es-CL')} por asignar`
-                  : `Te pasaste por $${(totalAmount - taskData.total_budget).toLocaleString('es-CL')}`
+                {totalPercentage < 100
+                  ? `Falta asignar ${(100 - totalPercentage).toFixed(2)}%`
+                  : `Te pasaste por ${(totalPercentage - 100).toFixed(2)}%`
                 }
               </span>
             </div>
           )}
+          <div className="mt-2 text-xs text-slate-400 flex justify-between border-t border-slate-600 pt-2">
+            <span>Monto Total Asignado:</span>
+            <span className={Math.abs(totalAmount - (taskData.total_budget || 0)) < 10 ? 'text-green-400' : 'text-yellow-400'}>
+              ${totalAmount.toLocaleString('es-CL')} / ${(taskData.total_budget || 0).toLocaleString('es-CL')}
+            </span>
+          </div>
         </div>
 
         {/* Razón del Ajuste */}
@@ -237,7 +263,7 @@ export function AdjustDistributionModalV2({ isOpen, onClose, task, onSuccess }: 
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-500"
-            placeholder="Ej: Ajuste por cambio de alcance, error en monto inicial, etc."
+            placeholder="Ej: Ajuste por cambio de alcance, error en porcentaje inicial, etc."
           />
         </div>
 
