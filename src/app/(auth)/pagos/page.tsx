@@ -200,13 +200,13 @@ export default function PagosPage() {
   const metrics = dbMetrics
   const projects = dbProjects
 
-  // Expandir todos los proyectos por defecto al cargar
-  useEffect(() => {
-    if (dbProjects.length > 0) {
-      const allProjectIds = new Set(dbProjects.map(p => p.project_id))
-      setExpandedProjects(allProjectIds)
-    }
-  }, [dbProjects])
+  // No expandir proyectos automÃ¡ticamente
+  // useEffect(() => {
+  //   if (dbProjects.length > 0) {
+  //     const allProjectIds = new Set(dbProjects.map(p => p.project_id))
+  //     setExpandedProjects(allProjectIds)
+  //   }
+  // }, [dbProjects])
 
   // Filtros
   const [projectFilter, setProjectFilter] = useState<string>('all')
