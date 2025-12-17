@@ -18,11 +18,17 @@ interface TaskTemplatesModalProps {
 export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps) {
   const { templates, loading, refresh, createTemplate, updateTemplate, deleteTemplate } = useTaskTemplates()
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    category: string
+    estimated_hours: number | string
+    priority: string
+    description: string
+  }>({
     name: '',
     category: '',
-    estimated_hours: 8,
-    priority: 'medium' as string,
+    estimated_hours: '',
+    priority: 'medium',
     description: ''
   })
   const [taskCategories, setTaskCategories] = useState<{ id: number; name: string }[]>([])
@@ -80,7 +86,7 @@ export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps)
     setFormData({
       name: '',
       category: '',
-      estimated_hours: 8,
+      estimated_hours: '',
       priority: 'medium',
       description: ''
     })
@@ -92,12 +98,17 @@ export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps)
       return
     }
 
+    const payload = {
+      ...formData,
+      estimated_hours: formData.estimated_hours === '' ? 0 : Number(formData.estimated_hours)
+    }
+
     try {
       if (editingId) {
-        await updateTemplate(editingId, formData)
+        await updateTemplate(editingId, payload)
         toast.success('Plantilla actualizada exitosamente')
       } else {
-        await createTemplate(formData)
+        await createTemplate(payload)
         toast.success('Plantilla creada exitosamente')
       }
       handleCancel()
@@ -169,8 +180,8 @@ export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps)
     }
 
     // Verificar si ya existe (excluyendo la actual)
-    if (taskCategories.some(cat => 
-      cat.id !== editingCategoryId && 
+    if (taskCategories.some(cat =>
+      cat.id !== editingCategoryId &&
       cat.name.toLowerCase() === newCategoryName.trim().toLowerCase()
     )) {
       toast.error('Esta categoría ya existe')
@@ -354,9 +365,9 @@ export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps)
             <Input
               label="Horas Estimadas"
               type="number"
-              min="1"
+              min="0"
               value={formData.estimated_hours}
-              onChange={(e) => setFormData({ ...formData, estimated_hours: parseInt(e.target.value) || 8 })}
+              onChange={(e) => setFormData({ ...formData, estimated_hours: e.target.value === '' ? '' : parseInt(e.target.value) })}
             />
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -409,19 +420,19 @@ export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps)
                     // Vista de edición (ya está en el formulario arriba)
                     null
                   ) : (
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-white">{template.name}</h4>
-                          <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h4 className="font-semibold text-white mr-1 break-all">{template.name}</h4>
+                          <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
                             {template.category}
                           </span>
                           {template.priority && (
-                            <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                            <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
                               {priorityOptions.find(p => p.value === template.priority)?.label || template.priority}
                             </span>
                           )}
-                          <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-500/30">
+                          <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-500/30 whitespace-nowrap">
                             {template.estimated_hours}h
                           </span>
                         </div>
@@ -429,7 +440,7 @@ export function TaskTemplatesModal({ isOpen, onClose }: TaskTemplatesModalProps)
                           <p className="text-sm text-slate-400 mb-2">{template.description}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 sm:ml-4 self-end sm:self-auto">
                         <Button
                           size="sm"
                           variant="outline"

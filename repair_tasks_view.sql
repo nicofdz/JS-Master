@@ -24,6 +24,7 @@ SELECT
   t.created_at,
   t.updated_at,
   t.actual_duration_minutes,
+  t.estimated_hours,
   
   -- Apartment info (can be null for floor tasks)
   a.apartment_number,
@@ -100,6 +101,7 @@ GROUP BY
   t.created_at,
   t.updated_at,
   t.actual_duration_minutes,
+  t.estimated_hours,
   a.apartment_number,
   f.id,
   f.floor_number,

@@ -156,16 +156,6 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
       setManualDurationMinutes(minutesMatch ? minutesMatch[1] : '')
     }
 
-    if (durationInputRef.current && !showDurationInput) {
-      const rect = durationInputRef.current.getBoundingClientRect()
-      // Posicionar debajo del badge, alineado a la izquierda si no se sale de pantalla, sino ajustar
-      // Por simplicidad, alineado a la izquierda del badge + pequeño offset vertical
-      setPopoverPosition({
-        top: rect.bottom + 5,
-        left: rect.left - 100 // Un poco más a la izquierda para que no se corte
-      })
-    }
-
     setShowDurationInput(!showDurationInput)
   }
 
@@ -547,55 +537,59 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
             {showDurationInput && (
               <div
-                className="fixed z-[9999] mt-1 p-3 w-48 bg-white rounded-lg shadow-lg border border-gray-200"
-                style={{
-                  top: `${popoverPosition.top}px`,
-                  left: `${popoverPosition.left}px`
+                className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowDurationInput(false)
                 }}
-                onClick={(e) => e.stopPropagation()}
               >
-                <div className="text-xs font-semibold text-gray-700 mb-2">Editar Duración Real</div>
-                <div className="flex gap-2 mb-3">
-                  <div className="flex-1">
-                    <label className="block text-[10px] text-gray-500 mb-1">Horas</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={manualDurationHours}
-                      onChange={(e) => setManualDurationHours(e.target.value)}
-                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
-                      placeholder="0"
-                    />
+                <div
+                  className="w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="text-sm font-semibold text-gray-800 mb-3 text-center">Editar Duración Real</div>
+                  <div className="flex gap-3 mb-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Horas</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={manualDurationHours}
+                        onChange={(e) => setManualDurationHours(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1.5">Minutos</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={manualDurationMinutes}
+                        onChange={(e) => setManualDurationMinutes(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        placeholder="0"
+                      />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] text-gray-500 mb-1">Min</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="59"
-                      value={manualDurationMinutes}
-                      onChange={(e) => setManualDurationMinutes(e.target.value)}
-                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
-                      placeholder="0"
-                    />
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowDurationInput(false) }}
+                      className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleSaveDuration() }}
+                      className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors shadow-sm"
+                    >
+                      Guardar
+                    </button>
                   </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowDurationInput(false) }}
-                    className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleSaveDuration() }}
-                    className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
-                  >
-                    Guardar
-                  </button>
-                </div>
-                <div className="mt-2 text-[9px] text-gray-400 italic">
-                  Deja en 0 para volver al cálculo automático.
+                  <div className="mt-3 text-[10px] text-gray-400 text-center italic">
+                    Deja en 0 para volver al cálculo automático.
+                  </div>
                 </div>
               </div>
             )}
@@ -784,6 +778,28 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
       {isExpanded && (
         <div className="bg-gray-50 border-t border-gray-200">
           <div className="px-4 pb-4 pt-4">
+            {/* Descripción y Notas */}
+            {(task.task_description || task.notes) && (
+              <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {task.task_description && (
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Descripción</h5>
+                    <p className="text-sm text-gray-700 bg-white p-3 rounded-md border border-gray-200 whitespace-pre-wrap">
+                      {task.task_description}
+                    </p>
+                  </div>
+                )}
+                {task.notes && (
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notas</h5>
+                    <p className="text-sm text-gray-700 bg-white p-3 rounded-md border border-gray-200 italic whitespace-pre-wrap">
+                      {task.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Encabezado de trabajadores */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
               <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">

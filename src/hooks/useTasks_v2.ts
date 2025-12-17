@@ -87,6 +87,7 @@ export interface TaskV2 {
   workers: Worker[]
   progress_photos?: any[]
   actual_duration_minutes?: number
+  estimated_hours?: number
 
 
 }
@@ -432,38 +433,49 @@ export function useTasksV2() {
   // Update task
   const updateTask = async (taskId: number, updates: any) => {
     try {
-      // If status is being changed to completed, use the RPC function
+      // 1. Sanitize updates to remove fields that don't exist in the tasks table
+      console.log('UpdateTask payload received:', updates)
+
+      const {
+        tower_id,
+        project_id,
+        apartment_code,
+        apartment_number,
+        floor_number,
+        tower_number,
+        project_name,
+        workers,
+        completed_at, // Remove completed_at from direct update if we are using RPC, or handle it
+        ...validUpdates
+      } = updates
+
+      // If we are calling RPC for completion, we might want to exclude status/completed_at from here 
+      // OR just let them update. Let's let them update (except completed_at which RPC handles preferrably)
+
+      console.log('Valid updates to send:', validUpdates)
+
+      // 2. Execute regular update for all fields (notes, priority, etc.)
+      const { error: updateError } = await supabase
+        .from('tasks')
+        .update({
+          ...validUpdates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', taskId)
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError)
+        throw updateError
+      }
+
+      // 3. Handle specific status side-effects
       if (updates.status === 'completed') {
-        const { error } = await supabase.rpc('complete_task_manually', {
+        // Call RPC to handle worker completion timestamps and logic
+        const { error: rpcError } = await supabase.rpc('complete_task_manually', {
           p_task_id: taskId,
           p_completed_at: updates.completed_at || new Date().toISOString()
         })
-        if (error) throw error
-      } else {
-        // Sanitize updates to remove fields that don't exist in the tasks table
-        const {
-          floor_id,
-          tower_id,
-          project_id,
-          apartment_code,
-          apartment_number,
-          floor_number,
-          tower_number,
-          project_name,
-          workers,
-          ...validUpdates
-        } = updates
-
-        // Regular update
-        const { error } = await supabase
-          .from('tasks')
-          .update({
-            ...validUpdates,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', taskId)
-
-        if (error) throw error
+        if (rpcError) throw rpcError
       }
 
       toast.success('Tarea actualizada exitosamente')
@@ -532,7 +544,21 @@ export function useTasksV2() {
     try {
       let query = supabase
         .from('deleted_tasks_view')
-        .select('*')
+        .select(`
+          task_id,
+          task_name,
+          task_category,
+          apartment_number,
+          floor_number,
+          project_name,
+          total_budget,
+          status,
+          deleted_at,
+          deletion_reason,
+          deleted_by_email,
+          deleted_assignments_count,
+          assigned_workers
+        `)
         .order('deleted_at', { ascending: false })
 
       if (userRole !== 'admin') {
@@ -753,7 +779,7 @@ export function useTasksV2() {
   }
 
   // Get workers for a specific project (with active contracts)
-  const getWorkersForProject = async (projectId: number) => {
+  const getWorkersForProject = useCallback(async (projectId: number) => {
     try {
       const { data, error } = await supabase
         .from('contract_history')
@@ -797,7 +823,7 @@ export function useTasksV2() {
       console.error('Error fetching workers for project:', err)
       return []
     }
-  }
+  }, [])
 
   // Update assignment status
   const updateAssignmentStatus = async (assignmentId: number, status: string) => {

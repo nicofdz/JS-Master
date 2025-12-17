@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { ModalV2 } from './ModalV2'
-import { Building, Calendar, DollarSign, Users, FileText, Edit, Image, Package, History } from 'lucide-react'
+import { Building, Calendar, DollarSign, Users, FileText, Edit, Image, Package, History, Trash2 } from 'lucide-react'
 import { formatApartmentNumber } from '@/lib/utils'
 import { TaskPhotosContent } from './TaskPhotosContent'
 import { TaskMaterialsContent } from './TaskMaterialsContent'
 import { TaskHistoryContent } from './TaskHistoryContent'
 import { AdjustDistributionModalV2 } from './AdjustDistributionModalV2'
 import { TaskFormModalV2 } from './TaskFormModalV2'
+import { useTasksV2 } from '@/hooks/useTasks_v2'
+import toast from 'react-hot-toast'
 
 interface TaskDetailModalV2Props {
   isOpen: boolean
@@ -40,6 +42,20 @@ export function TaskDetailModalV2({
   const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDistributionModal, setShowDistributionModal] = useState(false)
+  const { updateTask } = useTasksV2()
+
+  const handleDeleteNotes = async () => {
+    if (!task) return
+
+    if (confirm('¿Estás seguro de que deseas eliminar las notas?')) {
+      try {
+        await updateTask(task.id, { notes: null })
+        onTaskUpdate?.()
+      } catch (error) {
+        console.error('Error deleting notes:', error)
+      }
+    }
+  }
 
   // Actualizar tab cuando cambia initialTab o se abre el modal
   useEffect(() => {
@@ -47,6 +63,9 @@ export function TaskDetailModalV2({
       setActiveTab(initialTab)
     }
   }, [isOpen, initialTab])
+
+  console.log('TaskDetailModalV2 task prop:', task)
+
   // Placeholder data
   const taskData = task || {
     task_name: 'Tabiques',
@@ -149,8 +168,8 @@ export function TaskDetailModalV2({
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap snap-start flex-shrink-0 border-b-2 ${isActive
-                      ? 'bg-blue-50 text-blue-700 border-blue-600'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-transparent'
+                    ? 'bg-blue-50 text-blue-700 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 border-transparent'
                     }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -194,6 +213,33 @@ export function TaskDetailModalV2({
                 </div>
               </div>
             </div>
+
+            {/* Descripción y Notas */}
+            {(taskData.task_description || taskData.notes) && (
+              <div className="mt-4 grid grid-cols-1 gap-4">
+                {taskData.task_description && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <label className="block text-xs text-gray-500 mb-1">Descripción</label>
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">{taskData.task_description}</p>
+                  </div>
+                )}
+                {taskData.notes && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative group">
+                    <div className="flex justify-between items-start mb-1">
+                      <label className="block text-xs text-gray-500">Notas</label>
+                      <button
+                        onClick={handleDeleteNotes}
+                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                        title="Eliminar notas"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap italic">{taskData.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Ubicación */}
             <div>
@@ -282,28 +328,17 @@ export function TaskDetailModalV2({
               </div>
             </div>
 
-            {/* Notas */}
-            {taskData.notes && (
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  Notas
-                </h4>
-                <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md">{taskData.notes}</p>
-              </div>
-            )}
-
             {/* Botones de Acción */}
             <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
               <button
-                onClick={() => setShowEditModal(true)}
+                onClick={() => onEdit ? onEdit() : setShowEditModal(true)}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
               >
                 <Edit className="w-4 h-4" />
                 Editar
               </button>
               <button
-                onClick={() => setShowDistributionModal(true)}
+                onClick={() => onAdjustDistribution ? onAdjustDistribution() : setShowDistributionModal(true)}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
               >
                 <DollarSign className="w-4 h-4" />
@@ -353,14 +388,15 @@ export function TaskDetailModalV2({
         onClose={() => setShowEditModal(false)}
         task={task}
         mode="edit"
+        onSuccess={onTaskUpdate}
       />
 
       <AdjustDistributionModalV2
         isOpen={showDistributionModal}
         onClose={() => setShowDistributionModal(false)}
         task={task}
+        onSuccess={onTaskUpdate}
       />
     </>
   )
 }
-

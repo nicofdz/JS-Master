@@ -273,8 +273,8 @@ export function TaskFormModalV2({
         priority: 'medium',
         task_description: '',
         estimated_hours: '',
-        project_id: initialProjectId?.toString() || '',
-        tower_id: initialTowerId?.toString() || '',
+        project_id: initialProjectId?.toString() || (isMassCreate && massCreateData?.projectId ? massCreateData.projectId.toString() : ''),
+        tower_id: initialTowerId?.toString() || (isMassCreate && massCreateData?.towerId ? massCreateData.towerId.toString() : ''),
         floor_id: initialFloorId?.toString() || '',
         apartment_id: initialApartmentId?.toString() || '',
         start_date: '',
@@ -289,18 +289,22 @@ export function TaskFormModalV2({
       setAvailableApartments([])
       setAvailableWorkers([])
     }
-  }, [mode, task, isOpen, initialProjectId, initialTowerId, initialFloorId, initialApartmentId])
+  }, [mode, task, isOpen, initialProjectId, initialTowerId, initialFloorId, initialApartmentId, isMassCreate, massCreateData])
 
   // Load cascade data when initial values are provided in create mode
   useEffect(() => {
     if (mode === 'create' && isOpen) {
-      if (initialProjectId) {
-        const loadProjectData = async () => {
-          await loadTowersForProject(initialProjectId)
-          await loadWorkersForProject(initialProjectId)
+      const projectIdToLoad = initialProjectId || (isMassCreate && massCreateData?.projectId ? massCreateData.projectId : null)
 
-          if (initialTowerId) {
-            await loadFloorsForTower(initialTowerId)
+      if (projectIdToLoad) {
+        const loadProjectData = async () => {
+          await loadTowersForProject(projectIdToLoad)
+          await loadWorkersForProject(projectIdToLoad)
+
+          const towerIdToLoad = initialTowerId || (isMassCreate && massCreateData?.towerId ? massCreateData.towerId : null)
+
+          if (towerIdToLoad) {
+            await loadFloorsForTower(towerIdToLoad)
 
             if (initialFloorId) {
               await loadApartmentsForFloor(initialFloorId)
@@ -310,7 +314,7 @@ export function TaskFormModalV2({
         loadProjectData()
       }
     }
-  }, [mode, isOpen, initialProjectId, initialTowerId, initialFloorId])
+  }, [mode, isOpen, initialProjectId, initialTowerId, initialFloorId, isMassCreate, massCreateData])
 
   const loadTaskCategories = useCallback(async () => {
     try {
@@ -602,6 +606,23 @@ export function TaskFormModalV2({
     })
   }, [selectedWorkers])
 
+  // Fail-safe: Ensure workers are loaded if project is selected but no workers available
+  // This handles cases where initial load might have raced or failed.
+  useEffect(() => {
+    if (isOpen && formData.project_id && !loadingWorkers) {
+      // Check if we need to load workers (if we have none, or if we just switched projects and they don't match? 
+      // Simpler: Just rely on availableWorkers being empty or trust loadWorkersForProject handles it efficiently)
+      // We'll restrict it to when availableWorkers is empty to avoid redundant fetches if possible, 
+      // but if the project has 0 workers, this would loop if we aren't careful.
+      // Best check: see if we have loaded workers for this project? 
+      // We don't store "loadedProjectId", so we'll trust the component state.
+      // If availableWorkers is empty, try loading.
+      if (availableWorkers.length === 0) {
+        loadWorkersForProject(parseInt(formData.project_id))
+      }
+    }
+  }, [isOpen, formData.project_id])
+
   // Handle project change
   const handleProjectChange = (projectId: string) => {
     setFormData(prev => ({
@@ -709,6 +730,8 @@ export function TaskFormModalV2({
         notes: formData.notes.trim() || null,
         status: mode === 'edit' ? task?.status || 'pending' : 'pending'
       }
+
+
 
       if (isMassCreate && massCreateData) {
         toast.loading('Creando tareas masivas...', { id: 'mass-create' })
@@ -857,8 +880,8 @@ export function TaskFormModalV2({
       title={mode === 'create' ? 'Crear Nueva Tarea' : 'Editar Tarea'}
       size="xl"
       headerRight={mode === 'create' ? (
-        <div className="flex items-center gap-3 mr-8">
-          <span className="text-sm text-slate-400 hidden sm:inline">Plantilla:</span>
+        <div className="hidden sm:flex items-center gap-3 mr-8">
+          <span className="text-sm text-slate-400">Plantilla:</span>
           <select
             value={selectedTemplateId}
             onChange={(e) => handleTemplateSelect(e.target.value)}
@@ -873,9 +896,26 @@ export function TaskFormModalV2({
       ) : null}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Mobile Template Selector */}
+        {mode === 'create' && (
+          <div className="sm:hidden space-y-2">
+            <label className="block text-sm font-medium text-slate-300">Usar Plantilla</label>
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => handleTemplateSelect(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">-- Seleccionar Plantilla --</option>
+              {templates.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Basic Info */}
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Nombre de la Tarea</label>
               <input
@@ -939,7 +979,7 @@ export function TaskFormModalV2({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Prioridad</label>
               <select
@@ -976,7 +1016,7 @@ export function TaskFormModalV2({
         </div>
 
         {/* Location Selection */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Proyecto</label>
             <select
@@ -1228,7 +1268,7 @@ export function TaskFormModalV2({
         </div>
 
         {/* Budget & Dates */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">Presupuesto</label>
             <div className="relative">

@@ -78,6 +78,32 @@ export function useAuthState(): AuthContextType {
   useEffect(() => {
     let isMounted = true
 
+    // Helper to load assignments
+    const loadAssignments = async (userId: string, userRole: string) => {
+      if (!isMounted) return
+
+      if (userRole && userRole !== 'admin') {
+        const { data: assignments } = await supabase
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', userId)
+
+        if (assignments && isMounted) {
+          const newProjectIds = assignments.map(a => a.project_id).sort((a, b) => a - b)
+
+          setAssignedProjectIds(prev => {
+            const sortedPrev = [...prev].sort((a, b) => a - b)
+            if (JSON.stringify(sortedPrev) === JSON.stringify(newProjectIds)) {
+              return prev
+            }
+            return newProjectIds
+          })
+        }
+      } else if (userRole === 'admin' && isMounted) {
+        setAssignedProjectIds(prev => prev.length === 0 ? prev : [])
+      }
+    }
+
     // Obtener sesión inicial
     const initAuth = async () => {
       try {
@@ -85,7 +111,7 @@ export function useAuthState(): AuthContextType {
 
         if (error) {
           console.error('Error al obtener sesión:', error)
-          setLoading(false)
+          if (isMounted) setLoading(false)
           return
         }
 
@@ -95,10 +121,19 @@ export function useAuthState(): AuthContextType {
 
           // Cargar o crear perfil
           const { data: existingProfile } = await authService.getUserProfile(session.user.id)
+          let currentProfile = existingProfile
+
           if (existingProfile) {
-            setProfile(existingProfile)
+            if (isMounted) setProfile(existingProfile)
           } else {
             await createUserProfile(session.user)
+            // Intentar obtener el perfil de nuevo o usar los datos básicos
+            const { data: newProfile } = await authService.getUserProfile(session.user.id)
+            currentProfile = newProfile
+          }
+
+          if (currentProfile) {
+            await loadAssignments(session.user.id, currentProfile.role)
           }
         }
       } catch (error) {
@@ -116,8 +151,7 @@ export function useAuthState(): AuthContextType {
     const { data: { subscription } } = onAuthStateChange(async (session) => {
       if (!isMounted) return
 
-      // Solo actualizar si la sesión ha cambiado realmente (evita re-renders en focus)
-      // Comparamos access_token para ver si es una renovación o cambio real
+      // Solo actualizar si la sesión ha cambiado realmente
       setSession(prevSession => {
         if (prevSession?.access_token === session?.access_token) {
           return prevSession
@@ -126,7 +160,6 @@ export function useAuthState(): AuthContextType {
       })
 
       if (session?.user) {
-        // Solo actualizar usuario si cambió
         setUser(prevUser => {
           if (prevUser?.id === session.user.id && prevUser?.updated_at === session.user.updated_at) {
             return prevUser
@@ -134,40 +167,15 @@ export function useAuthState(): AuthContextType {
           return session.user
         })
 
-        // El resto de la lógica de perfil y asignaciones...
-        // ... (se mantiene igual, pero envuelto en verificaciones si es necesario)
-        // Por simplicidad, ejecutamos la carga de perfil solo si no tenemos perfil o si el usuario cambió
-        // Pero para evitar complejidad excesiva en este parche, dejamos que corra, 
-        // confiando en que el AuthLayout ya no desmonta.
-
-        // Cargar o crear perfil
-        // NOTA: Esto podría optimizarse más, pero la memoización del contexto ayuda.
         const { data: existingProfile } = await authService.getUserProfile(session.user.id)
-        if (existingProfile) {
+        if (existingProfile && isMounted) {
           setProfile(existingProfile)
-        } else {
+          await loadAssignments(session.user.id, existingProfile.role)
+        } else if (isMounted) {
           await createUserProfile(session.user)
         }
 
-        const loadAssignments = async () => {
-          if (existingProfile?.role && existingProfile.role !== 'admin') {
-            const { data: assignments } = await supabase
-              .from('user_projects')
-              .select('project_id')
-              .eq('user_id', session.user.id)
-
-            if (assignments) {
-              setAssignedProjectIds(assignments.map(a => a.project_id))
-            }
-          }
-        }
-
-        await loadAssignments()
-
-        // Realtime subscription for assignments
-        // Limpiamos la suscripción anterior si existe (necesitaríamos un ref para hacerlo bien)
-        // Por ahora, dejamos este bloque como estaba para no introducir bugs de lógica,
-        // ya que el problema principal era el unmount en el Layout.
+        // Subscription for assignments changes
         const assignmentsSubscription = supabase
           .channel('user-assignments-changes')
           .on(
@@ -180,7 +188,9 @@ export function useAuthState(): AuthContextType {
             },
             async () => {
               console.log('⚡ Cambios en asignaciones detectados, actualizando...')
-              await loadAssignments()
+              if (existingProfile) {
+                await loadAssignments(session.user.id, existingProfile.role)
+              }
             }
           )
           .subscribe()
@@ -189,13 +199,13 @@ export function useAuthState(): AuthContextType {
           assignmentsSubscription.unsubscribe()
         }
 
-      } else {
+      } else if (isMounted) {
         setUser(null)
         setProfile(null)
         setAssignedProjectIds([])
       }
 
-      setLoading(false)
+      if (isMounted) setLoading(false)
     })
 
     return () => {
