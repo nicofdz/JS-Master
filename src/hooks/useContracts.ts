@@ -237,7 +237,8 @@ export const useContracts = () => {
           notes: contractData.notes || null,
           contract_number: contractData.contract_number || null,
           is_active: true,
-          is_renovacion: contractData.is_renovacion
+          is_renovacion: contractData.is_renovacion,
+          created_by: user?.id
         })
         .select(`
           *,

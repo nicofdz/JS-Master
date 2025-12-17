@@ -86,6 +86,8 @@ export interface TaskV2 {
   project_is_active?: boolean
   workers: Worker[]
   progress_photos?: any[]
+  actual_duration_minutes?: number
+
 
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronRight, Building, Layers, Building2, Home, Plus } from 'lucide-react'
 import { TaskRowV2 } from './TaskRowV2'
 import { formatApartmentNumber } from '@/lib/utils'
@@ -37,9 +37,13 @@ interface TaskHierarchyV2Props {
   onTaskUpdate?: () => void
   onAddTask?: (projectId: number, towerId: number, floorId: number, apartmentId: number | null) => void
   onAddMassTask?: (projectId: number, towerId: number) => void
+  areFiltersActive?: boolean
 }
 
-export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAddTask, onAddMassTask }: TaskHierarchyV2Props) {
+export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAddTask, onAddMassTask, areFiltersActive }: TaskHierarchyV2Props) {
+  // Track previous filter state to detect clearing
+  const prevFiltersActive = useRef(areFiltersActive)
+
   // Inicializar estado expandido desde localStorage (solo una vez)
   const [expandedProjects, setExpandedProjects] = useState<Set<number>>(() => {
     try {
@@ -53,6 +57,8 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
     }
     return new Set<number>()
   })
+
+  // ... (keeping other states same, just showing I'm in the file) 
 
   const [expandedTowers, setExpandedTowers] = useState<Set<number>>(() => {
     try {
@@ -119,6 +125,57 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
     }
     return new Set<number>()
   })
+
+  // Auto-expandir cuando hay filtros activos
+  useEffect(() => {
+    if (areFiltersActive) {
+      // Recolectar todos los IDs para expandir
+      const projectIds = new Set<number>()
+      const towerIds = new Set<number>()
+      const floorIds = new Set<number>()
+      const apartmentIds = new Set<number>()
+
+      // Desde apartamentos (estructura)
+      apartments.forEach(apt => {
+        if (apt.floors) {
+          projectIds.add(apt.floors.project_id)
+          towerIds.add(apt.floors.tower_id)
+          floorIds.add(apt.floors.id)
+          apartmentIds.add(apt.id)
+        }
+      })
+
+      // Desde tareas (por si hay tareas de piso sin departamento visible en la lista de apartamentos)
+      tasks.forEach(task => {
+        if (task.project_id) projectIds.add(task.project_id)
+        if (task.tower_id) towerIds.add(task.tower_id)
+        if (task.floor_id) floorIds.add(task.floor_id)
+        // task.apartment_id is handled via apartments list usually, but safety check
+        if (task.apartment_id) apartmentIds.add(task.apartment_id)
+      })
+
+      setExpandedProjects(projectIds)
+      setExpandedTowers(towerIds)
+      setExpandedFloors(floorIds)
+      setExpandedApartments(apartmentIds)
+      // Opcional: Expandir tareas individuales? No, demasiado ruido visual.
+      // Expandir secciones de tareas de piso
+      setExpandedFloorTasks(floorIds)
+    }
+  }, [areFiltersActive, tasks, apartments])
+
+  // Auto-colapsar cuando se limpian los filtros
+  useEffect(() => {
+    if (prevFiltersActive.current && !areFiltersActive) {
+      setExpandedProjects(new Set())
+      setExpandedTowers(new Set())
+      setExpandedFloors(new Set())
+      setExpandedApartments(new Set())
+      setExpandedTasks(new Set())
+      setExpandedFloorTasks(new Set())
+    }
+    prevFiltersActive.current = areFiltersActive
+  }, [areFiltersActive])
 
   // Guardar estado expandido en localStorage cuando cambia
   useEffect(() => {

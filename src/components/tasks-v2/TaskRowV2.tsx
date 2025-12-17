@@ -80,6 +80,20 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
   const calculateTaskDuration = () => {
     if (task.status !== 'completed') return null
 
+    // Si hay una duración manual guardada, usarla
+    if (task.actual_duration_minutes !== undefined && task.actual_duration_minutes !== null) {
+      const hours = Math.floor(task.actual_duration_minutes / 60)
+      const minutes = task.actual_duration_minutes % 60
+
+      if (hours > 0) {
+        return `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`.trim()
+      } else if (minutes > 0) {
+        return `${minutes}m`
+      } else {
+        return '<1m'
+      }
+    }
+
     const completedAssignments = task.workers.filter(
       (w: any) => w.assignment_status === 'completed' && (w as any).started_at && (w as any).completed_at
     )
@@ -123,6 +137,86 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
   const assignmentStatusRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
   const allAssignmentsStatusRef = useRef<HTMLDivElement>(null)
 
+  // Estados para edición de duración manual
+  const [showDurationInput, setShowDurationInput] = useState(false)
+  const [manualDurationHours, setManualDurationHours] = useState('')
+  const [manualDurationMinutes, setManualDurationMinutes] = useState('')
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
+  const durationInputRef = useRef<HTMLDivElement>(null)
+
+  const handleDurationClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    // Inicializar valores con la duración actual si existe
+    if (taskDuration) {
+      // Parse simple: "5h 30m" -> 5 horas, 30 min
+      const hoursMatch = taskDuration.match(/(\d+)h/)
+      const minutesMatch = taskDuration.match(/(\d+)m/)
+
+      setManualDurationHours(hoursMatch ? hoursMatch[1] : '')
+      setManualDurationMinutes(minutesMatch ? minutesMatch[1] : '')
+    }
+
+    if (durationInputRef.current && !showDurationInput) {
+      const rect = durationInputRef.current.getBoundingClientRect()
+      // Posicionar debajo del badge, alineado a la izquierda si no se sale de pantalla, sino ajustar
+      // Por simplicidad, alineado a la izquierda del badge + pequeño offset vertical
+      setPopoverPosition({
+        top: rect.bottom + 5,
+        left: rect.left - 100 // Un poco más a la izquierda para que no se corte
+      })
+    }
+
+    setShowDurationInput(!showDurationInput)
+  }
+
+  const handleSaveDuration = async () => {
+    try {
+      const hours = parseInt(manualDurationHours) || 0
+      const minutes = parseInt(manualDurationMinutes) || 0
+      const totalMinutes = (hours * 60) + minutes
+
+      if (totalMinutes < 0) {
+        toast.error('La duración no puede ser negativa')
+        return
+      }
+
+      await updateTask(task.id, { actual_duration_minutes: totalMinutes > 0 ? totalMinutes : null })
+      setShowDurationInput(false)
+      toast.success('Duración actualizada')
+      if (onTaskUpdate) onTaskUpdate()
+    } catch (error: any) {
+      toast.error('Error al actualizar duración: ' + error.message)
+    }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (taskStatusRef.current && !taskStatusRef.current.contains(event.target as Node)) {
+        setTaskStatusOpen(false)
+      }
+      if (priorityRef.current && !priorityRef.current.contains(event.target as Node)) {
+        setPriorityOpen(false)
+      }
+      if (assignmentStatusOpen !== null) {
+        const ref = assignmentStatusRefs.current[assignmentStatusOpen]
+        if (ref && !ref.contains(event.target as Node)) {
+          setAssignmentStatusOpen(null)
+        }
+      }
+      if (allAssignmentsStatusRef.current && !allAssignmentsStatusRef.current.contains(event.target as Node)) {
+        setAllAssignmentsStatusOpen(false)
+      }
+      if (durationInputRef.current && !durationInputRef.current.contains(event.target as Node)) {
+        setShowDurationInput(false)
+      }
+    }
+
+    if (taskStatusOpen || priorityOpen || assignmentStatusOpen !== null || allAssignmentsStatusOpen || showDurationInput) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [taskStatusOpen, priorityOpen, assignmentStatusOpen, allAssignmentsStatusOpen, showDurationInput])
+
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true)
     setDeleteReason('')
@@ -145,31 +239,6 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
     }
   }
 
-  // Cerrar dropdowns al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (taskStatusRef.current && !taskStatusRef.current.contains(event.target as Node)) {
-        setTaskStatusOpen(false)
-      }
-      if (priorityRef.current && !priorityRef.current.contains(event.target as Node)) {
-        setPriorityOpen(false)
-      }
-      if (assignmentStatusOpen !== null) {
-        const ref = assignmentStatusRefs.current[assignmentStatusOpen]
-        if (ref && !ref.contains(event.target as Node)) {
-          setAssignmentStatusOpen(null)
-        }
-      }
-      if (allAssignmentsStatusRef.current && !allAssignmentsStatusRef.current.contains(event.target as Node)) {
-        setAllAssignmentsStatusOpen(false)
-      }
-    }
-
-    if (taskStatusOpen || priorityOpen || assignmentStatusOpen !== null || allAssignmentsStatusOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [taskStatusOpen, priorityOpen, assignmentStatusOpen, allAssignmentsStatusOpen])
 
   const handleTaskStatusChange = async (newStatus: string) => {
     try {
@@ -464,21 +533,82 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
         )}
 
         {/* Badge de Tiempo Transcurrido - Solo mostrar si está completada */}
-        {task.status === 'completed' && taskDuration && (
-          <div className="w-full md:col-span-1 mb-2 md:mb-0 flex justify-between md:block">
+        {task.status === 'completed' && (
+          <div className="w-full md:col-span-1 mb-2 md:mb-0 flex justify-between md:block relative" ref={durationInputRef}>
             <span className="md:hidden text-xs text-gray-500 mr-2">Duración:</span>
-            <span
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/40"
-              title="Tiempo promedio que se demoró en completar la tarea"
+            <button
+              onClick={handleDurationClick}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/40 hover:bg-blue-500/30 transition-colors"
+              title="Click para editar la duración real"
             >
               <Clock className="w-3 h-3" />
-              {taskDuration}
-            </span>
+              {taskDuration || '-'}
+            </button>
+
+            {showDurationInput && (
+              <div
+                className="fixed z-[9999] mt-1 p-3 w-48 bg-white rounded-lg shadow-lg border border-gray-200"
+                style={{
+                  top: `${popoverPosition.top}px`,
+                  left: `${popoverPosition.left}px`
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-xs font-semibold text-gray-700 mb-2">Editar Duración Real</div>
+                <div className="flex gap-2 mb-3">
+                  <div className="flex-1">
+                    <label className="block text-[10px] text-gray-500 mb-1">Horas</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={manualDurationHours}
+                      onChange={(e) => setManualDurationHours(e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] text-gray-500 mb-1">Min</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={manualDurationMinutes}
+                      onChange={(e) => setManualDurationMinutes(e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowDurationInput(false) }}
+                    className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleSaveDuration() }}
+                    className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
+                  >
+                    Guardar
+                  </button>
+                </div>
+                <div className="mt-2 text-[9px] text-gray-400 italic">
+                  Deja en 0 para volver al cálculo automático.
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* Trabajadores (nombre completo si es 1, avatares si son más) */}
-        <div className={`w-full ${task.is_delayed || (task.status === 'completed' && taskDuration) ? 'md:col-span-2' : 'md:col-span-3'} mb-2 md:mb-0`}>
+        <div className={`w-full ${(task.is_delayed && task.status === 'completed')
+          ? 'md:col-span-1'
+          : (task.is_delayed || task.status === 'completed')
+            ? 'md:col-span-2'
+            : 'md:col-span-3'
+          } mb-2 md:mb-0`}>
           {task.workers.length === 1 ? (
             // Si hay 1 trabajador: mostrar nombre completo
             <div className="flex items-center gap-2">

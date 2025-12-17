@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Layers, Building2, Building, User, Home, Search, MapPin } from 'lucide-react'
+import { X, Layers, Building2, Building, User, Home, Search, MapPin, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface TaskFiltersSidebarProps {
@@ -23,6 +23,14 @@ interface TaskFiltersSidebarProps {
     currentApartmentFilter: string
     onApartmentFilterChange: (filter: string) => void
 
+    // Date Filters
+    dateFilterType: 'all' | 'specific' | 'range' | 'month' | 'year'
+    onDateFilterTypeChange: (type: 'all' | 'specific' | 'range' | 'month' | 'year') => void
+    dateStart: string
+    onDateStartChange: (date: string) => void
+    dateEnd: string
+    onDateEndChange: (date: string) => void
+
     // Data
     projects: { id: number; name: string }[]
     workers: { id: number; full_name: string }[]
@@ -44,6 +52,14 @@ export function TaskFiltersSidebar({
     onFloorFilterChange,
     currentApartmentFilter,
     onApartmentFilterChange,
+
+    dateFilterType,
+    onDateFilterTypeChange,
+    dateStart,
+    onDateStartChange,
+    dateEnd,
+    onDateEndChange,
+
     projects,
     workers,
     towers,
@@ -57,6 +73,9 @@ export function TaskFiltersSidebar({
         onTowerFilterChange('all')
         onFloorFilterChange('all')
         onApartmentFilterChange('all')
+        onDateFilterTypeChange('all')
+        onDateStartChange('')
+        onDateEndChange('')
     }
 
     return (
@@ -96,14 +115,83 @@ export function TaskFiltersSidebar({
 
                         {/* Sección Principal */}
                         <div className="space-y-6">
-                            {/* Búsqueda (Placeholder visual, la funcionalidad está en el header principal pero el diseño lo sugiere) 
-                                Nota: El usuario pidió replicar el diseño, que incluye "Búsqueda". 
-                                Sin embargo, la búsqueda ya está en la página principal. 
-                                Para ser fiel al diseño, agregaré un input de búsqueda aquí también si es funcional, 
-                                o simplemente los filtros solicitados. 
-                                El usuario dijo "ignora los filtros de estado... ya que ya se puede filtrar eso".
-                                Asumiré que quiere los filtros de estructura y trabajador.
-                            */}
+
+                            {/* Filtro de Fecha */}
+                            <div className="group">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Clock className="w-4 h-4 text-orange-400" />
+                                    <h3 className="text-sm font-medium text-slate-300">
+                                        Fecha de Inicio
+                                    </h3>
+                                </div>
+                                <div className="space-y-3">
+                                    <select
+                                        className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all appearance-none text-sm hover:border-slate-600"
+                                        value={dateFilterType}
+                                        onChange={(e) => onDateFilterTypeChange(e.target.value as any)}
+                                    >
+                                        <option value="all">Cualquier fecha</option>
+                                        <option value="specific">Fecha específica</option>
+                                        <option value="range">Rango de fechas</option>
+                                        <option value="month">Mes</option>
+                                        <option value="year">Año</option>
+                                    </select>
+
+                                    {/* Inputs dinámicos según tipo */}
+                                    {dateFilterType === 'specific' && (
+                                        <input
+                                            type="date"
+                                            value={dateStart}
+                                            onChange={(e) => onDateStartChange(e.target.value)}
+                                            className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                        />
+                                    )}
+
+                                    {dateFilterType === 'range' && (
+                                        <div className="space-y-2">
+                                            <div>
+                                                <label className="text-xs text-slate-500 ml-1">Desde</label>
+                                                <input
+                                                    type="date"
+                                                    value={dateStart}
+                                                    onChange={(e) => onDateStartChange(e.target.value)}
+                                                    className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-slate-500 ml-1">Hasta</label>
+                                                <input
+                                                    type="date"
+                                                    value={dateEnd}
+                                                    onChange={(e) => onDateEndChange(e.target.value)}
+                                                    className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {dateFilterType === 'month' && (
+                                        <input
+                                            type="month"
+                                            value={dateStart} // YYYY-MM
+                                            onChange={(e) => onDateStartChange(e.target.value)}
+                                            className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                        />
+                                    )}
+
+                                    {dateFilterType === 'year' && (
+                                        <input
+                                            type="number"
+                                            placeholder="YYYY"
+                                            min="2000"
+                                            max="2100"
+                                            value={dateStart}
+                                            onChange={(e) => onDateStartChange(e.target.value)}
+                                            className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-2 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                                        />
+                                    )}
+                                </div>
+                            </div>
 
                             {/* Filtro por Proyecto */}
                             <div className="group">

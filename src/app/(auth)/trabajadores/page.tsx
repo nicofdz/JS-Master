@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { WorkerForm } from '@/components/workers/WorkerForm'
-import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp, UserMinus } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp, UserMinus, Eye } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { ContractFiltersSidebar } from '@/components/workers/ContractFiltersSidebar'
@@ -19,6 +19,7 @@ import { TerminateContractModal } from '@/components/workers/TerminateContractMo
 import { formatDateToChilean } from '@/lib/contracts'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
+import { ContractDetailModal } from '@/components/workers/ContractDetailModal'
 
 export default function TrabajadoresPage() {
   const { profile } = useAuth()
@@ -101,6 +102,10 @@ export default function TrabajadoresPage() {
   // Estado para terminación de contrato
   const [showTerminateContractModal, setShowTerminateContractModal] = useState(false)
   const [contractToTerminate, setContractToTerminate] = useState<Contract | null>(null)
+
+  // Estados para detalles de contrato
+  const [selectedContractForDetails, setSelectedContractForDetails] = useState<Contract | null>(null)
+  const [showContractDetailModal, setShowContractDetailModal] = useState(false)
 
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
@@ -1661,6 +1666,12 @@ export default function TrabajadoresPage() {
                         <div className="flex justify-end gap-2 pt-3 border-t border-slate-700 flex-wrap">
                           {!showTrash ? (
                             <>
+                              <Button size="sm" variant="ghost" onClick={() => {
+                                setSelectedContractForDetails(contract)
+                                setShowContractDetailModal(true)
+                              }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700" title="Ver detalles y historial">
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button size="sm" variant="ghost" onClick={() => handleEditContract(contract)} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300 hover:bg-slate-700">
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1777,6 +1788,16 @@ export default function TrabajadoresPage() {
                               <div className="flex space-x-2">
                                 {!showTrash ? (
                                   <>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedContractForDetails(contract)
+                                        setShowContractDetailModal(true)
+                                      }}
+                                      className="text-blue-600 hover:text-blue-900"
+                                      title="Ver detalles y historial"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </button>
                                     <button
                                       onClick={() => handleEditContract(contract)}
                                       className="text-blue-600 hover:text-blue-900"
@@ -2398,6 +2419,18 @@ export default function TrabajadoresPage() {
               </div>
             </Modal>
           )
+        }
+
+
+        <ContractDetailModal
+          isOpen={showContractDetailModal}
+          onClose={() => {
+            setShowContractDetailModal(false)
+            setSelectedContractForDetails(null)
+          }}
+          contract={selectedContractForDetails}
+        />
+
         }
 
         <TerminateContractModal

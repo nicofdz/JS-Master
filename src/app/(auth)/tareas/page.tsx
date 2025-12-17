@@ -46,7 +46,14 @@ export default function TareasPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed' | 'blocked' | 'cancelled' | 'on_hold' | 'delayed'>('all')
   const [towerFilter, setTowerFilter] = useState<string>('all')
   const [floorFilter, setFloorFilter] = useState<string>('all')
+
   const [apartmentFilter, setApartmentFilter] = useState<string>('all')
+
+  // Date Filters
+  const [dateFilterType, setDateFilterType] = useState<'all' | 'specific' | 'range' | 'month' | 'year'>('all')
+  const [dateStart, setDateStart] = useState<string>('')
+  const [dateEnd, setDateEnd] = useState<string>('')
+
   const [projectWorkers, setProjectWorkers] = useState<any[]>([])
   const [loadingWorkers, setLoadingWorkers] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -149,6 +156,11 @@ export default function TareasPage() {
         if (filters.apartmentFilter) setApartmentFilter(filters.apartmentFilter)
         if (filters.searchTerm) setSearchTerm(filters.searchTerm)
         if (filters.activeTab) setActiveTab(filters.activeTab)
+
+        // Date filters
+        if (filters.dateFilterType) setDateFilterType(filters.dateFilterType)
+        if (filters.dateStart) setDateStart(filters.dateStart)
+        if (filters.dateEnd) setDateEnd(filters.dateEnd)
       } else {
         // Si no hay localStorage, check URL param anyway
         const urlStatus = searchParams.get('status')
@@ -176,13 +188,17 @@ export default function TareasPage() {
         towerFilter,
         floorFilter,
         apartmentFilter,
-        searchTerm
+
+        searchTerm,
+        dateFilterType,
+        dateStart,
+        dateEnd
       }
       localStorage.setItem('tareas-filters', JSON.stringify(filters))
     } catch (error) {
       console.error('Error saving filters to localStorage:', error)
     }
-  }, [selectedProjectId, workerFilter, statusFilter, towerFilter, floorFilter, apartmentFilter, searchTerm])
+  }, [selectedProjectId, workerFilter, statusFilter, towerFilter, floorFilter, apartmentFilter, searchTerm, dateFilterType, dateStart, dateEnd])
 
   // Actualizar estadísticas cuando cambia el proyecto
   useEffect(() => {
@@ -362,7 +378,34 @@ export default function TareasPage() {
         ? task.is_delayed === true
         : task.status === statusFilter.replace('-', '_')
 
-    return matchesSearch && matchesProject && matchesTower && matchesFloor && matchesApartment && matchesWorker && matchesStatus
+    // Filter by Date
+    let matchesDate = true
+    if (dateFilterType !== 'all') {
+      const taskDate = task.start_date ? new Date(task.start_date) : null
+
+      if (!task.start_date) {
+        matchesDate = false
+      } else {
+        // Ajustar zona horaria local para comparación de strings YYYY-MM-DD
+        // task.start_date viene como ISO string
+        const taksDateString = task.start_date.split('T')[0] // YYYY-MM-DD
+
+        if (dateFilterType === 'specific') {
+          matchesDate = taksDateString === dateStart
+        } else if (dateFilterType === 'range') {
+          matchesDate = (!dateStart || taksDateString >= dateStart) &&
+            (!dateEnd || taksDateString <= dateEnd)
+        } else if (dateFilterType === 'month') {
+          // dateStart is YYYY-MM
+          matchesDate = taksDateString.startsWith(dateStart)
+        } else if (dateFilterType === 'year') {
+          // dateStart is YYYY
+          matchesDate = taksDateString.startsWith(dateStart)
+        }
+      }
+    }
+
+    return matchesSearch && matchesProject && matchesTower && matchesFloor && matchesApartment && matchesWorker && matchesStatus && matchesDate
   })
 
   // Filtrar apartamentos para mostrar en la jerarquía (incluso vacíos)
@@ -429,7 +472,7 @@ export default function TareasPage() {
       // Probablemente NO.
       // Si hay filtros de TAREA activos (Worker, Status), tal vez deberíamos restringir a los que tienen tareas match.
 
-      const hasTaskFilters = workerFilter !== 'all' || statusFilter !== 'all'
+      const hasTaskFilters = workerFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all'
 
       if (hasTaskFilters) {
         const visibleTaskAptIds = new Set(filteredTasks.map(t => t.apartment_id))
@@ -438,7 +481,7 @@ export default function TareasPage() {
     }
 
     return result
-  }, [apartments, selectedProjectId, towerFilter, floorFilter, apartmentFilter, searchTerm, filteredTasks, workerFilter, statusFilter])
+  }, [apartments, selectedProjectId, towerFilter, floorFilter, apartmentFilter, searchTerm, filteredTasks, workerFilter, statusFilter, dateFilterType])
 
   if (loading) {
     return (
@@ -526,14 +569,14 @@ export default function TareasPage() {
             >
               <Filter className="w-5 h-5" />
               Filtros
-              {(selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' ? (
+              {(selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all' ? (
                 <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
                   !
                 </span>
               ) : null}
             </Button>
 
-            {((selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all') && (
+            {((selectedProjectId !== 'all' && selectedProjectId) || workerFilter !== 'all' || towerFilter !== 'all' || floorFilter !== 'all' || apartmentFilter !== 'all' || statusFilter !== 'all' || dateFilterType !== 'all') && (
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -542,7 +585,11 @@ export default function TareasPage() {
                   setTowerFilter('all')
                   setFloorFilter('all')
                   setApartmentFilter('all')
+
                   setStatusFilter('all')
+                  setDateFilterType('all')
+                  setDateStart('')
+                  setDateEnd('')
                 }}
                 className="text-slate-400 hover:text-white hover:bg-slate-800"
                 title="Limpiar filtros"
@@ -574,6 +621,12 @@ export default function TareasPage() {
         floors={availableFloors}
         apartments={availableApartments}
 
+        dateFilterType={dateFilterType}
+        onDateFilterTypeChange={setDateFilterType}
+        dateStart={dateStart}
+        onDateStartChange={setDateStart}
+        dateEnd={dateEnd}
+        onDateEndChange={setDateEnd}
       />
 
       {/* Tabs */}
@@ -686,6 +739,16 @@ export default function TareasPage() {
               }}
               onAddTask={handleAddTask}
               onAddMassTask={handleMassAddTask}
+              areFiltersActive={
+                (selectedProjectId !== 'all' && selectedProjectId !== null) ||
+                workerFilter !== 'all' ||
+                towerFilter !== 'all' ||
+                floorFilter !== 'all' ||
+                apartmentFilter !== 'all' ||
+                statusFilter !== 'all' ||
+                dateFilterType !== 'all' ||
+                searchTerm !== ''
+              }
             />
           </div>
         </>
