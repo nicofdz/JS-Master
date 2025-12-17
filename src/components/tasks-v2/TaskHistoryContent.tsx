@@ -139,7 +139,7 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
       if (auditLog) {
         auditLog.forEach(item => {
           const userName = item.user_id ? (auditUserNamesMap[item.user_id] || 'Sistema') : 'Sistema'
-          
+
           if (item.action === 'INSERT') {
             historyItems.push({
               id: `task-created-${item.id}`,
@@ -159,7 +159,7 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
             const oldBudget = item.old_values?.total_budget
             const newPriority = item.new_values?.priority
             const oldPriority = item.old_values?.priority
-            
+
             if (newStatus === 'completed' && oldStatus !== 'completed') {
               historyItems.push({
                 id: `task-completed-${item.id}`,
@@ -249,7 +249,7 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
         assignmentHistory.forEach(historyItem => {
           const workerName = (Array.isArray(historyItem.workers) && historyItem.workers.length > 0 ? (historyItem.workers[0] as any)?.full_name : (historyItem.workers as any)?.full_name) || 'Trabajador desconocido'
           const userName = (Array.isArray(historyItem.user_profiles) && historyItem.user_profiles.length > 0 ? (historyItem.user_profiles[0] as any)?.full_name : (historyItem.user_profiles as any)?.full_name) || 'Sistema'
-          
+
           if (historyItem.action === 'assigned') {
             historyItems.push({
               id: `assignment-created-${historyItem.id}`,
@@ -313,7 +313,7 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
           photoChanges.forEach(change => {
             const oldPhotos = change.old_values?.progress_photos || []
             const newPhotos = change.new_values?.progress_photos || []
-            
+
             if (newPhotos.length > oldPhotos.length) {
               const addedCount = newPhotos.length - oldPhotos.length
               const photoUserName = change.user_id ? (auditUserNamesMap[change.user_id] || 'Sistema') : 'Sistema'
@@ -333,7 +333,50 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
         }
       }
 
-      // 5. Ordenar por fecha (más reciente primero)
+      // 6. Si no hay evento de creación en audit_log, intentamos obtenerlo de la tabla tasks
+      const hasCreationEvent = historyItems.some(item => item.type === 'created')
+
+      if (!hasCreationEvent) {
+        // Obtener datos de creación de la tarea
+        const { data: taskCreationData } = await supabase
+          .from('tasks')
+          .select('created_at, created_by')
+          .eq('id', task.id)
+          .single()
+
+        if (taskCreationData) {
+          let creatorName = 'Sistema'
+
+          if (taskCreationData.created_by) {
+            // Verificar si el usuario ya está en el mapa
+            if (userNamesMap[taskCreationData.created_by] || auditUserNamesMap[taskCreationData.created_by]) {
+              creatorName = userNamesMap[taskCreationData.created_by] || auditUserNamesMap[taskCreationData.created_by]
+            } else {
+              // Si no, buscarlo
+              const { data: creatorProfile } = await supabase
+                .from('user_profiles')
+                .select('full_name')
+                .eq('id', taskCreationData.created_by)
+                .single()
+
+              if (creatorProfile) {
+                creatorName = creatorProfile.full_name || 'Usuario desconocido'
+              }
+            }
+          }
+
+          historyItems.push({
+            id: `task-created-fallback-${task.id}`,
+            date: taskCreationData.created_at,
+            type: 'created',
+            title: 'Tarea creada',
+            user: creatorName,
+            details: {}
+          })
+        }
+      }
+
+      // 7. Ordenar por fecha (más reciente primero)
       historyItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
       setHistory(historyItems)
@@ -389,14 +432,14 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
     }
   }
 
-  const filteredHistory = filter === 'all' 
-    ? history 
+  const filteredHistory = filter === 'all'
+    ? history
     : history.filter((item) => {
-        if (filter === 'changes') return item.type === 'created' || item.type === 'completed' || item.type === 'change' || item.type === 'budget' || item.type === 'photo' || item.type === 'material'
-        if (filter === 'payments') return item.type === 'payment' || item.type === 'budget'
-        if (filter === 'assignments') return item.type === 'assignment' || item.type === 'removed' || item.type === 'reactivated'
-        return true
-      })
+      if (filter === 'changes') return item.type === 'created' || item.type === 'completed' || item.type === 'change' || item.type === 'budget' || item.type === 'photo' || item.type === 'material'
+      if (filter === 'payments') return item.type === 'payment' || item.type === 'budget'
+      if (filter === 'assignments') return item.type === 'assignment' || item.type === 'removed' || item.type === 'reactivated'
+      return true
+    })
 
   if (loading) {
     return (
@@ -413,46 +456,42 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
         <p className="text-sm text-slate-300 mb-4">
           Tarea: <span className="font-medium text-slate-100">{task?.task_name || 'Sin nombre'}</span>
         </p>
-        
+
         {/* Filtros */}
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              filter === 'all'
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'all'
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
+              }`}
           >
             Todos
           </button>
           <button
             onClick={() => setFilter('changes')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              filter === 'changes'
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'changes'
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
+              }`}
           >
             Cambios
           </button>
           <button
             onClick={() => setFilter('payments')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              filter === 'payments'
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'payments'
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
+              }`}
           >
             Pagos
           </button>
           <button
             onClick={() => setFilter('assignments')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              filter === 'assignments'
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'assignments'
                 ? 'bg-blue-600 text-white'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
+              }`}
           >
             Asignaciones
           </button>
@@ -473,7 +512,7 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
                       <p className="text-sm font-medium text-slate-100">{item.title}</p>
                       <span className="text-xs text-slate-400">{formatDate(item.date)}</span>
                     </div>
-                    
+
                     {/* Detalles específicos */}
                     {item.details && (
                       <div className="mt-2 space-y-1">
@@ -527,7 +566,7 @@ export function TaskHistoryContent({ task }: TaskHistoryContentProps) {
                         )}
                       </div>
                     )}
-                    
+
                     <p className="text-xs text-slate-400 mt-1">Por: <span className="text-slate-300">{item.user}</span></p>
                   </div>
                 </div>

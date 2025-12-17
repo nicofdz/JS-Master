@@ -155,9 +155,8 @@ export function useTowers(projectId?: number) {
     }
   }
 
-  const softDeleteTower = async (id: number) => {
+  const checkTowerDependencies = async (id: number) => {
     try {
-      // 1. Verificar si hay tareas completadas en algún departamento de la torre
       const { data: floors, error: floorsError } = await supabase
         .from('floors')
         .select('id')
@@ -165,40 +164,57 @@ export function useTowers(projectId?: number) {
         .eq('is_active', true)
 
       if (floorsError) throw floorsError
+      if (!floors || floors.length === 0) return { hasDependencies: false, count: 0 }
 
-      if (floors && floors.length > 0) {
-        const floorIds = floors.map(f => f.id)
+      const floorIds = floors.map(f => f.id)
+      const { data: apartments, error: apartmentsError } = await supabase
+        .from('apartments')
+        .select('id')
+        .in('floor_id', floorIds)
+        .eq('is_active', true)
 
-        // Obtener departamentos de estos pisos
-        const { data: apartments, error: apartmentsError } = await supabase
-          .from('apartments')
-          .select('id')
-          .in('floor_id', floorIds)
-          .eq('is_active', true)
+      if (apartmentsError) throw apartmentsError
+      if (!apartments || apartments.length === 0) return { hasDependencies: false, count: 0 }
 
-        if (apartmentsError) throw apartmentsError
+      const apartmentIds = apartments.map(a => a.id)
+      const { count, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .in('apartment_id', apartmentIds)
+        .eq('status', 'completed')
+        .eq('is_deleted', false)
 
-        if (apartments && apartments.length > 0) {
-          const apartmentIds = apartments.map(a => a.id)
+      if (tasksError) throw tasksError
 
-          // Verificar tareas completadas
-          const { data: completedTasks, error: tasksError } = await supabase
-            .from('tasks')
-            .select('id')
-            .in('apartment_id', apartmentIds)
-            .eq('status', 'completed')
-            .eq('is_deleted', false)
-            .limit(1)
+      return {
+        hasDependencies: (count || 0) > 0,
+        count: count || 0
+      }
+    } catch (err) {
+      console.error('Error checking tower dependencies:', err)
+      throw err
+    }
+  }
 
-          if (tasksError) throw tasksError
-
-          if (completedTasks && completedTasks.length > 0) {
-            throw new Error('No se puede eliminar la torre porque contiene departamentos con tareas completadas. Elimine las tareas primero.')
-          }
+  const softDeleteTower = async (id: number, force: boolean = false) => {
+    try {
+      // 1. Verificar si hay tareas completadas (si no es forzado)
+      if (!force) {
+        const { hasDependencies } = await checkTowerDependencies(id)
+        if (hasDependencies) {
+          throw new Error('HAS_COMPLETED_TASKS')
         }
       }
 
       // 2. Proceder con el soft delete en cascada
+      // Recuperar pisos para la cascada (necesario aunque force=true)
+      const { data: floors, error: floorsError } = await supabase
+        .from('floors')
+        .select('id')
+        .eq('tower_id', id)
+        .eq('is_active', true)
+
+      if (floorsError) throw floorsError
 
       // Soft delete de departamentos
       if (floors && floors.length > 0) {
@@ -213,6 +229,20 @@ export function useTowers(projectId?: number) {
         if (fetchAptsError) throw fetchAptsError
 
         if (apartmentsToUpdate && apartmentsToUpdate.length > 0) {
+          const aptIds = apartmentsToUpdate.map(a => a.id)
+
+          // OPTIMIZACION: Cancelar todas las tareas en una sola consulta
+          await supabase
+            .from('tasks')
+            .update({
+              status: 'cancelled',
+              updated_at: new Date().toISOString()
+            })
+            .in('apartment_id', aptIds)
+            .eq('is_deleted', false)
+
+          // Actualizar departamentos uno por uno para mantener la lógica de renombrado
+          // (Si no fuera necesario renombrar, podríamos hacer un bulk update también)
           for (const apt of apartmentsToUpdate) {
             const currentNumber = apt.apartment_number
             const newNumber = currentNumber.startsWith('[ELIMINADO] ')
@@ -226,16 +256,6 @@ export function useTowers(projectId?: number) {
                 apartment_number: newNumber
               })
               .eq('id', apt.id)
-
-            // Cancelar tareas
-            await supabase
-              .from('tasks')
-              .update({
-                status: 'cancelled',
-                updated_at: new Date().toISOString()
-              })
-              .eq('apartment_id', apt.id)
-              .eq('is_deleted', false)
           }
         }
       }
@@ -419,9 +439,46 @@ export function useTowers(projectId?: number) {
 
       const hasHistory = keptApartmentIds.size > 0
 
+      // Helper para limpiar dependencias de tareas (constraint de pagos)
+      const cleanupTaskDependencies = async (aptIds: number[]) => {
+        if (aptIds.length === 0) return
+
+        // 1. Obtener tareas de 'tasks'
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('id')
+          .in('apartment_id', aptIds)
+
+        if (tasks && tasks.length > 0) {
+          const taskIds = tasks.map(t => t.id)
+          // Eliminar dependencias de pagos y asignaciones
+          await supabase.from('payment_task_assignments').delete().in('task_id', taskIds)
+          await supabase.from('payment_distribution_history').delete().in('task_id', taskIds)
+          await supabase.from('task_assignments').delete().in('task_id', taskIds)
+        }
+
+        // 2. Obtener tareas de 'apartment_tasks' (si existe y es relevante para constraints)
+        const { data: aptTasks } = await supabase
+          .from('apartment_tasks')
+          .select('id')
+          .in('apartment_id', aptIds)
+
+        if (aptTasks && aptTasks.length > 0) {
+          const aptTaskIds = aptTasks.map(t => t.id)
+          await supabase.from('payment_tasks').delete().in('task_id', aptTaskIds)
+          await supabase.from('task_materials').delete().in('apartment_task_id', aptTaskIds)
+          await supabase.from('progress_photos').delete().in('apartment_task_id', aptTaskIds)
+        }
+      }
+
       if (!hasHistory) {
         // --- ESCENARIO 1: BORRADO TOTAL ---
         console.log('No completed tasks found. Performing full delete of tower.')
+
+        // NEW: Limpiar dependencias antes de borrar
+        if (apartmentIds.length > 0) {
+          await cleanupTaskDependencies(apartmentIds)
+        }
 
         // Borrar torre (Cascade borrará pisos, deptos y tareas)
         const { error: deleteTowerError } = await supabase
@@ -438,9 +495,10 @@ export function useTowers(projectId?: number) {
         // --- ESCENARIO 2: PODA (PRUNING) ---
         console.log(`Found history in ${keptApartmentIds.size} apartments. Pruning tower.`)
 
-        // a. Eliminar departamentos sin historial
+        // a. Eliminar departamentos sin historial (limpiando dependencias primero)
         const apartmentsToDelete = apartmentIds.filter(id => !keptApartmentIds.has(id))
         if (apartmentsToDelete.length > 0) {
+          await cleanupTaskDependencies(apartmentsToDelete)
           await supabase.from('apartments').delete().in('id', apartmentsToDelete)
         }
 
@@ -548,6 +606,7 @@ export function useTowers(projectId?: number) {
     updateTower,
     deleteTower,
     softDeleteTower,
+    checkTowerDependencies,
     hardDeleteTower,
     restoreTower,
     getNextTowerNumber,

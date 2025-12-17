@@ -408,7 +408,8 @@ export function useTasksV2() {
           total_budget: taskData.total_budget || 0,
           start_date: taskData.start_date || null,
           end_date: taskData.end_date || null,
-          notes: taskData.notes || null
+          notes: taskData.notes || null,
+          created_by: user?.id || null
         })
         .select()
         .single()

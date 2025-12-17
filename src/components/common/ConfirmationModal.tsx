@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-react'
 import { ModalV2 } from '../tasks-v2/ModalV2'
 import { useState } from 'react'
 
@@ -10,7 +10,7 @@ interface ConfirmationModalProps {
     message: string
     confirmText?: string
     cancelText?: string
-    type?: 'danger' | 'warning' | 'info'
+    type?: 'danger' | 'warning' | 'info' | 'success'
     showReasonInput?: boolean
     reason?: string
     onReasonChange?: (reason: string) => void
@@ -41,6 +41,8 @@ export function ConfirmationModal({
                 return <AlertTriangle className="w-8 h-8 text-yellow-500" />
             case 'info':
                 return <Info className="w-8 h-8 text-blue-500" />
+            case 'success':
+                return <CheckCircle className="w-8 h-8 text-green-500" />
         }
     }
 
@@ -52,6 +54,8 @@ export function ConfirmationModal({
                 return 'bg-yellow-600 hover:bg-yellow-700'
             case 'info':
                 return 'bg-blue-600 hover:bg-blue-700'
+            case 'success':
+                return 'bg-green-600 hover:bg-green-700'
         }
     }
 

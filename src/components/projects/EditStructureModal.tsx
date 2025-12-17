@@ -26,7 +26,7 @@ interface EditStructureModalProps {
 }
 
 export function EditStructureModal({ isOpen, onClose, projectId, projectName }: EditStructureModalProps) {
-  const { towers, loading: loadingTowers, refresh: refreshTowers, softDeleteTower, hardDeleteTower, restoreTower } = useTowers(projectId)
+  const { towers, loading: loadingTowers, refresh: refreshTowers, softDeleteTower, hardDeleteTower, restoreTower, checkTowerDependencies } = useTowers(projectId)
   const { floors, loading: loadingFloors, refresh: refreshFloors, deleteFloor } = useFloors(projectId)
   const { apartments, loading: loadingApartments, refresh: refreshApartments, fetchAllApartments, deleteApartment, hardDeleteApartment, restoreApartment } = useApartments()
 
@@ -51,7 +51,11 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
   const [towerToHardDelete, setTowerToHardDelete] = useState<{ id: number; name: string } | null>(null)
   const [showTrash, setShowTrash] = useState(false)
   const [confirmDeleteTowerState, setConfirmDeleteTowerState] = useState<{ isOpen: boolean, towerId: number | null }>({ isOpen: false, towerId: null })
+  const [confirmForceDeleteTowerState, setConfirmForceDeleteTowerState] = useState<{ isOpen: boolean, towerId: number | null, count: number }>({ isOpen: false, towerId: null, count: 0 })
   const [confirmRestoreTowerState, setConfirmRestoreTowerState] = useState<{ isOpen: boolean, towerId: number | null, towerName: string }>({ isOpen: false, towerId: null, towerName: '' })
+
+  // Loading state for deletions
+  const [isDeleting, setIsDeleting] = useState(false)
   const [confirmDeleteFloorState, setConfirmDeleteFloorState] = useState<{ isOpen: boolean, floorId: number | null }>({ isOpen: false, floorId: null })
 
   // Recargar torres cuando cambia el modo papelera
@@ -190,14 +194,44 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     setShowEditApartmentModal(true)
   }
 
-  const handleDeleteTower = (towerId: number) => {
-    setConfirmDeleteTowerState({ isOpen: true, towerId })
+  const handleDeleteTower = async (towerId: number) => {
+    try {
+      const { hasDependencies, count } = await checkTowerDependencies(towerId)
+      if (hasDependencies) {
+        setConfirmForceDeleteTowerState({ isOpen: true, towerId, count })
+      } else {
+        setConfirmDeleteTowerState({ isOpen: true, towerId })
+      }
+    } catch (err) {
+      console.error(err)
+      toast.error('Error al verificar dependencias')
+    }
+  }
+
+  const executeForceDeleteTower = async () => {
+    if (!confirmForceDeleteTowerState.towerId) return
+
+    try {
+      setIsDeleting(true)
+      await softDeleteTower(confirmForceDeleteTowerState.towerId, true)
+      toast.success('Torre eliminada exitosamente')
+      refreshTowers()
+      refreshFloors()
+      refreshApartments()
+      setConfirmForceDeleteTowerState({ isOpen: false, towerId: null, count: 0 })
+    } catch (err) {
+      toast.error('Error al eliminar la torre')
+      console.error(err)
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const executeDeleteTower = async () => {
     if (!confirmDeleteTowerState.towerId) return
 
     try {
+      setIsDeleting(true)
       await softDeleteTower(confirmDeleteTowerState.towerId)
       toast.success('Torre eliminada exitosamente')
       refreshTowers()
@@ -207,6 +241,8 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     } catch (err) {
       toast.error('Error al eliminar la torre')
       console.error(err)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -308,6 +344,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
     if (!towerToHardDelete) return
 
     try {
+      setIsDeleting(true)
       await hardDeleteTower(towerToHardDelete.id)
       toast.success('Torre eliminada definitivamente. Las tareas completadas se mantienen en el sistema.')
       refreshTowers(showTrash)
@@ -320,6 +357,8 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
       console.error('Error completo al eliminar definitivamente torre:', err)
       const errorMessage = err?.message || 'Error desconocido al eliminar definitivamente la torre'
       toast.error(`Error al eliminar la torre: ${errorMessage}`)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -773,6 +812,85 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
         onSuccess={handleRefresh}
       />
 
+      <ConfirmationModal
+        isOpen={confirmDeleteTowerState.isOpen}
+        onClose={() => setConfirmDeleteTowerState({ isOpen: false, towerId: null })}
+        onConfirm={executeDeleteTower}
+        title="Eliminar Torre"
+        message="¿Estás seguro de que deseas eliminar esta torre? Se eliminarán también todos sus pisos, departamentos y tareas asociadas."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={confirmForceDeleteTowerState.isOpen}
+        onClose={() => setConfirmForceDeleteTowerState({ isOpen: false, towerId: null, count: 0 })}
+        onConfirm={executeForceDeleteTower}
+        title="¡Advertencia! Tareas Completadas"
+        message={`Esta torre contiene ${confirmForceDeleteTowerState.count} tareas COMPLETADAS (y posiblemente pagadas). Si eliminas esta torre, estas tareas se cancelarán y se moverán a la papelera. ¿Estás seguro de que deseas continuar?`}
+        confirmText="Sí, Eliminar Todo"
+        cancelText="Cancelar"
+        type="danger"
+        isLoading={isDeleting}
+      />
+
+      <ConfirmationModal
+        isOpen={confirmDeleteFloorState.isOpen}
+        onClose={() => setConfirmDeleteFloorState({ isOpen: false, floorId: null })}
+        onConfirm={executeDeleteFloor}
+        title="Eliminar Piso"
+        message="¿Estás seguro de que deseas eliminar este piso? Se eliminarán también todos sus departamentos y tareas asociadas."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteApartmentConfirm}
+        onClose={() => setShowDeleteApartmentConfirm(false)}
+        onConfirm={confirmDeleteApartment}
+        title="Eliminar Departamento"
+        message={`¿Estás seguro de que deseas eliminar el departamento ${apartmentToDelete?.number}? Se eliminarán también todas sus tareas asociadas.`}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={confirmRestoreTowerState.isOpen}
+        onClose={() => setConfirmRestoreTowerState({ isOpen: false, towerId: null, towerName: '' })}
+        onConfirm={executeRestoreTower}
+        title="Restaurar Torre"
+        message={`¿Estás seguro de que deseas restaurar la torre "${confirmRestoreTowerState.towerName}"? Se restaurarán también sus pisos y departamentos.`}
+        confirmText="Restaurar"
+        cancelText="Cancelar"
+        type="success"
+      />
+
+      <ConfirmationModal
+        isOpen={showHardDeleteTowerConfirm}
+        onClose={() => setShowHardDeleteTowerConfirm(false)}
+        onConfirm={confirmHardDeleteTower}
+        title="Eliminar Torre Definitivamente"
+        message={`ADVERTENCIA: Estás a punto de eliminar definitivamente la torre "${towerToHardDelete?.name}". Esta acción NO SE PUEDE DESHACER.`}
+        confirmText="Eliminar Definitivamente"
+        cancelText="Cancelar"
+        type="danger"
+        isLoading={isDeleting}
+      />
+
+      <ConfirmationModal
+        isOpen={showHardDeleteApartmentConfirm}
+        onClose={() => setShowHardDeleteApartmentConfirm(false)}
+        onConfirm={confirmHardDeleteApartment}
+        title="Eliminar Departamento Definitivamente"
+        message={`ADVERTENCIA: Estás a punto de eliminar definitivamente el departamento ${apartmentToHardDelete?.number}. Esta acción NO SE PUEDE DESHACER.`}
+        confirmText="Eliminar Definitivamente"
+        cancelText="Cancelar"
+        type="danger"
+      />
+
       {selectedTowerForFloor && (
         <AddFloorModal
           isOpen={showAddFloorModal}
@@ -945,52 +1063,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
         </div>
       </Modal>
 
-      {/* Modal de Confirmación de Eliminación Definitiva de Torre */}
-      <Modal
-        isOpen={showHardDeleteTowerConfirm}
-        onClose={() => {
-          setShowHardDeleteTowerConfirm(false)
-          setTowerToHardDelete(null)
-        }}
-        title="Confirmar Eliminación Definitiva de Torre"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-slate-300">
-            ¿Está seguro de que desea eliminar <strong className="text-white">definitivamente</strong> la torre <strong className="text-white">{towerToHardDelete?.name}</strong>?
-          </p>
-          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-3 space-y-2">
-            <p className="text-sm text-red-300 font-semibold">
-              ⚠️ Esta acción es irreversible y tendrá los siguientes efectos:
-            </p>
-            <ul className="text-sm text-slate-300 space-y-1 list-disc list-inside">
-              <li>La torre será eliminada permanentemente de la base de datos</li>
-              <li>Todos los <strong className="text-white">pisos</strong> de la torre serán eliminados</li>
-              <li>Todos los <strong className="text-white">departamentos</strong> de esos pisos serán eliminados</li>
-              <li>Las tareas <strong className="text-white">no completadas</strong> serán eliminadas definitivamente</li>
-              <li>Las tareas <strong className="text-white">completadas</strong> se mantendrán pero quedarán sin departamento asignado</li>
-              <li>No podrá restaurar esta torre después de esta acción</li>
-            </ul>
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowHardDeleteTowerConfirm(false)
-                setTowerToHardDelete(null)
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={confirmHardDeleteTower}
-              className="bg-red-700 hover:bg-red-800 text-white"
-            >
-              Eliminar Definitivamente
-            </Button>
-          </div>
-        </div>
-      </Modal>
+
       {/* Modales de Confirmación Reutilizables */}
 
       {/* Confirmación de Eliminar Torre */}
@@ -1002,6 +1075,7 @@ export function EditStructureModal({ isOpen, onClose, projectId, projectName }: 
         message="¿Está seguro de que desea eliminar esta torre? Todos sus pisos y departamentos también serán eliminados."
         confirmText="Eliminar"
         type="danger"
+        isLoading={isDeleting}
       />
 
       {/* Confirmación de Restaurar Torre */}

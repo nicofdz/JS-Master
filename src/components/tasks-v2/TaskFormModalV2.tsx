@@ -43,7 +43,6 @@ export function TaskFormModalV2({
   massCreateData
 }: TaskFormModalV2Props) {
   const { projects, createTask, updateTask, assignWorkerToTask, removeWorkerFromTask, getWorkersForProject, refreshTasks } = useTasksV2()
-  const { workers: allSystemWorkers } = useWorkers()
   const { templates } = useTaskTemplates()
 
   // Form states
@@ -114,7 +113,7 @@ export function TaskFormModalV2({
     }
   }, [mode, task?.workers, availableWorkers])
 
-  // Unificar trabajadores para la vista (mezclar asignados y disponibles del proyecto con todos los del sistema)
+  // Unificar trabajadores para la vista (solo asignados y disponibles del proyecto)
   const unifiedWorkers = useMemo(() => {
     // Crear un mapa para evitar duplicados por ID
     const workersMap = new Map()
@@ -136,21 +135,8 @@ export function TaskFormModalV2({
       }
     })
 
-    // 3. Agregar resto de trabajadores del sistema
-    if (allSystemWorkers.length > 0) {
-      allSystemWorkers.forEach((worker: any) => {
-        if (!workersMap.has(worker.id)) {
-          workersMap.set(worker.id, {
-            ...worker,
-            is_assigned: false,
-            contract_type: !worker.is_active ? 'sin_contrato' : (worker.contract_type || 'sin_contrato')
-          })
-        }
-      })
-    }
-
     return Array.from(workersMap.values())
-  }, [mode, availableWorkers, assignedWorkers, allSystemWorkers])
+  }, [mode, availableWorkers, assignedWorkers])
 
   // Separar trabajadores por tipo de contrato (Usando la lista unificada)
   const { workersPorDia, workersATrato, workersSinContrato } = useMemo(() => {
@@ -702,8 +688,8 @@ export function TaskFormModalV2({
         return
       }
     } else if (hasATrato || selectedWorkersData.length === 0 || allowMixedContracts) {
-      if (!formData.total_budget || parseFloat(formData.total_budget) <= 0) {
-        toast.error('El presupuesto debe ser mayor a 0')
+      if (formData.total_budget && parseFloat(formData.total_budget) < 0) {
+        toast.error('El presupuesto no puede ser negativo')
         return
       }
     }
@@ -717,7 +703,7 @@ export function TaskFormModalV2({
         task_category: formData.task_category,
         priority: formData.priority,
         estimated_hours: formData.estimated_hours ? parseInt(formData.estimated_hours) : null,
-        total_budget: parseFloat(formData.total_budget),
+        total_budget: formData.total_budget ? parseFloat(formData.total_budget) : 0,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
         notes: formData.notes.trim() || null,

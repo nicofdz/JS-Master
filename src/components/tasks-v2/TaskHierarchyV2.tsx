@@ -106,6 +106,20 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
     return new Set<number>()
   })
 
+  // Estado para controlar visibilidad de tareas de piso separadas
+  const [expandedFloorTasks, setExpandedFloorTasks] = useState<Set<number>>(() => {
+    try {
+      const saved = localStorage.getItem('tareas-expanded')
+      if (saved) {
+        const expanded = JSON.parse(saved)
+        return new Set<number>(expanded.floorTasks || [])
+      }
+    } catch (error) {
+      console.error('Error loading expanded floor tasks from localStorage:', error)
+    }
+    return new Set<number>()
+  })
+
   // Guardar estado expandido en localStorage cuando cambia
   useEffect(() => {
     try {
@@ -114,13 +128,14 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
         towers: Array.from(expandedTowers),
         floors: Array.from(expandedFloors),
         apartments: Array.from(expandedApartments),
-        tasks: Array.from(expandedTasks)
+        tasks: Array.from(expandedTasks),
+        floorTasks: Array.from(expandedFloorTasks)
       }
       localStorage.setItem('tareas-expanded', JSON.stringify(expanded))
     } catch (error) {
       console.error('Error saving expanded state to localStorage:', error)
     }
-  }, [expandedProjects, expandedTowers, expandedFloors, expandedApartments, expandedTasks])
+  }, [expandedProjects, expandedTowers, expandedFloors, expandedApartments, expandedTasks, expandedFloorTasks])
 
   // Agrupar tareas por proyecto → torre → piso → apartamento
   const hierarchy = useMemo(() => {
@@ -373,6 +388,18 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
     })
   }
 
+  const toggleFloorTasks = (floorId: number) => {
+    setExpandedFloorTasks(prev => {
+      const next = new Set(prev)
+      if (next.has(floorId)) {
+        next.delete(floorId)
+      } else {
+        next.add(floorId)
+      }
+      return next
+    })
+  }
+
   if (tasks.length === 0) {
     return (
       <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-slate-700">
@@ -508,7 +535,7 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                             )}
                             <Building className="w-3.5 h-3.5 text-purple-400" />
                             <p className="text-xs font-medium text-slate-300">
-                              Torre {tower.number}
+                              {tower.name || `Torre ${tower.number}`}
                             </p>
                             {onAddMassTask && (
                               <button
@@ -612,23 +639,38 @@ export function TaskHierarchyV2({ tasks, apartments, floors, onTaskUpdate, onAdd
                                   <div className="space-y-2 ml-2 md:ml-4">
                                     {/* Tareas de Piso (Áreas Comunes) */}
                                     {floorData.tasks.length > 0 && (
-                                      <div className="mb-4 pl-4 border-l-2 border-indigo-500/30">
-                                        <h4 className="text-xs uppercase tracking-wider text-indigo-400 font-semibold mb-2 flex items-center gap-2">
-                                          <Layers className="w-3 h-3" />
-                                          Áreas Comunes / Piso {floorData.floor_number}
-                                        </h4>
-                                        <div className="bg-slate-800/50 rounded-lg p-2 space-y-2">
-                                          {floorData.tasks.map(task => (
-                                            <TaskRowV2
-                                              key={task.id}
-                                              task={task}
-                                              isExpanded={expandedTasks.has(task.id)}
-                                              onToggleExpand={() => toggleTask(task.id)}
-                                              onTaskUpdate={onTaskUpdate}
+                                      <div className="mb-4">
+                                        <button
+                                          onClick={() => toggleFloorTasks(floorId)}
+                                          className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors mb-2 border ${expandedFloorTasks.has(floorId)
+                                            ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                                            : 'bg-slate-700/30 text-slate-400 border-slate-600 hover:bg-slate-700/50 hover:text-slate-300'
+                                            }`}
+                                        >
+                                          {expandedFloorTasks.has(floorId) ? (
+                                            <ChevronDown className="w-3.5 h-3.5" />
+                                          ) : (
+                                            <ChevronRight className="w-3.5 h-3.5" />
+                                          )}
+                                          <Layers className="w-3.5 h-3.5" />
+                                          Ver Tareas de Piso ({floorData.tasks.length})
+                                        </button>
 
-                                            />
-                                          ))}
-                                        </div>
+                                        {expandedFloorTasks.has(floorId) && (
+                                          <div className="pl-4 border-l-2 border-indigo-500/30">
+                                            <div className="bg-slate-800/50 rounded-lg p-2 space-y-2">
+                                              {floorData.tasks.map(task => (
+                                                <TaskRowV2
+                                                  key={task.id}
+                                                  task={task}
+                                                  isExpanded={expandedTasks.has(task.id)}
+                                                  onToggleExpand={() => toggleTask(task.id)}
+                                                  onTaskUpdate={onTaskUpdate}
+                                                />
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
 
