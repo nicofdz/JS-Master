@@ -2431,7 +2431,7 @@ export default function TrabajadoresPage() {
           contract={selectedContractForDetails}
         />
 
-        }
+
 
         <TerminateContractModal
           isOpen={showTerminateContractModal}
