@@ -1,10 +1,10 @@
 'use client'
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import { ModalV2 } from '@/components/tasks-v2/ModalV2'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { InvoiceIncome } from '@/hooks/useInvoices'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
+import { FileText, Calendar, Building, DollarSign } from 'lucide-react'
 
 interface InvoiceDetailModalProps {
   invoice: InvoiceIncome | null
@@ -13,182 +13,143 @@ interface InvoiceDetailModalProps {
 }
 
 export function InvoiceDetailModal({ invoice, isOpen, onClose }: InvoiceDetailModalProps) {
-  if (!isOpen || !invoice) return null
-
-  const getStatusColor = (status: string, isProcessed: boolean) => {
-    if (isProcessed) return 'bg-green-100 text-green-800'
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-800'
-    return 'bg-gray-100 text-gray-800'
-  }
-
-  const getStatusText = (status: string, isProcessed: boolean) => {
-    if (isProcessed) return 'Procesada'
-    if (status === 'pending') return 'Pendiente'
-    return 'Sin procesar'
-  }
+  if (!invoice) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-black">Detalles de la Factura #{invoice.invoice_number}</h2>
-            <Button variant="outline" onClick={onClose}>
-              ✕
-            </Button>
+    <ModalV2
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`Factura #${invoice.invoice_number}`}
+      size="2xl"
+    >
+      <div className="space-y-6">
+        {/* PDF Preview Link */}
+        {invoice.pdf_url && (
+          <div className="bg-slate-700/50 p-3 rounded-lg flex justify-between items-center border border-slate-600">
+            <div className="flex items-center gap-2 text-slate-300">
+              <FileText className="w-4 h-4" />
+              <span className="text-sm">Documento PDF Original</span>
+            </div>
+            <a
+              href={invoice.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+            >
+              Ver PDF
+            </a>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-6">
+          {/* Emisor y Receptor */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 flex items-center gap-2">
+              <Building className="w-4 h-4" /> Emisor y Receptor
+            </h4>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nombre Emisor</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300">
+                {invoice.issuer_name || 'No especificado'}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">RUT Emisor</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300 font-mono">
+                {invoice.issuer_rut || 'No especificado'}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nombre Receptor</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300">
+                {invoice.client_name || 'No especificado'}
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Datos del Emisor */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-black">Datos del Emisor</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Empresa:</span>
-                  <p className="text-black">{invoice.issuer_name || 'No especificado'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">RUT:</span>
-                  <p className="text-black font-mono">{invoice.issuer_rut || 'No especificado'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Dirección:</span>
-                  <p className="text-black">{invoice.issuer_address || 'No especificada'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Email:</span>
-                  <p className="text-black">{invoice.issuer_email || 'No especificado'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Teléfono:</span>
-                  <p className="text-black">{invoice.issuer_phone || 'No especificado'}</p>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Detalles de Factura */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 flex items-center gap-2">
+              <Calendar className="w-4 h-4" /> Detalles
+            </h4>
 
-            {/* Datos del Cliente */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-black">Datos del Cliente</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Empresa:</span>
-                  <p className="text-black">{invoice.client_name || 'No especificada'}</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">N° Factura</label>
+                <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300 font-medium">
+                  {invoice.invoice_number || 'No especificado'}
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Dirección:</span>
-                  <p className="text-black">{invoice.client_address || 'No especificada'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Ciudad:</span>
-                  <p className="text-black">{invoice.client_city || 'No especificada'}</p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Datos de la Factura */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-black">Datos de la Factura</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Número:</span>
-                  <p className="text-black font-semibold">{invoice.invoice_number || 'No especificado'}</p>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Fecha Emisión</label>
+                <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300">
+                  {invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString('es-CL') : 'No especificada'}
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Fecha de Emisión:</span>
-                  <p className="text-black">{invoice.issue_date ? formatDate(invoice.issue_date) : 'No especificada'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Oficina SII:</span>
-                  <p className="text-black">{invoice.sii_office || 'No especificada'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Estado:</span>
-                  <div className="mt-1">
-                    <Badge className={getStatusColor(invoice.status, invoice.is_processed)}>
-                      {getStatusText(invoice.status, invoice.is_processed)}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Montos */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-black">Montos</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-600">Neto:</span>
-                  <span className="text-black font-semibold">{formatCurrency(invoice.net_amount || 0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-600">IVA 19%:</span>
-                  <span className="text-black font-semibold">{formatCurrency(invoice.iva_amount || 0)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-600">Impuesto Adicional:</span>
-                  <span className="text-black font-semibold">{formatCurrency(invoice.additional_tax || 0)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="text-sm font-bold text-gray-800">Total:</span>
-                  <span className="text-black font-bold text-lg">{formatCurrency(invoice.total_amount || 0)}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Detalles del Servicio */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-black">Detalles del Servicio</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Descripción:</span>
-                  <p className="text-black mt-1">{invoice.description || 'No especificada'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Contrato:</span>
-                  <p className="text-black">{invoice.contract_number || 'No especificado'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Fecha del Contrato:</span>
-                  <p className="text-black">{invoice.contract_date ? formatDate(invoice.contract_date) : 'No especificada'}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-600">Forma de Pago:</span>
-                  <p className="text-black">{invoice.payment_method || 'No especificada'}</p>
-                </div>
-                {invoice.pdf_url && (
-                  <div className="pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      onClick={() => invoice.pdf_url && window.open(invoice.pdf_url, '_blank')}
-                      className="w-full"
-                    >
-                      📄 Ver PDF Original
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-          </div>
-
-          {/* Botón de Cerrar */}
-          <div className="flex justify-end mt-6 pt-6 border-t">
-            <Button onClick={onClose} className="bg-gray-600 hover:bg-gray-700">
-              Cerrar
-            </Button>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Descripción / Glosa</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300 min-h-[76px]">
+                {invoice.description || 'No especificada'}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Montos */}
+        <div className="space-y-4 pt-2">
+          <h4 className="text-sm font-semibold text-slate-200 border-b border-slate-700 pb-2 flex items-center gap-2">
+            <DollarSign className="w-4 h-4" /> Montos
+          </h4>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Monto Neto</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300">
+                {formatCurrency(invoice.net_amount || 0)}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">IVA (19%)</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300">
+                {formatCurrency(invoice.iva_amount || 0)}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Impuesto Adic.</label>
+              <div className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-sm text-slate-300">
+                {formatCurrency(invoice.additional_tax || 0)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <div className="bg-slate-800 p-3 rounded-lg border border-slate-700 min-w-[200px]">
+              <label className="block text-xs text-slate-400 mb-1 text-right">Total Factura</label>
+              <p className="text-xl font-bold text-emerald-400 text-right">
+                {formatCurrency(invoice.total_amount || 0)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex justify-end pt-4 border-t border-slate-700">
+          <Button
+            onClick={onClose}
+            className="bg-slate-600 hover:bg-slate-700 text-white"
+          >
+            Cerrar
+          </Button>
+        </div>
       </div>
-    </div>
+    </ModalV2>
   )
 }

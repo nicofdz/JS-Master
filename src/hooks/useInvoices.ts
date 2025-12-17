@@ -79,6 +79,69 @@ export function useInvoices() {
     }
   }
 
+  const extractInvoiceData = async (file: File, projectId: number) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('projectId', projectId.toString())
+      formData.append('action', 'extract') // Indicate extraction only
+
+      console.log('🔄 Extrayendo datos de factura...', { fileName: file.name })
+
+      const response = await fetch('/api/invoices/process-robust', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      if (result.error) throw new Error(result.error)
+
+      return result // Returns { data, extractedRaw, pdfUrl }
+    } catch (err) {
+      console.error('❌ Error extracting invoice data:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Error al extraer datos'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createInvoice = async (invoiceData: Partial<InvoiceIncome>) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      console.log('💾 Guardando factura confirmada...', invoiceData)
+
+      const { data, error } = await supabase
+        .from('invoice_income')
+        .insert([invoiceData])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setInvoices(prev => [data, ...prev])
+      return data
+    } catch (err) {
+      console.error('❌ Error creating invoice:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Error al crear factura'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Mantener processInvoice por compatibilidad, pero ahora usa la lógica antigua
   const processInvoice = async (file: File, projectId: number) => {
     try {
       setLoading(true)
@@ -87,21 +150,13 @@ export function useInvoices() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('projectId', projectId.toString())
+      // No action param = default save behavior
 
-      console.log('🔄 Enviando factura para procesamiento...', {
-        fileName: file.name,
-        fileSize: file.size,
-        projectId: projectId
-      })
+      console.log('🔄 Procesando y guardando factura directo...')
 
       const response = await fetch('/api/invoices/process-robust', {
         method: 'POST',
         body: formData
-      })
-
-      console.log('📡 Respuesta recibida:', {
-        status: response.status,
-        ok: response.ok
       })
 
       if (!response.ok) {
@@ -109,25 +164,15 @@ export function useInvoices() {
         try {
           const errorData = await response.json()
           errorMessage = errorData.error || errorMessage
-          console.error('❌ Error de API:', errorData)
-        } catch (parseError) {
-          console.error('❌ Error parseando respuesta de error:', parseError)
-          errorMessage = `Error HTTP ${response.status}: ${response.statusText}`
-        }
+        } catch (e) { }
         throw new Error(errorMessage)
       }
 
       const result = await response.json()
-      console.log('✅ Factura procesada exitosamente:', result)
-
-      // Recargar la lista de facturas
       await fetchInvoices()
-
       return result
     } catch (err) {
-      console.error('❌ Error processing invoice:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Error al procesar factura'
-      setError(errorMessage)
+      setError(err instanceof Error ? err.message : 'Error al procesar factura')
       throw err
     } finally {
       setLoading(false)
@@ -326,6 +371,8 @@ export function useInvoices() {
     error,
     fetchInvoices,
     processInvoice,
+    extractInvoiceData,
+    createInvoice,
     updateInvoice,
     deleteInvoice,
     getInvoiceStats,

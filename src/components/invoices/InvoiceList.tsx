@@ -10,13 +10,14 @@ import { InvoiceIncome } from '@/hooks/useInvoices'
 interface InvoiceListProps {
   invoices: InvoiceIncome[]
   onEdit?: (invoice: InvoiceIncome) => void
+  onView?: (invoice: InvoiceIncome) => void
   onDelete?: (id: number) => void
   onViewPDF?: (url: string) => void
   onStatusChange?: (invoiceId: number, newStatus: string) => Promise<void>
   externalStatusFilter?: 'all' | 'processed' | 'pending'
 }
 
-export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusChange, externalStatusFilter }: InvoiceListProps) {
+export function InvoiceList({ invoices, onEdit, onView, onDelete, onViewPDF, onStatusChange, externalStatusFilter }: InvoiceListProps) {
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'status'>('date')
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'processed' | 'blocked'>('all')
 
@@ -220,6 +221,14 @@ export function InvoiceList({ invoices, onEdit, onDelete, onViewPDF, onStatusCha
                   >
                     📄 Ver Factura
                     {!invoice.pdf_url && <span className="ml-1 text-xs">(Sin PDF)</span>}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onView?.(invoice)}
+                    className="bg-cyan-900/30 hover:bg-cyan-800/40 text-cyan-400 border border-cyan-600"
+                  >
+                    👁️ Vista Rápida
                   </Button>
                   <Button
                     variant="outline"

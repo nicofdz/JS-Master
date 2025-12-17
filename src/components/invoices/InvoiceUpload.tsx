@@ -8,6 +8,7 @@ import { useProjects } from '@/hooks/useProjects'
 import { useInvoices } from '@/hooks/useInvoices'
 import { formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { InvoiceVerificationModal } from './InvoiceVerificationModal'
 
 interface InvoiceUploadProps {
   onUploadSuccess?: () => void
@@ -17,10 +18,17 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedProject, setSelectedProject] = useState<string>('')
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadStep, setUploadStep] = useState<'idle' | 'extracting' | 'verifying' | 'saving'>('idle')
+
+  // Verification Modal State
+  const [showVerification, setShowVerification] = useState(false)
+  const [extractedData, setExtractedData] = useState<any>(null)
+  const [isSaving, setIsSaving] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { projects } = useProjects()
-  const { processInvoice } = useInvoices()
+  const { extractInvoiceData, createInvoice } = useInvoices()
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -39,42 +47,62 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
 
     try {
       setIsUploading(true)
+      setUploadStep('extracting')
 
-      // Agregar timeout para evitar que se quede colgado
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: La operación tardó demasiado')), 45000) // 45 segundos
-      })
+      // 1. Extract Data Only
+      const result = await extractInvoiceData(selectedFile, parseInt(selectedProject))
 
-      const uploadPromise = processInvoice(selectedFile, parseInt(selectedProject))
+      console.log('Datos extraídos:', result)
 
-      const result = await Promise.race([uploadPromise, timeoutPromise])
+      // 2. Open Verification Modal
+      if (result && result.data) {
+        setExtractedData(result.data)
+        setShowVerification(true)
+        setUploadStep('verifying')
+      } else {
+        throw new Error('No se pudieron extraer datos válidos')
+      }
+
+    } catch (error) {
+      console.error('Error extracting invoice data:', error)
+      let errorMessage = 'Error al procesar la factura'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      toast.error(errorMessage)
+      setUploadStep('idle')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleConfirmSave = async (finalData: any) => {
+    try {
+      setIsSaving(true)
+      setUploadStep('saving')
+
+      // 3. Create Invoice with Verified Data
+      await createInvoice(finalData)
+
+      toast.success('Factura guardada exitosamente')
 
       // Reset form
+      setShowVerification(false)
       setSelectedFile(null)
       setSelectedProject('')
+      setExtractedData(null)
+      setUploadStep('idle')
+
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
 
-      toast.success('Factura procesada exitosamente')
       onUploadSuccess?.()
     } catch (error) {
-      console.error('Error uploading invoice:', error)
-
-      // Mostrar mensaje de error más específico
-      let errorMessage = 'Error al procesar la factura'
-      if (error instanceof Error) {
-        if (error.message.includes('Timeout')) {
-          errorMessage = 'La operación tardó demasiado. Por favor, intenta de nuevo.'
-        } else if (error.message.includes('Network')) {
-          errorMessage = 'Error de conexión. Verifica tu internet e intenta de nuevo.'
-        } else {
-          errorMessage = `Error: ${error.message}`
-        }
-      }
-
-      toast.error(errorMessage)
+      console.error('Error saving confirmed invoice:', error)
+      toast.error('Error al guardar la factura')
     } finally {
+      setIsSaving(false)
       setIsUploading(false)
     }
   }
@@ -124,8 +152,8 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
           <h4 className="font-medium text-blue-300 mb-2">¿Qué hace el sistema?</h4>
           <ul className="text-sm text-blue-400 space-y-1">
             <li>• Extrae automáticamente los datos del PDF</li>
-            <li>• Identifica número de factura, empresa, montos</li>
-            <li>• Calcula IVA e impuestos automáticamente</li>
+            <li>• Te permite <b>verificar y editar</b> la información antes de guardar</li>
+            <li>• Identifica número de factura, empresa, montos e impuestos</li>
             <li>• Vincula la factura con el proyecto seleccionado</li>
           </ul>
         </div>
@@ -138,13 +166,21 @@ export function InvoiceUpload({ onUploadSuccess }: InvoiceUploadProps) {
           {isUploading ? (
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Procesando...
+              {uploadStep === 'extracting' ? 'Extrayendo Datos...' : 'Procesando...'}
             </div>
           ) : (
-            'Subir y Procesar Factura'
+            'Subir y Verificar Factura'
           )}
         </Button>
       </CardContent>
+
+      <InvoiceVerificationModal
+        isOpen={showVerification}
+        onClose={() => setShowVerification(false)}
+        onConfirm={handleConfirmSave}
+        data={extractedData}
+        loading={isSaving}
+      />
     </Card>
   )
 }

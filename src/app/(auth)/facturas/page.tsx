@@ -8,6 +8,7 @@ import { InvoiceList } from '@/components/invoices/InvoiceList'
 import { InvoiceStats } from '@/components/invoices/InvoiceStats'
 import { InvoiceChart } from '@/components/invoices/InvoiceChart'
 import { InvoiceEditModal } from '@/components/invoices/InvoiceEditModal'
+import { InvoiceDetailModal } from '@/components/invoices/InvoiceDetailModal'
 import { InvoiceFiltersSidebar } from '@/components/invoices/InvoiceFiltersSidebar'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { Filter, X, XCircle, FileText } from 'lucide-react'
@@ -21,6 +22,7 @@ export default function FacturasPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceIncome | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all')
   const [selectedYear, setSelectedYear] = useState(0) // 0 = Todos los años
   const [projectFilter, setProjectFilter] = useState('all')
@@ -242,6 +244,11 @@ export default function FacturasPage() {
     setShowEditModal(true)
   }
 
+  const handleView = (invoice: InvoiceIncome) => {
+    setSelectedInvoice(invoice)
+    setShowDetailModal(true)
+  }
+
 
   const handleStatusChange = async (invoiceId: number, newStatus: string) => {
     try {
@@ -460,6 +467,7 @@ export default function FacturasPage() {
             <InvoiceList
               invoices={filteredInvoices}
               onEdit={handleEdit}
+              onView={handleView}
               onDelete={handleDelete}
               onViewPDF={handleViewPDF}
               onStatusChange={handleStatusChange}
@@ -515,6 +523,16 @@ export default function FacturasPage() {
           setSelectedInvoice(null)
         }}
         onSave={handleSaveEdit}
+      />
+
+      {/* Modal de Vista Rápida */}
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false)
+          setSelectedInvoice(null)
+        }}
       />
 
       {/* Diálogo de Confirmación de Eliminación */}
