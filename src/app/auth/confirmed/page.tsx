@@ -37,7 +37,7 @@ export default function ConfirmedPage() {
                     </div>
 
                     <div className="pt-4">
-                        <Link href="/auth/login" className="block w-full">
+                        <Link href="/login" className="block w-full">
                             <Button className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-base group cursor-pointer relative z-20">
                                 Iniciar Sesión
                                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
