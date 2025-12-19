@@ -892,7 +892,14 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                               <div className={`font-medium truncate max-w-[150px] sm:max-w-none ${isRemoved ? 'text-red-700 line-through' : 'text-gray-900'}`}>
                                 {worker.full_name || 'Sin nombre'}
                               </div>
-                              <div className="text-xs text-gray-500">ID: {worker.id}</div>
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <span>ID: {worker.id}</span>
+                                {worker.contract_type === 'a_trato' && (
+                                  <span className="md:hidden inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                    A Trato
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
@@ -919,7 +926,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                         <div className="w-full md:col-span-7 grid grid-cols-2 md:grid-cols-7 gap-3 md:gap-4 items-center">
                           {/* Porcentaje - Solo mostrar si no es "por_dia" */}
                           {worker.contract_type === 'por_dia' ? (
-                            <div className="col-span-2 md:col-span-4 text-left md:text-center pl-12 md:pl-0">
+                            <div className="col-span-2 md:col-span-4 text-left md:text-center">
                               <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/20 text-yellow-600 border border-yellow-500/40 rounded-full">
                                 <span className="text-sm font-semibold">Al Día</span>
                               </div>
@@ -927,16 +934,12 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                             </div>
                           ) : (
                             <>
-                              <div className="text-left md:text-center pl-12 md:pl-0 md:col-span-2">
+                              <div className="text-left md:text-center md:col-span-2">
                                 <div className="flex flex-col items-start md:items-center">
                                   <div className="flex items-center gap-2">
                                     <div className={`text-lg font-bold ${isRemoved ? 'text-red-500' : 'text-blue-600'}`}>
                                       {isRemoved ? '0%' : `${worker.payment_share_percentage}%`}
                                     </div>
-                                    {/* Mobile only badge */}
-                                    <span className="md:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                                      A Trato
-                                    </span>
                                   </div>
                                   <div className="text-xs text-gray-500">Porcentaje</div>
                                 </div>
@@ -961,7 +964,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
                           {/* Estado */}
                           <div
-                            className="col-span-2 md:col-span-2 flex justify-start md:justify-center pl-12 md:pl-0"
+                            className="col-span-2 md:col-span-2 flex justify-start md:justify-center"
                             ref={(el) => {
                               if (worker.assignment_id) {
                                 assignmentStatusRefs.current[worker.assignment_id] = el

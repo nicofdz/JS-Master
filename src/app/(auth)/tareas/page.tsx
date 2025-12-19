@@ -21,6 +21,9 @@ import { formatApartmentNumber } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function TareasPage() {
+  const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
+  const searchParams = useSearchParams()
+
   const {
     tasks,
     apartments,
@@ -38,10 +41,7 @@ export default function TareasPage() {
     restoreTask,
     hardDeleteTask,
     emptyTrash
-  } = useTasksV2()
-
-  const { selectedProjectId, setSelectedProjectId } = useProjectFilter()
-  const searchParams = useSearchParams()
+  } = useTasksV2({ projectId: selectedProjectId })
 
   const [activeTab, setActiveTab] = useState<'active' | 'trash' | 'recent'>('active')
   const [searchTerm, setSearchTerm] = useState('')
@@ -365,7 +365,7 @@ export default function TareasPage() {
     const matchesStatus = statusFilter === 'all'
       ? true
       : statusFilter === 'delayed'
-        ? task.is_delayed === true
+        ? (task.is_delayed === true || (task.end_date && new Date(task.end_date) < new Date(new Date().setHours(0, 0, 0, 0)) && task.status !== 'completed' && task.status !== 'cancelled' && task.status !== 'blocked'))
         : task.status === statusFilter.replace('-', '_')
 
     // Filter by Date
@@ -473,6 +473,23 @@ export default function TareasPage() {
     return result
   }, [apartments, selectedProjectId, towerFilter, floorFilter, apartmentFilter, searchTerm, filteredTasks, workerFilter, statusFilter, dateFilterType])
 
+  // Calculate delayed count client-side to match the dynamic filter logic
+  const derivedDelayedCount = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    return tasks.filter(task => {
+      // Logic must match exactly the filter logic above and dashboard logic
+      const isOverdue = task.end_date && new Date(task.end_date) < today &&
+        task.status !== 'completed' &&
+        task.status !== 'finished' &&
+        task.status !== 'cancelled' &&
+        task.status !== 'blocked'
+
+      return task.is_delayed === true || isOverdue
+    }).length
+  }, [tasks])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -494,6 +511,8 @@ export default function TareasPage() {
       </div>
     )
   }
+
+
 
   return (
     <div className="w-full px-4 py-8">
@@ -746,7 +765,7 @@ export default function TareasPage() {
                 value: 'delayed',
                 label: 'Atrasadas',
                 icon: AlertCircle,
-                count: taskStats.delayed,
+                count: derivedDelayedCount,
                 activeColor: 'orange-400',
                 activeBg: 'orange-900/30',
                 activeBorder: 'orange-500'

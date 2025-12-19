@@ -103,7 +103,7 @@ export interface TaskStats {
   delayed: number
 }
 
-export function useTasksV2() {
+export function useTasksV2(props?: { projectId?: string | number | null }) {
   // Use centralized Auth Context
   const { user, profile, assignedProjectIds } = useAuth()
   const userRole = profile?.role || null
@@ -134,6 +134,11 @@ export function useTasksV2() {
         .from('tasks_with_workers_v2')
         .select('*')
         .order('created_at', { ascending: false })
+
+      // Server-side filtering by Project ID for performance
+      if (props?.projectId && props.projectId !== 'all') {
+        query = query.eq('project_id', props.projectId)
+      }
 
       // Aplicar filtro de seguridad
       if (userRole !== 'admin') {
@@ -206,7 +211,7 @@ export function useTasksV2() {
       console.error('Error fetching tasks:', err)
       setError(err.message)
     }
-  }, [userRole, assignedProjectIds])
+  }, [userRole, assignedProjectIds, props?.projectId])
 
   // Fetch apartments
   const fetchApartments = useCallback(async () => {
