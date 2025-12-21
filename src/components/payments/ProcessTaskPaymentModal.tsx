@@ -200,7 +200,7 @@ export function ProcessTaskPaymentModal({
                 'process_worker_payment_v2',
                 {
                     p_worker_id: worker.id,
-                    p_payment_amount: selectedTotal,
+                    p_payment_amount: Number(selectedTotal.toFixed(2)),
                     p_payment_notes: notes.trim() || null,
                     p_assignment_ids: assignmentIds
                 }
