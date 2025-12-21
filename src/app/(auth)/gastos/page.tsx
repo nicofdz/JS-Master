@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle, Trash2 } from 'lucide-react'
+import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle, Trash2, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -986,63 +986,74 @@ export default function GastosPage() {
           ) : (
             filteredExpenses.map((expense) => (
               <Card key={expense.id} className="bg-slate-800 border-slate-700 hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
+                <CardContent className="p-3">
                   <div className="flex flex-col sm:flex-row items-start justify-between">
                     <div className="flex-1 w-full">
-                      <div className="flex flex-wrap items-center gap-3 mb-4">
-                        <h3 className="text-xl font-semibold text-white">{expense.name}</h3>
-                        <Badge className={getTypeColor(expense.type)}>
-                          <span className="flex items-center space-x-1">
-                            {getTypeIcon(expense.type)}
-                            <span>{getTypeLabel(expense.type)}</span>
-                          </span>
-                        </Badge>
-                        <Badge
-                          className={`text-white capitalize ${expense.document_type === 'factura'
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-gray-500 text-white border-gray-500'
-                            }`}
-                        >
-                          {expense.document_type}
-                        </Badge>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-white">{expense.name}</h3>
+                        <div className="flex gap-1.5">
+                          <Badge className={`${getTypeColor(expense.type)} text-[10px] px-1.5 py-0`}>
+                            <span className="flex items-center space-x-1">
+                              {getTypeIcon(expense.type)}
+                              <span>{getTypeLabel(expense.type)}</span>
+                            </span>
+                          </Badge>
+                          <Badge
+                            className={`text-white capitalize text-[10px] px-1.5 py-0 ${expense.document_type === 'factura'
+                              ? 'bg-blue-500 text-white border-blue-500'
+                              : 'bg-gray-500 text-white border-gray-500'
+                              }`}
+                          >
+                            {expense.document_type}
+                          </Badge>
+                          {/* Proyecto (Solo si existe) */}
+                          {expense.project_id && (
+                            <Badge variant="outline" className="text-slate-300 border-slate-500 text-[10px] px-1.5 py-0 flex items-center gap-1">
+                              <Briefcase className="w-3 h-3" />
+                              <span className="max-w-[150px] truncate">
+                                {projects.find(p => p.id === expense.project_id)?.name || 'Proyecto desconocido'}
+                              </span>
+                            </Badge>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                         <div className="flex items-center">
-                          <Calendar className="w-4 h-4 text-slate-400 mr-2" />
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 mr-2" />
                           <div>
-                            <p className="text-sm font-medium text-slate-400">Fecha</p>
-                            <p className="text-sm text-white">{formatDate(expense.date)}</p>
+                            <p className="text-xs font-medium text-slate-400">Fecha</p>
+                            <p className="text-xs text-white">{formatDate(expense.date)}</p>
                           </div>
                         </div>
 
                         <div className="flex items-center">
-                          <DollarSign className="w-4 h-4 text-slate-400 mr-2" />
+                          <DollarSign className="w-3.5 h-3.5 text-slate-400 mr-2" />
                           <div>
-                            <p className="text-sm font-medium text-slate-400">Total</p>
-                            <p className="text-sm text-white font-semibold">{formatPrice(expense.total_amount)}</p>
+                            <p className="text-xs font-medium text-slate-400">Total</p>
+                            <p className="text-xs text-white font-semibold">{formatPrice(expense.total_amount)}</p>
                           </div>
                         </div>
 
                         {(expense.quantity || (expense.type === 'materiales' && expense.quantity === null)) && (
                           <div className="flex items-center">
-                            <Package className="w-4 h-4 text-slate-400 mr-2" />
+                            <Package className="w-3.5 h-3.5 text-slate-400 mr-2" />
                             <div>
-                              <p className="text-sm font-medium text-slate-400">Cantidad</p>
-                              <p className="text-sm text-white">
+                              <p className="text-xs font-medium text-slate-400">Cantidad</p>
+                              <p className="text-xs text-white">
                                 {expense.type === 'materiales' && expense.quantity === null
-                                  ? 'revisar catálogo de materiales'
-                                  : `${expense.quantity} unidades`}
+                                  ? 'Catálogo'
+                                  : `${expense.quantity} u.`}
                               </p>
                             </div>
                           </div>
                         )}
 
                         <div className="flex items-center">
-                          <FileText className="w-4 h-4 text-slate-400 mr-2" />
+                          <FileText className="w-3.5 h-3.5 text-slate-400 mr-2" />
                           <div>
-                            <p className="text-sm font-medium text-slate-400">Proveedor</p>
-                            <p className="text-sm text-white">{expense.supplier}</p>
+                            <p className="text-xs font-medium text-slate-400">Proveedor</p>
+                            <p className="text-xs text-white truncate max-w-[120px]" title={expense.supplier}>{expense.supplier}</p>
                           </div>
                         </div>
                       </div>
