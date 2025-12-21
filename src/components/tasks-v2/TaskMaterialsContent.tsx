@@ -13,9 +13,9 @@ interface TaskMaterialsContentProps {
 }
 
 interface MaterialDelivery {
-  id: number
+  id: number // ID de la asociación o ID negativo/virtual si no está asociada
   delivery_id: number
-  task_assignment_id: number
+  task_assignment_id: number | null
   material_name: string
   quantity: number
   unit: string
@@ -24,6 +24,7 @@ interface MaterialDelivery {
   worker_name: string
   date: string
   notes?: string
+  is_linked: boolean // Nuevo campo para diferenciar
 }
 
 export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
@@ -48,10 +49,10 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
 
     setLoading(true)
     try {
-      // Obtener task_assignments de esta tarea
+      // 1. Obtener trabajadores asignados a esta tarea
       const { data: assignments, error: assignmentsError } = await supabase
         .from('task_assignments')
-        .select('id')
+        .select('id, worker_id')
         .eq('task_id', task.id)
         .eq('is_deleted', false)
 
@@ -63,30 +64,10 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
         return
       }
 
-      const assignmentIds = assignments.map(a => a.id)
+      const workerIds = assignments.map(a => a.worker_id)
+      const assignmentMap = new Map(assignments.map(a => [a.worker_id, a.id]))
 
-      // Obtener materiales asociados a estas asignaciones
-      const { data: taskMaterials, error: materialsError } = await supabase
-        .from('task_assignment_materials')
-        .select(`
-          id,
-          task_assignment_id,
-          delivery_id,
-          notes,
-          created_at
-        `)
-        .in('task_assignment_id', assignmentIds)
-
-      if (materialsError) throw materialsError
-
-      if (!taskMaterials || taskMaterials.length === 0) {
-        setMaterials([])
-        setLoading(false)
-        return
-      }
-
-      // Obtener detalles de las entregas (material_movements)
-      const deliveryIds = taskMaterials.map(tm => tm.delivery_id)
+      // 2. Obtener TODAS las entregas de materiales a estos trabajadores (últimas 50)
       const { data: deliveries, error: deliveriesError } = await supabase
         .from('material_movements')
         .select(`
@@ -106,41 +87,57 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
             full_name
           )
         `)
-        .in('id', deliveryIds)
+        .in('worker_id', workerIds)
         .eq('movement_type', 'entrega')
+        .order('created_at', { ascending: false })
+        .limit(50)
 
       if (deliveriesError) throw deliveriesError
 
-      // Combinar datos
-      const materialsData: MaterialDelivery[] = taskMaterials.map(tm => {
-        const delivery = deliveries?.find(d => d.id === tm.delivery_id)
-        if (!delivery) return null
+      // 3. Obtener asociaciones explícitas existentes
+      const { data: associations, error: associationsError } = await supabase
+        .from('task_assignment_materials')
+        .select('id, delivery_id, task_assignment_id, notes')
+        .in('task_assignment_id', assignments.map(a => a.id))
+
+      if (associationsError) throw associationsError
+
+      const associationMap = new Map() // delivery_id -> association object
+      associations?.forEach(assoc => {
+        associationMap.set(assoc.delivery_id, assoc)
+      })
+
+      // 4. Combinar datos
+      const materialsData: MaterialDelivery[] = (deliveries || []).map(delivery => {
+        const association = associationMap.get(delivery.id)
+        const isLinked = !!association
+
+        const materialData = Array.isArray(delivery.materials) ? delivery.materials[0] : delivery.materials
 
         // Si los costos no están guardados en el movimiento, obtenerlos del material
-        const materialUnitCost = Number(Array.isArray(delivery.materials) && delivery.materials.length > 0 ? delivery.materials[0]?.unit_cost : 0)
+        const materialUnitCost = Number(materialData?.unit_cost || 0)
         const movementUnitCost = delivery.unit_cost ? Number(delivery.unit_cost) : null
         const movementTotalCost = delivery.total_cost ? Number(delivery.total_cost) : null
 
-        // Usar el costo del movimiento si existe, sino usar el del material
         const finalUnitCost = movementUnitCost ?? materialUnitCost
         const quantity = Number(delivery.quantity || 0)
-        // Calcular total_cost si no está guardado
         const finalTotalCost = movementTotalCost ?? (finalUnitCost * quantity)
 
         return {
-          id: tm.id,
-          delivery_id: tm.delivery_id,
-          task_assignment_id: tm.task_assignment_id,
-          material_name: (Array.isArray(delivery.materials) && delivery.materials.length > 0 ? delivery.materials[0]?.name : null) || 'Material desconocido',
+          id: association ? association.id : -delivery.id, // Si no está asociado, usamos ID negativo del delivery para key única
+          delivery_id: delivery.id,
+          task_assignment_id: association ? association.task_assignment_id : (assignmentMap.get(delivery.worker_id) || null),
+          material_name: materialData?.name || 'Material desconocido',
           quantity: quantity,
-          unit: (Array.isArray(delivery.materials) && delivery.materials.length > 0 ? delivery.materials[0]?.unit : null) || 'unidad',
+          unit: materialData?.unit || 'unidad',
           unit_cost: finalUnitCost,
           total_cost: finalTotalCost,
           worker_name: (Array.isArray(delivery.workers) && delivery.workers.length > 0 ? delivery.workers[0]?.full_name : (delivery.workers as any)?.full_name) || 'Sin nombre',
-          date: delivery.created_at || tm.created_at,
-          notes: tm.notes || undefined
+          date: delivery.created_at,
+          notes: association?.notes,
+          is_linked: isLinked
         }
-      }).filter(Boolean) as MaterialDelivery[]
+      })
 
       setMaterials(materialsData)
     } catch (err: any) {
@@ -257,15 +254,17 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
                     <Eye className="w-3 h-3" />
                     Ver Detalles
                   </button>
-                  <button
-                    className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
-                    onClick={() => {
-                      setMaterialToDelete(material.id)
-                      setShowDeleteConfirm(true)
-                    }}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  {material.is_linked && (
+                    <button
+                      className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                      onClick={() => {
+                        setMaterialToDelete(material.id)
+                        setShowDeleteConfirm(true)
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

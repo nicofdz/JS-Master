@@ -22,6 +22,7 @@ export interface Contract {
   is_renovacion: boolean
   created_at: string
   created_by?: string
+  signed_contract_url?: string;
   // Datos relacionados
   worker_name?: string
   worker_rut?: string
@@ -317,6 +318,63 @@ export const useContracts = () => {
     } catch (err: any) {
       console.error('Error updating contract:', err)
       throw new Error(err.message || 'Error al actualizar contrato')
+    }
+  }
+
+  // Subir contrato firmado
+  const uploadSignedContract = async (contractId: number, file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${contractId}_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Subir archivo al bucket 'contracts'
+      const { error: uploadError } = await supabase.storage
+        .from('contracts')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Obtener URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('contracts')
+        .getPublicUrl(filePath);
+
+      // Actualizar registro en la base de datos
+      const { data, error: updateError } = await supabase
+        .from('contract_history')
+        .update({
+          signed_contract_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contractId)
+        .select(`
+          *,
+          workers!inner(full_name, rut),
+          projects!inner(name)
+        `)
+        .single();
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Actualizar estado local
+      const updatedContract = {
+        ...data,
+        worker_name: data.workers?.full_name,
+        worker_rut: data.workers?.rut,
+        project_name: data.projects?.name
+      };
+
+      setContracts(prev => prev.map(c => c.id === contractId ? updatedContract : c));
+
+      return publicUrl;
+    } catch (err: any) {
+      console.error('Error uploading signed contract:', err);
+      throw new Error(err.message || 'Error al subir el contrato firmado');
     }
   }
 
@@ -699,6 +757,59 @@ export const useContracts = () => {
     }
   }
 
+
+
+  // Eliminar contrato firmado
+  const deleteSignedContract = async (contractId: number, contractUrl: string) => {
+    try {
+      // Extraer nombre de archivo de la URL
+      // La URL es tipo: .../storage/v1/object/public/contracts/filename.ext
+      const fileName = contractUrl.split('/').pop()
+
+      if (!fileName) {
+        throw new Error('No se pudo obtener el nombre del archivo')
+      }
+
+      // 1. Eliminar del bucket
+      const { error: storageError } = await supabase.storage
+        .from('contracts')
+        .remove([fileName])
+
+      if (storageError) {
+        console.error('Error deleting file from storage:', storageError)
+        // No lanzamos error aquí para permitir limpiar la BD si el archivo ya no existe
+      }
+
+      // 2. Actualizar BD
+      const { data, error: updateError } = await supabase
+        .from('contract_history')
+        .update({
+          signed_contract_url: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contractId)
+        .select(`
+            *,
+            workers!inner(full_name, rut),
+            projects!inner(name)
+        `)
+        .single()
+
+      if (updateError) throw updateError
+
+      // 3. Actualizar estado local
+      setContracts(prev => prev.map(contract =>
+        contract.id === contractId
+          ? { ...data, worker_name: contract.worker_name, worker_rut: contract.worker_rut, project_name: contract.project_name }
+          : contract
+      ))
+
+    } catch (err: any) {
+      console.error('Error deleting signed contract:', err)
+      throw new Error(err.message || 'Error al eliminar el documento')
+    }
+  }
+
   return {
     contracts,
     loading,
@@ -706,6 +817,8 @@ export const useContracts = () => {
     fetchContracts,
     createContract,
     updateContract,
+    uploadSignedContract,
+    deleteSignedContract,
     deleteContract,
     restoreContract,
     hardDeleteContract,

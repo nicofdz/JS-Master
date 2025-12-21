@@ -35,10 +35,10 @@ interface DeliveryDetails {
   created_at: string
 }
 
-export function MaterialDeliveryDetailModalV2({ 
-  isOpen, 
-  onClose, 
-  deliveryId 
+export function MaterialDeliveryDetailModalV2({
+  isOpen,
+  onClose,
+  deliveryId
 }: MaterialDeliveryDetailModalV2Props) {
   const [delivery, setDelivery] = useState<DeliveryDetails | null>(null)
   const [loading, setLoading] = useState(true)
@@ -100,11 +100,18 @@ export function MaterialDeliveryDetailModalV2({
       if (error) throw error
 
       if (data) {
+        // Corrección de mapeo: materials es un objeto (relación one-to-many inversa) o array dependiendo de la query
+        const materialData = Array.isArray(data.materials) ? data.materials[0] : data.materials
+        const warehouseData = Array.isArray(data.warehouses) ? data.warehouses[0] : (data.warehouses as any)
+        const projectData = Array.isArray(data.projects) ? data.projects[0] : (data.projects as any)
+        const workerData = Array.isArray(data.workers) ? data.workers[0] : (data.workers as any)
+        const deliveredByData = Array.isArray(data.user_profiles) ? data.user_profiles[0] : (data.user_profiles as any)
+
         // Si los costos no están guardados en el movimiento, obtenerlos del material
-        const materialUnitCost = Number(Array.isArray(data.materials) && data.materials.length > 0 ? data.materials[0]?.unit_cost : 0)
+        const materialUnitCost = Number(materialData?.unit_cost || 0)
         const movementUnitCost = data.unit_cost ? Number(data.unit_cost) : null
         const movementTotalCost = data.total_cost ? Number(data.total_cost) : null
-        
+
         // Usar el costo del movimiento si existe, sino usar el del material
         const finalUnitCost = movementUnitCost ?? materialUnitCost
         const quantity = Number(data.quantity || 0)
@@ -114,22 +121,22 @@ export function MaterialDeliveryDetailModalV2({
         setDelivery({
           id: data.id,
           material_id: data.material_id,
-          material_name: (Array.isArray(data.materials) && data.materials.length > 0 ? data.materials[0]?.name : null) || 'Material desconocido',
-          material_category: (Array.isArray(data.materials) && data.materials.length > 0 ? data.materials[0]?.category : null) || 'Sin categoría',
-          material_unit: (Array.isArray(data.materials) && data.materials.length > 0 ? data.materials[0]?.unit : null) || 'unidad',
-          warehouse_id: (data as any).warehouse_id || (Array.isArray(data.warehouses) && data.warehouses.length > 0 ? (data.warehouses[0] as any)?.id : null),
-          warehouse_name: (Array.isArray(data.warehouses) && data.warehouses.length > 0 ? (data.warehouses[0] as any)?.name : null) || 'Almacén desconocido',
+          material_name: materialData?.name || 'Material desconocido',
+          material_category: materialData?.category || 'Sin categoría',
+          material_unit: materialData?.unit || 'unidad',
+          warehouse_id: (data as any).warehouse_id || warehouseData?.id,
+          warehouse_name: warehouseData?.name || 'Almacén desconocido',
           quantity: quantity,
           unit_cost: finalUnitCost,
           total_cost: finalTotalCost,
           stock_before: Number(data.stock_before || 0),
           stock_after: Number(data.stock_after || 0),
           project_id: data.project_id,
-          project_name: (Array.isArray(data.projects) && data.projects.length > 0 ? (data.projects[0] as any)?.name : (data.projects as any)?.name) || null,
+          project_name: projectData?.name || null,
           worker_id: data.worker_id,
-          worker_name: (Array.isArray(data.workers) && data.workers.length > 0 ? (data.workers[0] as any)?.full_name : (data.workers as any)?.full_name) || null,
+          worker_name: workerData?.full_name || null,
           delivered_by: data.delivered_by,
-          delivered_by_name: (Array.isArray(data.user_profiles) && data.user_profiles.length > 0 ? (data.user_profiles[0] as any)?.full_name : (data.user_profiles as any)?.full_name) || null,
+          delivered_by_name: deliveredByData?.full_name || null,
           reason: data.reason || null,
           notes: data.notes || null,
           created_at: data.created_at

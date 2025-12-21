@@ -16,10 +16,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
 type EntregaModalProps = {
-    open: boolean;
-    onClose: () => void;
-    preselectedMaterialId?: number;
-    onSuccess?: () => void;
+	open: boolean;
+	onClose: () => void;
+	preselectedMaterialId?: number;
+	onSuccess?: () => void;
 };
 
 export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }: EntregaModalProps) {
@@ -30,7 +30,7 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 	const projectsHook = useProjects();
 	const workersHook = useWorkers();
 	const [users, setUsers] = useState<any[]>([]);
-	
+
 	const projects = Array.isArray(projectsHook) ? projectsHook : (projectsHook?.projects || []);
 	const workers = Array.isArray(workersHook) ? workersHook : (workersHook?.workers || []);
 
@@ -53,14 +53,14 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 			// Siempre cargar materiales y almacenes al abrir el modal
 			fetchMaterials({ activeOnly: true });
 			fetchWarehouses();
-			
+
 			// Establecer fecha y hora actuales por defecto
 			const now = new Date();
 			const dateStr = now.toISOString().split('T')[0];
 			const timeStr = now.toTimeString().slice(0, 5); // HH:mm
 			setDeliveryDate(dateStr);
 			setDeliveryTime(timeStr);
-			
+
 			// Cargar usuarios del sistema
 			const loadUsers = async () => {
 				try {
@@ -93,9 +93,15 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 	// Cargar stock cuando se selecciona material y resetear bodega/cantidad
 	useEffect(() => {
 		// Resetear bodega y cantidad cuando cambia el material
-		setWarehouseId("");
+		const material = materials.find(m => m.id.toString() === materialId);
+
+		if (material?.default_warehouse_id) {
+			setWarehouseId(material.default_warehouse_id.toString());
+		} else {
+			setWarehouseId("");
+		}
 		setQuantity("");
-		
+
 		// Cargar stock del material seleccionado
 		if (materialId) {
 			fetchStockForMaterials([Number(materialId)]);
@@ -128,18 +134,18 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 	}, [open]);
 
 	const selectedMaterial = materials.find(m => m.id.toString() === materialId);
-	
+
 	// Obtener bodegas con stock del material seleccionado
 	const warehousesWithStock = materialId
 		? warehouses.filter(w => {
-				if (!w.is_active) return false;
-				const stock = getStockByWarehouse(Number(materialId), w.id);
-				return stock > 0;
-			})
+			if (!w.is_active) return false;
+			const stock = getStockByWarehouse(Number(materialId), w.id);
+			return stock > 0;
+		})
 		: [];
 
 	// Obtener stock actual de la bodega seleccionada
-	const currentStock = warehouseId && materialId 
+	const currentStock = warehouseId && materialId
 		? getStockByWarehouse(Number(materialId), Number(warehouseId))
 		: 0;
 
@@ -182,7 +188,7 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 		}
 
 		try {
-            await registerDelivery({
+			await registerDelivery({
 				material_id: Number(materialId),
 				warehouse_id: Number(warehouseId),
 				quantity: Number(qty.toFixed(3)), // Asegurar que sea un número válido
@@ -199,7 +205,7 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 				await fetchStockForMaterials([Number(materialId)]);
 			}
 			onClose();
-            onSuccess?.();
+			onSuccess?.();
 		} catch (err: any) {
 			setError(err.message || "Error al registrar entrega");
 		} finally {
@@ -220,8 +226,8 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Material *</label>
-						<Select 
-							value={materialId} 
+						<Select
+							value={materialId}
 							onChange={(e) => setMaterialId(e.target.value)}
 							required
 							disabled={!!preselectedMaterialId}
@@ -251,8 +257,8 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 								</div>
 							</div>
 						) : (
-							<Select 
-								value={warehouseId} 
+							<Select
+								value={warehouseId}
 								onChange={(e) => setWarehouseId(e.target.value)}
 								required
 							>
@@ -271,12 +277,12 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Cantidad a entregar *</label>
-						<Input 
-							type="number" 
-							min="0.001" 
+						<Input
+							type="number"
+							min="0.001"
 							step="0.001"
 							max={currentStock}
-							value={quantity} 
+							value={quantity}
 							onChange={(e) => setQuantity(e.target.value)}
 							required
 							disabled={!warehouseId || !hasAnyStock}
@@ -314,8 +320,8 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Entregado por *</label>
-						<Select 
-							value={deliveredBy || user?.id || ''} 
+						<Select
+							value={deliveredBy || user?.id || ''}
 							onChange={(e) => setDeliveredBy(e.target.value)}
 							required
 						>
@@ -330,9 +336,9 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Fecha de entrega *</label>
-						<Input 
+						<Input
 							type="date"
-							value={deliveryDate} 
+							value={deliveryDate}
 							onChange={(e) => setDeliveryDate(e.target.value)}
 							required
 						/>
@@ -340,9 +346,9 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Hora de entrega *</label>
-						<Input 
+						<Input
 							type="time"
-							value={deliveryTime} 
+							value={deliveryTime}
 							onChange={(e) => setDeliveryTime(e.target.value)}
 							required
 						/>
@@ -350,17 +356,17 @@ export function EntregaModal({ open, onClose, preselectedMaterialId, onSuccess }
 
 					<div className="md:col-span-2">
 						<label className="block text-sm font-medium text-gray-700 mb-1">Motivo / uso previsto (opcional)</label>
-						<Input 
-							value={reason} 
-							onChange={(e) => setReason(e.target.value)} 
+						<Input
+							value={reason}
+							onChange={(e) => setReason(e.target.value)}
 							placeholder="Ej: para piso 3"
 						/>
 					</div>
 
 					<div className="md:col-span-2">
 						<label className="block text-sm font-medium text-gray-700 mb-1">Comentarios (opcional)</label>
-						<Textarea 
-							value={notes} 
+						<Textarea
+							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							rows={3}
 							placeholder="Notas adicionales sobre la entrega"

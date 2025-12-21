@@ -129,6 +129,52 @@ export function useWarehouses() {
     }
   }
 
+  // Activar almacén (Desbloquear)
+  const activateWarehouse = async (id: number) => {
+    try {
+      setError(null)
+
+      const { data, error } = await supabase
+        .from('warehouses')
+        .update({
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await fetchWarehouses()
+      return data
+    } catch (err: any) {
+      console.error('Error activating warehouse:', err)
+      setError(err.message || 'Error al activar almacén')
+      throw err
+    }
+  }
+
+  // Eliminar almacén (Hard Delete)
+  const deleteWarehouse = async (id: number) => {
+    try {
+      setError(null)
+
+      const { error } = await supabase
+        .from('warehouses')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      await fetchWarehouses()
+    } catch (err: any) {
+      console.error('Error deleting warehouse:', err)
+      setError(err.message || 'Error al eliminar almacén')
+      throw err
+    }
+  }
+
   // Cargar datos iniciales
   useEffect(() => {
     fetchWarehouses()
@@ -142,5 +188,7 @@ export function useWarehouses() {
     createWarehouse,
     updateWarehouse,
     deactivateWarehouse,
+    activateWarehouse,
+    deleteWarehouse,
   }
 }

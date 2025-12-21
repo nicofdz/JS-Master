@@ -6,6 +6,7 @@ import { MovementList } from "@/components/materials/MovementList";
 import { EntregaModal } from "@/components/materials/EntregaModal";
 import { AdjustStockModal } from "@/components/materials/AdjustStockModal";
 import { MaterialFormModal } from "@/components/materials/MaterialFormModal";
+import { WarehouseFormModal } from "@/components/materials/WarehouseFormModal";
 import { MaterialFiltersSidebar } from "@/components/materials/MaterialFiltersSidebar";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -20,6 +21,7 @@ export default function MaterialesPage() {
 	const [isDeliveryOpen, setIsDeliveryOpen] = useState(false);
 	const [isAdjustOpen, setIsAdjustOpen] = useState(false);
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
+	const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
 	const [selectedMaterialId, setSelectedMaterialId] = useState<number | undefined>();
 	const [refreshKey, setRefreshKey] = useState(0);
 
@@ -96,65 +98,108 @@ export default function MaterialesPage() {
 
 	return (
 		<div className="w-full px-6 space-y-6 py-8">
+			{/* Header Row: Title and View Toggle */}
 			<div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
 				<div className="flex items-center gap-4">
-					<div className="w-12 h-12 bg-slate-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-slate-600/20">
-						<Package className="w-6 h-6" />
+					<div className="w-12 h-12 bg-slate-700/50 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-black/20 border border-slate-700">
+						<Package className="w-6 h-6 text-blue-400" />
 					</div>
 					<div>
-						<h1 className="text-2xl font-bold text-gray-900 tracking-tight">Gestión de Materiales</h1>
-						<p className="text-gray-500">Administra el catálogo, registra entregas y controla el stock</p>
+						<h1 className="text-2xl font-bold text-slate-100 tracking-tight">Gestión de Materiales</h1>
+						<p className="text-slate-400">Administra el catálogo, registra entregas y controla el stock por almacén.</p>
 					</div>
 				</div>
-				<div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
-					{view === 'materiales' && (
-						<div className="relative w-full sm:w-64">
-							<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-							<Input
-								placeholder="Buscar material..."
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								className="pl-9 bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50 w-full"
-							/>
-						</div>
-					)}
-					<div className="flex gap-2 w-full sm:w-auto">
-						<Button
-							onClick={() => setIsFilterSidebarOpen(true)}
-							variant="outline"
-							className="flex-1 sm:flex-none border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white"
-						>
-							<Filter className="w-4 h-4 mr-2" />
-							Filtros
-							{((view === 'materiales' && (category || lowStockOnly)) ||
-								(view === 'historial' && (movementType !== 'todos' || materialId || projectId || workerId || userId || dateFrom || dateTo))) && (
-									<span className="ml-2 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
-										!
-									</span>
-								)}
-						</Button>
 
-						<div className="flex bg-slate-700/30 p-1 rounded-lg flex-1 sm:flex-none">
-							<button
-								onClick={() => setView("materiales")}
-								className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${view === "materiales"
-									? "bg-blue-600 text-white shadow-md"
-									: "text-slate-400 hover:text-slate-300"
-									}`}
-							>
-								Materiales
-							</button>
-							<button
-								onClick={() => setView("historial")}
-								className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${view === "historial"
-									? "bg-blue-600 text-white shadow-md"
-									: "text-slate-400 hover:text-slate-300"
-									}`}
-							>
-								Historial
-							</button>
-						</div>
+				{/* View Toggle */}
+				<div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700">
+					<button
+						onClick={() => setView("materiales")}
+						className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${view === "materiales"
+							? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+							: "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+							}`}
+					>
+						Materiales
+					</button>
+					<button
+						onClick={() => setView("historial")}
+						className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${view === "historial"
+							? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+							: "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50"
+							}`}
+					>
+						Historial
+					</button>
+				</div>
+			</div>
+
+			{/* Second Row: Filters and Actions */}
+			<div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+				{/* Filters (Left) */}
+				<div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+					<div className="relative w-full sm:w-64">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+						<Input
+							placeholder="Buscar material..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="pl-9 bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500 focus:ring-blue-500/50 focus:border-blue-500/50 w-full"
+						/>
 					</div>
+
+					<select
+						value={category}
+						onChange={(e) => setCategory(e.target.value)}
+						className="bg-slate-800 border-slate-700 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 w-full sm:w-48 appearance-none"
+					>
+						<option value="">Todas las categorías</option>
+						{categories.map((cat) => (
+							<option key={cat} value={cat}>
+								{cat}
+							</option>
+						))}
+					</select>
+
+					<label className="flex items-center gap-2 px-3 py-2 cursor-pointer select-none bg-slate-800/50 border border-slate-700/50 rounded-md hover:bg-slate-800 transition-colors">
+						<input
+							type="checkbox"
+							checked={lowStockOnly}
+							onChange={(e) => setLowStockOnly(e.target.checked)}
+							className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0"
+						/>
+						<span className="text-sm text-slate-300">Solo bajo stock</span>
+					</label>
+				</div>
+
+				{/* Action Buttons (Right) */}
+				<div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
+					<Button
+						onClick={() => handleNewDelivery()}
+						className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg shadow-blue-900/20"
+					>
+						Registrar entrega
+					</Button>
+					<Button
+						onClick={() => handleAdjustStock()}
+						variant="secondary"
+						className="bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600"
+					>
+						Ajustar stock
+					</Button>
+					<Button
+						onClick={() => setIsWarehouseOpen(true)}
+						variant="secondary"
+						className="bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600"
+					>
+						Bodegas
+					</Button>
+					<Button
+						onClick={() => setIsCreateOpen(true)}
+						variant="secondary"
+						className="bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600"
+					>
+						Nuevo material
+					</Button>
 				</div>
 			</div>
 
@@ -236,6 +281,11 @@ export default function MaterialesPage() {
 					setIsCreateOpen(false);
 					setRefreshKey((k) => k + 1);
 				}}
+			/>
+			<WarehouseFormModal
+				open={isWarehouseOpen}
+				onClose={() => setIsWarehouseOpen(false)}
+				onSuccess={() => setRefreshKey((k) => k + 1)} // Refreshing lists might not be strictly necessary for warehouse changes unless they affect stock view, but safe to do.
 			/>
 		</div>
 	);

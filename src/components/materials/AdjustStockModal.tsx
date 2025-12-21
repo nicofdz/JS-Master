@@ -12,10 +12,10 @@ import { useMaterials } from "@/hooks/useMaterials";
 import { useWarehouses } from "@/hooks/useWarehouses";
 
 type AdjustStockModalProps = {
-    open: boolean;
-    onClose: () => void;
-    preselectedMaterialId?: number;
-    onSuccess?: () => void;
+	open: boolean;
+	onClose: () => void;
+	preselectedMaterialId?: number;
+	onSuccess?: () => void;
 };
 
 export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSuccess }: AdjustStockModalProps) {
@@ -39,12 +39,27 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 		}
 	}, [preselectedMaterialId, open]);
 
-	// Cargar stock cuando se selecciona material y almacén
+	// Cargar stock cuando se selecciona material y resetear bodega/cantidad
 	useEffect(() => {
-		if (materialId && warehouseId) {
+		// Resetear bodega y cantidad cuando cambia el material
+		const material = materials.find(m => m.id.toString() === materialId);
+
+		if (material?.default_warehouse_id) {
+			setWarehouseId(material.default_warehouse_id.toString());
+		} else {
+			setWarehouseId("");
+		}
+
+		// Cargar stock del material seleccionado
+		if (materialId) {
 			fetchStockForMaterials([Number(materialId)]);
 		}
-	}, [materialId, warehouseId]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [materialId]);
+
+	// Cuando cambia warehouseId, recargar el stock específico si es necesario (aunque ya cargamos todo el stock del material)
+	/* No es estrictamente necesario otro effect si fetchStockForMaterials trae todo, 
+	   pero mantenemos la lógica de obtener el valor específico para UI */
 
 	// Resetear formulario al cerrar
 	useEffect(() => {
@@ -60,7 +75,7 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 	}, [open]);
 
 	const selectedMaterial = materials.find(m => m.id.toString() === materialId);
-	const currentStock = warehouseId && materialId 
+	const currentStock = warehouseId && materialId
 		? getStockByWarehouse(Number(materialId), Number(warehouseId))
 		: 0;
 
@@ -90,7 +105,7 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 		}
 
 		try {
-            await registerAdjustment({
+			await registerAdjustment({
 				material_id: Number(materialId),
 				warehouse_id: Number(warehouseId),
 				movement_type: adjustType,
@@ -99,7 +114,7 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 				notes: notes || null,
 			});
 			onClose();
-            onSuccess?.();
+			onSuccess?.();
 		} catch (err: any) {
 			setError(err.message || "Error al registrar ajuste");
 		} finally {
@@ -120,8 +135,8 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Material *</label>
-						<Select 
-							value={materialId} 
+						<Select
+							value={materialId}
 							onChange={(e) => setMaterialId(e.target.value)}
 							required
 							disabled={!!preselectedMaterialId}
@@ -140,8 +155,8 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Almacén *</label>
-						<Select 
-							value={warehouseId} 
+						<Select
+							value={warehouseId}
 							onChange={(e) => setWarehouseId(e.target.value)}
 							required
 						>
@@ -154,8 +169,8 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Tipo de movimiento *</label>
-						<Select 
-							value={adjustType} 
+						<Select
+							value={adjustType}
 							onChange={(e) => setAdjustType(e.target.value as "ingreso" | "ajuste_negativo")}
 							required
 						>
@@ -166,11 +181,11 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 
 					<div>
 						<label className="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
-						<Input 
-							type="number" 
-							min="0.001" 
+						<Input
+							type="number"
+							min="0.001"
 							step="0.001"
-							value={quantity} 
+							value={quantity}
 							onChange={(e) => setQuantity(e.target.value)}
 							required
 						/>
@@ -181,17 +196,17 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 
 					<div className="md:col-span-2">
 						<label className="block text-sm font-medium text-gray-700 mb-1">Motivo (opcional)</label>
-						<Input 
-							value={reason} 
-							onChange={(e) => setReason(e.target.value)} 
+						<Input
+							value={reason}
+							onChange={(e) => setReason(e.target.value)}
 							placeholder="Ej: reposición, corrección, pérdida"
 						/>
 					</div>
 
 					<div className="md:col-span-2">
 						<label className="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
-						<Textarea 
-							value={notes} 
+						<Textarea
+							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 							rows={3}
 							placeholder="Detalles adicionales del ajuste"
@@ -201,8 +216,8 @@ export function AdjustStockModal({ open, onClose, preselectedMaterialId, onSucce
 
 				<div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
 					<p className="text-xs text-yellow-800">
-						<strong>Nota:</strong> {adjustType === "ingreso" 
-							? "Este ajuste aumentará el stock disponible." 
+						<strong>Nota:</strong> {adjustType === "ingreso"
+							? "Este ajuste aumentará el stock disponible."
 							: "Este ajuste reducirá el stock. Se validará que no quede stock negativo."}
 					</p>
 				</div>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useWorkers, Worker } from '@/hooks/useWorkers'
 import { useContracts, Contract } from '@/hooks/useContracts'
 import { useProjects } from '@/hooks/useProjects'
@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { WorkerForm } from '@/components/workers/WorkerForm'
-import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp, UserMinus, Eye } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Users, UserCheck, UserX, FileText, RotateCcw, History, Clock, ChevronLeft, ChevronRight, Layers, Filter, XCircle, TrendingUp, UserMinus, Eye, Upload, Loader2 } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { ContractFiltersSidebar } from '@/components/workers/ContractFiltersSidebar'
@@ -24,7 +24,7 @@ import { ContractDetailModal } from '@/components/workers/ContractDetailModal'
 export default function TrabajadoresPage() {
   const { profile } = useAuth()
   const { workers, loading, error, createWorker, updateWorker, deleteWorker, restoreWorker, hardDeleteWorker, toggleWorkerStatus, refresh, refreshAll } = useWorkers()
-  const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, terminateContract, fetchContracts, checkAllContracts } = useContracts()
+  const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, terminateContract, fetchContracts, checkAllContracts, uploadSignedContract, deleteSignedContract } = useContracts()
   const { projects } = useProjects()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -106,6 +106,11 @@ export default function TrabajadoresPage() {
   // Estados para detalles de contrato
   const [selectedContractForDetails, setSelectedContractForDetails] = useState<Contract | null>(null)
   const [showContractDetailModal, setShowContractDetailModal] = useState(false)
+
+  // Estado para subida de contrato
+  const [uploadingContractId, setUploadingContractId] = useState<number | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [contractIdToUpload, setContractIdToUpload] = useState<number | null>(null)
 
   // Estados para paginación (Performance)
   const [currentPage, setCurrentPage] = useState(1)
@@ -430,6 +435,52 @@ export default function TrabajadoresPage() {
       setContractToTerminate(null)
     } catch (error: any) {
       toast.error(error.message || 'Error al terminar contrato')
+    }
+  }
+
+  const handleUploadClick = (contractId: number) => {
+    setContractIdToUpload(contractId)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '' // Reset value to allow selecting same file
+      fileInputRef.current.click()
+    }
+  }
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !contractIdToUpload) return
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error('El archivo es demasiado grande (max 5MB)')
+      return
+    }
+
+    try {
+      setUploadingContractId(contractIdToUpload)
+      await uploadSignedContract(contractIdToUpload, file)
+      toast.success('Contrato firmado subido correctamente')
+      //   await fetchContracts() // useContracts should handle update via state, but if not, uncomment
+    } catch (error: any) {
+      console.error('Error uploading contract:', error)
+      toast.error(error.message || 'Error al subir contrato')
+    } finally {
+      setUploadingContractId(null)
+      setContractIdToUpload(null)
+    }
+  }
+
+  const handleDeleteSignedContract = async () => {
+    if (!selectedContractForDetails || !selectedContractForDetails.signed_contract_url) return
+
+    try {
+      await deleteSignedContract(selectedContractForDetails.id, selectedContractForDetails.signed_contract_url)
+      toast.success('Documento eliminado correctamente')
+
+      // Actualizar el estado del modal localmente para reflejar el cambio inmediato
+      setSelectedContractForDetails(prev => prev ? ({ ...prev, signed_contract_url: undefined }) : null)
+    } catch (error: any) {
+      console.error('Error deleting contract document:', error)
+      toast.error(error.message || 'Error al eliminar documento')
     }
   }
 
@@ -1464,6 +1515,15 @@ export default function TrabajadoresPage() {
         {
           currentView === 'contracts' && (
             <>
+              {/* Input oculto para subida de archivos */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*,.pdf"
+                onChange={handleFileSelected}
+              />
+
               {/* Estadísticas de contratos */}
               <div className="flex-shrink-0">
                 <StatusFilterCards
@@ -1678,6 +1738,20 @@ export default function TrabajadoresPage() {
                               <Button size="sm" variant="ghost" onClick={() => handleGenerateDocuments(contract)} className="h-8 w-8 p-0 text-green-400 hover:text-green-300 hover:bg-slate-700">
                                 <FileText className="h-4 w-4" />
                               </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleUploadClick(contract.id)}
+                                disabled={uploadingContractId === contract.id}
+                                className="h-8 w-8 p-0 text-cyan-400 hover:text-cyan-300 hover:bg-slate-700"
+                                title="Subir contrato firmado"
+                              >
+                                {uploadingContractId === contract.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Upload className="h-4 w-4" />
+                                )}
+                              </Button>
                               <Button size="sm" variant="ghost" onClick={() => handleGenerateHoursOnly(contract)} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-slate-700">
                                 <Clock className="h-4 w-4" />
                               </Button>
@@ -1811,6 +1885,18 @@ export default function TrabajadoresPage() {
                                       title="Generar documentos completos (Contrato + Pacto de Horas)"
                                     >
                                       <FileText className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleUploadClick(contract.id)}
+                                      disabled={uploadingContractId === contract.id}
+                                      className="text-cyan-600 hover:text-cyan-900"
+                                      title="Subir contrato firmado"
+                                    >
+                                      {uploadingContractId === contract.id ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Upload className="h-4 w-4" />
+                                      )}
                                     </button>
                                     <button
                                       onClick={() => handleGenerateHoursOnly(contract)}
@@ -2424,11 +2510,13 @@ export default function TrabajadoresPage() {
 
         <ContractDetailModal
           isOpen={showContractDetailModal}
-          onClose={() => {
-            setShowContractDetailModal(false)
-            setSelectedContractForDetails(null)
-          }}
+          onClose={() => setShowContractDetailModal(false)}
           contract={selectedContractForDetails}
+          onEdit={() => {
+            setShowContractDetailModal(false)
+            handleEditContract(selectedContractForDetails!)
+          }}
+          onDeleteDocument={handleDeleteSignedContract}
         />
 
 

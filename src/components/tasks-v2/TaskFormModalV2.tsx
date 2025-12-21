@@ -600,11 +600,21 @@ export function TaskFormModalV2({
 
   useEffect(() => {
     selectedWorkers.forEach(workerId => {
-      if (!workerDeliveries[workerId]) {
-        loadWorkerDeliveries(workerId)
-      }
+      // Pre-load if needed, or just rely on manual toggle?
+      // User asked for "in the list", likely wants on-demand or auto if selected.
+      // But for performance, on-demand click is better as implemented below.
     })
   }, [selectedWorkers])
+
+  // Handle toggle materials section
+  const handleToggleMaterials = async (workerId: number) => {
+    const isExpanded = materialsSectionExpanded[workerId]
+    setMaterialsSectionExpanded(prev => ({ ...prev, [workerId]: !isExpanded }))
+
+    if (!isExpanded && !workerDeliveries[workerId]) {
+      await loadWorkerDeliveries(workerId)
+    }
+  }
 
   // Fail-safe: Ensure workers are loaded if project is selected but no workers available
   // This handles cases where initial load might have raced or failed.
@@ -1217,6 +1227,50 @@ export function TaskFormModalV2({
                                   {worker.rut} • {worker.contract_type === 'por_dia' ? 'Por Día' : (worker.contract_type === 'a_trato' ? 'A Trato' : 'Sin Contrato')}
                                 </div>
                               </div>
+                            </div>
+
+                            {/* Material Deliveries Toggle */}
+                            <div className="mt-2 ml-7">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  handleToggleMaterials(worker.id)
+                                }}
+                                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                              >
+                                <span className={`transform transition-transform ${materialsSectionExpanded[worker.id] ? 'rotate-180' : ''}`}>
+                                  ▼
+                                </span>
+                                Entregas de Materiales (Múltiple selección)
+                              </button>
+
+                              {materialsSectionExpanded[worker.id] && (
+                                <div className="mt-2 p-3 bg-slate-900/50 rounded border border-slate-700">
+                                  {loadingDeliveries[worker.id] ? (
+                                    <div className="flex justify-center py-2">
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                    </div>
+                                  ) : workerDeliveries[worker.id] && workerDeliveries[worker.id].length > 0 ? (
+                                    <div className="space-y-2">
+                                      {workerDeliveries[worker.id].map((delivery: any) => (
+                                        <div key={delivery.id} className="text-xs flex justify-between items-start border-b border-slate-800 pb-2 last:border-0 last:pb-0">
+                                          <div>
+                                            <div className="text-slate-300 font-medium">{delivery.materials?.name}</div>
+                                            <div className="text-slate-500">{new Date(delivery.created_at).toLocaleDateString()}</div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="text-slate-300">{delivery.quantity} {delivery.materials?.unit}</div>
+                                            <div className="text-slate-500">${delivery.total_cost?.toLocaleString()}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-slate-500 italic">No hay entregas registradas para este trabajador</p>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Edit Mode: Timestamps */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ModalV2 } from '@/components/tasks-v2/ModalV2'
-import { FileText, History, User, Briefcase, Calendar, DollarSign, Activity } from 'lucide-react'
+import { FileText, History, User, Briefcase, Calendar, DollarSign, ExternalLink, Trash2 } from 'lucide-react'
 import { ContractHistoryContent } from './ContractHistoryContent'
 import { formatDateToChilean } from '@/lib/contracts'
 
@@ -12,16 +12,55 @@ interface ContractDetailModalProps {
     contract?: any
     initialTab?: 'details' | 'history'
     onEdit?: () => void
+    onDeleteDocument?: () => void
 }
 
 type TabType = 'details' | 'history'
+
+const getStatusBadge = (status: string, isActive: boolean = true) => {
+    if (!isActive && status !== 'cancelado') {
+        return (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Cancelado (Eliminado)
+            </span>
+        )
+    }
+
+    switch (status) {
+        case 'activo':
+            return (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    Activo
+                </span>
+            )
+        case 'finalizado':
+            return (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    Finalizado
+                </span>
+            )
+        case 'cancelado':
+            return (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Cancelado
+                </span>
+            )
+        default:
+            return (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    {status}
+                </span>
+            )
+    }
+}
 
 export function ContractDetailModal({
     isOpen,
     onClose,
     contract,
     initialTab = 'details',
-    onEdit
+    onEdit,
+    onDeleteDocument
 }: ContractDetailModalProps) {
     const [activeTab, setActiveTab] = useState<TabType>(initialTab)
 
@@ -44,43 +83,6 @@ export function ContractDetailModal({
     ]
 
     if (!contract) return null
-
-    const getStatusBadge = (status: string, isActive: boolean = true) => {
-        if (!isActive && status !== 'cancelado') {
-            return (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                    Cancelado (Eliminado)
-                </span>
-            )
-        }
-
-        switch (status) {
-            case 'activo':
-                return (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Activo
-                    </span>
-                )
-            case 'finalizado':
-                return (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        Finalizado
-                    </span>
-                )
-            case 'cancelado':
-                return (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Cancelado
-                    </span>
-                )
-            default:
-                return (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {status}
-                    </span>
-                )
-        }
-    }
 
     return (
         <ModalV2
@@ -215,14 +217,67 @@ export function ContractDetailModal({
                                 </div>
                             </div>
                         )}
+
+                        {/* Contrato Firmado */}
+                        <div>
+                            <h4 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Contrato Firmado
+                            </h4>
+
+                            {contract.signed_contract_url ? (
+                                <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <p className="text-sm text-slate-300">Documento subido</p>
+                                        <div className="flex items-center gap-3">
+                                            <a
+                                                href={contract.signed_contract_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                                            >
+                                                <ExternalLink className="w-4 h-4" />
+                                                Ver documento original
+                                            </a>
+                                            {onDeleteDocument && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (window.confirm('¿Estás seguro de que deseas eliminar este documento permanentemente?')) {
+                                                            onDeleteDocument()
+                                                        }
+                                                    }}
+                                                    className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1 transition-colors"
+                                                    title="Eliminar documento"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="relative aspect-[3/4] w-full max-w-md mx-auto bg-slate-800 rounded-lg overflow-hidden border border-slate-600">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={contract.signed_contract_url}
+                                            alt="Contrato Firmado"
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-slate-400 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                                    <p className="text-sm">No hay documento firmado disponible.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
+
 
                 {activeTab === 'history' && (
                     <ContractHistoryContent contract={contract} />
                 )}
             </div>
 
-        </ModalV2>
+        </ModalV2 >
     )
 }
