@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { usePaymentsV2, PaymentHistoryItem } from '@/hooks/usePaymentsV2'
 import { supabase } from '@/lib/supabase'
 import jsPDF from 'jspdf'
+import { EditPaymentDateModal } from '@/components/payments/EditPaymentDateModal'
 import {
   DollarSign,
   Calendar,
@@ -28,7 +29,8 @@ import {
   AlertCircle,
   XCircle,
   Download,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { WorkerTasksModal } from '@/components/payments/WorkerTasksModal'
@@ -280,6 +282,16 @@ export default function PagosPage() {
     endDate?: string
     projectId?: number | null
   } | null>(null)
+
+  // Estado para edición de fecha
+  const [showEditDateModal, setShowEditDateModal] = useState(false)
+  const [selectedPaymentForDateEdit, setSelectedPaymentForDateEdit] = useState<{
+    id: number
+    payment_date: string
+    worker_name: string
+    total_amount: number
+  } | null>(null)
+
   const [workerTasks, setWorkerTasks] = useState<any[]>([])
   const [loadingTasks, setLoadingTasks] = useState(false)
 
@@ -1694,6 +1706,23 @@ export default function PagosPage() {
                           >
                             <FileText className="w-4 h-4" />
                           </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setSelectedPaymentForDateEdit({
+                                id: payment.id,
+                                payment_date: payment.payment_date,
+                                worker_name: payment.worker_name,
+                                total_amount: payment.total_amount
+                              })
+                              setShowEditDateModal(true)
+                            }}
+                            className="p-2 rounded-full bg-amber-900/30 text-amber-400 border border-amber-500 hover:bg-amber-900/50"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={(e) => {
                               e.preventDefault()
@@ -1815,6 +1844,7 @@ export default function PagosPage() {
                                   <Info className="w-3.5 h-3.5" />
                                 </button>
                               )}
+
                               <button
                                 onClick={(e) => {
                                   e.preventDefault()
@@ -1823,15 +1853,36 @@ export default function PagosPage() {
                                 }}
                                 className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-900/30 text-blue-400 border border-blue-500 hover:bg-blue-900/50 transition-colors"
                                 type="button"
-                                title="Exportar PDF"
+                                title="Descargar PDF"
                               >
                                 <FileText className="w-3.5 h-3.5" />
                               </button>
+
                               <button
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  handleDeletePayment(payment.id)
+                                  setSelectedPaymentForDateEdit({
+                                    id: payment.id,
+                                    payment_date: payment.payment_date,
+                                    worker_name: payment.worker_name,
+                                    total_amount: payment.total_amount
+                                  })
+                                  setShowEditDateModal(true)
+                                }}
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-900/30 text-amber-400 border border-amber-500 hover:bg-amber-900/50 transition-colors"
+                                type="button"
+                                title="Editar fecha"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setPaymentToDeleteId(payment.id)
+                                  setIsDeleteModalOpen(true)
                                 }}
                                 className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-900/30 text-red-400 border border-red-500 hover:bg-red-900/50 transition-colors"
                                 type="button"
@@ -2085,6 +2136,12 @@ export default function PagosPage() {
         cancelText="Cancelar"
         type="danger"
         isLoading={isDeleting}
+      />
+      <EditPaymentDateModal
+        isOpen={showEditDateModal}
+        onClose={() => setShowEditDateModal(false)}
+        payment={selectedPaymentForDateEdit}
+        onUpdate={refreshPayments}
       />
     </div>
   )

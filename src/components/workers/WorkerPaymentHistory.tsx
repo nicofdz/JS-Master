@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useWorkerPayments } from '@/hooks/useWorkerPayments'
-import { DollarSign, Calendar, Clock, CheckCircle, Eye, ArrowLeft, Edit, Trash2 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { DollarSign, Calendar, Clock, CheckCircle, Eye, ArrowLeft, Edit, Trash2, Briefcase } from 'lucide-react'
 
 interface WorkerPaymentHistoryProps {
   workerId: number
@@ -23,7 +23,11 @@ interface PaymentHistoryItem {
   payment_status: string
   notes?: string
   created_at: string
+  project_name?: string
 }
+
+// ... existing code ...
+
 
 interface PaymentTaskDetail {
   task_id: number
@@ -251,13 +255,19 @@ export function WorkerPaymentHistory({ workerId, workerName, onClose, onPaymentC
                         <div className="flex-1">
                           <div className="flex items-center gap-4 mb-2">
                             <h4 className="text-lg font-medium text-slate-100">
-                              Pago #{index + 1}
+                              Pago #{payment.payment_id}
                             </h4>
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(payment.payment_status)}`}>
                               {getStatusText(payment.payment_status)}
                             </span>
+                            {payment.project_name && (
+                              <div className="flex items-center gap-1 text-slate-300 text-sm bg-slate-800 px-2 py-0.5 rounded border border-slate-600">
+                                <Briefcase className="h-3 w-3" />
+                                <span>{payment.project_name}</span>
+                              </div>
+                            )}
                           </div>
-                          
+
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-emerald-400" />

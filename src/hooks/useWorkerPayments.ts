@@ -136,7 +136,7 @@ export function useWorkerPayments() {
 
       // Refrescar los datos después del pago (sin mostrar loading)
       await fetchWorkerPayments(false)
-      
+
       return data
     } catch (err: any) {
       console.error('Error processing payment:', err)
@@ -186,7 +186,7 @@ export function useWorkerPayments() {
   const deletePayment = async (paymentId: number) => {
     try {
       console.log('🗑️ Eliminando pago con ID:', paymentId)
-      
+
       const { error } = await supabase.rpc('delete_payment', {
         p_payment_id: paymentId
       })
@@ -197,14 +197,14 @@ export function useWorkerPayments() {
       }
 
       console.log('✅ Pago eliminado exitosamente')
-      
+
       // Pequeño delay para asegurar que la base de datos se actualice
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       // Refrescar los datos después de la eliminación (sin mostrar loading)
       console.log('🔄 Refrescando datos después de eliminación...')
       await fetchWorkerPayments(false)
-      
+
       console.log('✅ Datos refrescados después de eliminación')
     } catch (err: any) {
       console.error('Error deleting payment:', err)

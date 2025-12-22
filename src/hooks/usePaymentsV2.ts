@@ -516,46 +516,12 @@ export function usePaymentsV2() {
         try {
             const historyItems: PaymentHistoryItem[] = []
 
-            // Query unificada a worker_payment_history para ambos tipos de contrato
-            let query = supabase
-                .from('worker_payment_history')
-                .select(`
-          id,
-          worker_id,
-          project_id,
-          contract_type,
-          payment_date,
-          created_at,
-          total_amount,
-          work_days,
-          days_count,
-          tasks_count,
-          payment_month,
-          payment_year,
-          daily_rate,
-          start_date,
-          end_date,
-          notes,
-          workers(id, full_name, rut),
-          projects(id, name)
-        `)
-                .eq('is_deleted', false)
-                .eq('payment_status', 'completed')
-                .order('created_at', { ascending: false })
-
-            if (workerId) {
-                query = query.eq('worker_id', workerId)
-            }
-
-            // Nota: project_id puede ser null en algunos registros antiguos o a_trato
-            // Si se filtra por proyecto, se aplicará, pero podría excluir registros sin project_id
-            // Para a_trato, el project_id a veces no se guarda directamente en el historial si es multi-proyecto
-            // Pero en el nuevo esquema parece que sí.
-            if (projectId) {
-                query = query.eq('project_id', projectId)
-            }
-
-            const { data: payments, error } = await query
+            // Usar RPC para obtener historial con nombres de proyectos correctos
+            const { data: payments, error } = await supabase
+                .rpc('get_payment_history_v2', {
+                    p_worker_id: workerId || null,
+                    p_project_id: projectId || null
+                })
 
             if (error) {
                 console.error('❌ Error obteniendo historial de pagos:', error)
@@ -563,13 +529,7 @@ export function usePaymentsV2() {
             }
 
             if (payments) {
-                // Optimización: Obtener contratos solo si es necesario (para por_dia si faltan datos)
-                // Pero worker_payment_history ya tiene daily_rate, etc.
-
                 for (const payment of payments) {
-                    const worker = Array.isArray(payment.workers) ? payment.workers[0] : payment.workers
-                    const project = Array.isArray(payment.projects) ? payment.projects[0] : payment.projects
-
                     // Determinar tipo: si es null, asumir a_trato (legacy) o inferir por tasks_count > 0
                     let type: 'a_trato' | 'por_dia' | 'custom' = (payment.contract_type as any)
 
@@ -590,14 +550,14 @@ export function usePaymentsV2() {
                         payment_date: payment.payment_date,
                         created_at: payment.created_at,
                         worker_id: payment.worker_id,
-                        worker_name: (worker as any)?.full_name || 'Trabajador desconocido',
-                        worker_rut: (worker as any)?.rut || '',
+                        worker_name: payment.worker_name || 'Trabajador desconocido',
+                        worker_rut: payment.worker_rut || '',
                         project_id: payment.project_id,
-                        project_name: (project as any)?.name || 'N/A',
+                        project_name: payment.project_name || 'N/A',
                         type: type,
                         total_amount: Number(payment.total_amount || 0),
                         tasks_count: payment.tasks_count || 0,
-                        days_count: payment.days_count || payment.work_days || 0,
+                        days_count: payment.days_count || 0,
                         payment_month: payment.payment_month,
                         payment_year: payment.payment_year,
                         daily_rate: Number(payment.daily_rate || 0),
@@ -653,6 +613,7 @@ export function usePaymentsV2() {
             })
 
             const chartDataArray: PaymentHistoryChartData[] = Array.from(chartDataMap.entries())
+                .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
                 .map(([key, data]) => {
                     const [year, month] = key.split('-')
                     const date = new Date(parseInt(year), parseInt(month) - 1)
@@ -662,7 +623,6 @@ export function usePaymentsV2() {
                         asistencia: data.asistencia
                     }
                 })
-                .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
 
             console.log('✅ Historial obtenido (unificado):', filteredHistory.length, 'pagos')
             setPaymentHistory(filteredHistory)
@@ -695,6 +655,24 @@ export function usePaymentsV2() {
         }
     }
 
+    const updatePaymentDate = async (paymentId: number, newDate: Date) => {
+        try {
+            const { error } = await supabase
+                .rpc('update_payment_date', {
+                    p_payment_id: paymentId,
+                    p_new_date: newDate.toISOString()
+                })
+
+            if (error) throw error
+
+            await fetchAll()
+            return true
+        } catch (err: any) {
+            console.error('Error updating payment date:', err)
+            throw err
+        }
+    }
+
     return {
         metrics,
         projects,
@@ -705,6 +683,7 @@ export function usePaymentsV2() {
         refresh: fetchAll,
         fetchWorkerTasks,
         fetchPaymentHistory,
-        deletePayment
+        deletePayment,
+        updatePaymentDate
     }
 }

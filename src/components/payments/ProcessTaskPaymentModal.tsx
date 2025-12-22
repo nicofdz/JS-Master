@@ -43,10 +43,14 @@ export function ProcessTaskPaymentModal({
     const [notes, setNotes] = useState('')
     const [paymentMode, setPaymentMode] = useState<'all' | 'partial'>('all')
 
+    const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0])
+
     // Cargar tareas pendientes al abrir el modal
     useEffect(() => {
         if (isOpen && worker.id) {
             loadPendingTasks()
+            // Reset date to today when opening
+            setPaymentDate(new Date().toISOString().split('T')[0])
         } else {
             // Limpiar estado al cerrar
             setTasks([])
@@ -196,13 +200,17 @@ export function ProcessTaskPaymentModal({
                 ? Array.from(selectedTasks)
                 : null
 
+            // Convertir fecha seleccionada a timestamp o usar now() si no hay
+            const paymentTimestamp = paymentDate ? new Date(paymentDate).toISOString() : new Date().toISOString()
+
             const { data: paymentId, error: paymentError } = await supabase.rpc(
                 'process_worker_payment_v2',
                 {
                     p_worker_id: worker.id,
                     p_payment_amount: Number(selectedTotal.toFixed(2)),
                     p_payment_notes: notes.trim() || null,
-                    p_assignment_ids: assignmentIds
+                    p_assignment_ids: assignmentIds,
+                    p_payment_date: paymentTimestamp
                 }
             )
 
@@ -427,18 +435,31 @@ export function ProcessTaskPaymentModal({
                                     </div>
                                 </div>
 
-                                {/* Campo de notas */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                                        Notas (opcional)
-                                    </label>
-                                    <textarea
-                                        value={notes}
-                                        onChange={(e) => setNotes(e.target.value)}
-                                        placeholder="Agregar notas sobre este pago..."
-                                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                                        rows={3}
-                                    />
+                                {/* Fecha de Pago y Notas */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                                            Fecha de Pago
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={paymentDate}
+                                            onChange={(e) => setPaymentDate(e.target.value)}
+                                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                                            Notas (opcional)
+                                        </label>
+                                        <textarea
+                                            value={notes}
+                                            onChange={(e) => setNotes(e.target.value)}
+                                            placeholder="Agregar notas..."
+                                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                            rows={1}
+                                        />
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
