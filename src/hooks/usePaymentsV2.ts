@@ -109,7 +109,7 @@ export function usePaymentsV2() {
                 .eq('assignment_status', 'completed')
                 .eq('is_paid', false)
                 .eq('is_deleted', false)
-                .gt('worker_payment', 0)
+                .gte('worker_payment', 0)
 
             if (tasksError) throw tasksError
 
@@ -216,7 +216,7 @@ export function usePaymentsV2() {
                 .eq('assignment_status', 'completed')
                 .eq('is_paid', false)
                 .eq('is_deleted', false)
-                .gt('worker_payment', 0)
+                .gte('worker_payment', 0)
 
             if (assignmentsError) throw assignmentsError
 
@@ -416,7 +416,7 @@ export function usePaymentsV2() {
                 .eq('assignment_status', 'completed')
                 .eq('is_paid', false)
                 .eq('is_deleted', false)
-                .gt('worker_payment', 0)
+                .gte('worker_payment', 0)
 
             if (pendingError) throw pendingError
 

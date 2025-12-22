@@ -94,7 +94,7 @@ export function ProcessTaskPaymentModal({
                 .eq('assignment_status', 'completed')
                 .eq('is_paid', false)
                 .eq('is_deleted', false)
-                .gt('worker_payment', 0)
+                .gte('worker_payment', 0)
 
             if (assignmentsError) throw assignmentsError
 
@@ -186,8 +186,8 @@ export function ProcessTaskPaymentModal({
             return
         }
 
-        if (selectedTotal <= 0) {
-            toast.error('El monto total debe ser mayor a 0')
+        if (selectedTotal < 0) {
+            toast.error('El monto total no puede ser negativo')
             return
         }
 
@@ -476,7 +476,7 @@ export function ProcessTaskPaymentModal({
                             </Button>
                             <Button
                                 onClick={handleProcessPayment}
-                                disabled={processing || selectedTasks.size === 0 || selectedTotal <= 0}
+                                disabled={processing || selectedTasks.size === 0 || selectedTotal < 0}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                             >
                                 {processing ? (
