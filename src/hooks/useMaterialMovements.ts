@@ -14,6 +14,9 @@ export interface MaterialMovement {
   quantity: number
   stock_before: number
   stock_after: number
+  consumed?: boolean
+  consumed_at?: string
+  consumed_by?: string
   project_id?: number | null
   worker_id?: number | null
   delivered_by?: string | null
@@ -49,6 +52,7 @@ export interface MaterialAdjustmentData {
   quantity: number
   reason?: string | null
   notes?: string | null
+  project_id?: number | null
 }
 
 export interface MovementFilters {
@@ -158,6 +162,9 @@ export function useMaterialMovements() {
           unit_cost: movement.unit_cost ? Number(movement.unit_cost) : null,
           total_cost: movement.total_cost ? Number(movement.total_cost) : null,
           created_at: movement.created_at,
+          consumed: movement.consumed,
+          consumed_at: movement.consumed_at,
+          consumed_by: movement.consumed_by,
           // Relaciones
           material_name: materials?.name,
           warehouse_name: warehouses?.name,

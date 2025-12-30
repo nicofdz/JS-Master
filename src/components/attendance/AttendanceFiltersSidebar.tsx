@@ -1,4 +1,4 @@
-import { X, Layers, Building2, User } from 'lucide-react'
+import { X, Layers, Building2, User, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 interface AttendanceFiltersSidebarProps {
@@ -8,6 +8,8 @@ interface AttendanceFiltersSidebarProps {
     onProjectFilterChange: (filter: string) => void
     currentWorkerFilter: string
     onWorkerFilterChange: (filter: string) => void
+    currentContractTypeFilter: string
+    onContractTypeFilterChange: (filter: string) => void
     projects: { id: number; name: string }[]
     workers: { id: number; full_name: string }[]
 }
@@ -19,6 +21,8 @@ export function AttendanceFiltersSidebar({
     onProjectFilterChange,
     currentWorkerFilter,
     onWorkerFilterChange,
+    currentContractTypeFilter,
+    onContractTypeFilterChange,
     projects,
     workers
 }: AttendanceFiltersSidebarProps) {
@@ -26,6 +30,7 @@ export function AttendanceFiltersSidebar({
     const handleClearFilters = () => {
         onProjectFilterChange('all')
         onWorkerFilterChange('all')
+        onContractTypeFilterChange('all')
     }
 
     return (
@@ -111,6 +116,32 @@ export function AttendanceFiltersSidebar({
                                         {workers.map((worker) => (
                                             <option key={worker.id} value={worker.id}>{worker.full_name}</option>
                                         ))}
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="h-px bg-slate-800 my-6" />
+
+                            {/* Filtro por Tipo de Contrato */}
+                            <div className="group">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Briefcase className="w-4 h-4 text-amber-400" />
+                                    <h3 className="text-sm font-medium text-slate-300">
+                                        Tipo de Contrato
+                                    </h3>
+                                </div>
+                                <div className="relative">
+                                    <select
+                                        className="w-full bg-[#1e293b] border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all appearance-none text-sm hover:border-slate-600"
+                                        value={currentContractTypeFilter}
+                                        onChange={(e) => onContractTypeFilterChange(e.target.value)}
+                                    >
+                                        <option value="all">Todos los tipos</option>
+                                        <option value="por_dia">Por día</option>
+                                        <option value="a_trato">A trato</option>
                                     </select>
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>

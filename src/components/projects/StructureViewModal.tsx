@@ -44,7 +44,7 @@ export function StructureViewModal({ isOpen, onClose, projectId, projectName }: 
   const fetchTaskCounts = async () => {
     try {
       const apartmentIds = projectApartments.map(a => a.id)
-      
+
       // Consultar tasks V2 en lugar de apartment_tasks
       const { data, error } = await supabase
         .from('tasks')
@@ -56,7 +56,7 @@ export function StructureViewModal({ isOpen, onClose, projectId, projectName }: 
 
       // Agrupar por apartment_id y contar
       const counts: Record<number, { completed: number; total: number }> = {}
-      
+
       data?.forEach(task => {
         if (!counts[task.apartment_id]) {
           counts[task.apartment_id] = { completed: 0, total: 0 }
@@ -133,7 +133,7 @@ export function StructureViewModal({ isOpen, onClose, projectId, projectName }: 
   const getApartmentColor = (apartmentNumber: string) => {
     const apartment = projectApartments.find(a => formatApartmentNumber(a.apartment_code, a.apartment_number) === apartmentNumber)
     if (!apartment) return 'bg-slate-500 text-gray-300'
-    
+
     // Aquí puedes agregar lógica para determinar el estado
     // Por ahora retorno un color base
     return 'bg-slate-500 text-white hover:bg-slate-400'
@@ -146,7 +146,7 @@ export function StructureViewModal({ isOpen, onClose, projectId, projectName }: 
 
     const isComplete = count.completed === count.total
     const bgColor = isComplete ? 'bg-green-500' : 'bg-yellow-500'
-    
+
     return (
       <div className={`absolute -top-1 -right-1 ${bgColor} text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[28px] text-center shadow-lg`}>
         {count.completed}/{count.total}
@@ -159,154 +159,154 @@ export function StructureViewModal({ isOpen, onClose, projectId, projectName }: 
   return (
     <>
       <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Estructura del Proyecto: ${projectName}`}
-      size="xl"
-    >
-      <div className="space-y-4">
-        {/* Botones de control */}
-        <div className="flex justify-end gap-2 pb-2 border-b border-slate-600">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={expandAll}
-            className="flex items-center gap-2"
-          >
-            <Maximize2 className="w-4 h-4" />
-            Expandir Todo
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={collapseAll}
-            className="flex items-center gap-2"
-          >
-            <Minimize2 className="w-4 h-4" />
-            Colapsar Todo
-          </Button>
-        </div>
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Estructura del Proyecto: ${projectName}`}
+        size="xl"
+      >
+        <div className="space-y-4">
+          {/* Botones de control */}
+          <div className="flex justify-end gap-2 pb-2 border-b border-slate-600">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={expandAll}
+              className="flex items-center gap-2"
+            >
+              <Maximize2 className="w-4 h-4" />
+              Expandir Todo
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={collapseAll}
+              className="flex items-center gap-2"
+            >
+              <Minimize2 className="w-4 h-4" />
+              Colapsar Todo
+            </Button>
+          </div>
 
-        {/* Contenedor con scroll */}
-        <div className="max-h-[600px] overflow-y-auto pr-2">
-          {loadingTowers || loadingFloors || loadingApartments ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : towers.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-400">No hay torres en este proyecto</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {towers.map(tower => {
-                const towerFloors = projectFloors.filter(f => f.tower_id === tower.id)
-                const isExpanded = expandedTowers.has(tower.id)
+          {/* Contenedor con scroll */}
+          <div className="max-h-[600px] overflow-y-auto pr-2">
+            {loadingTowers || loadingFloors || loadingApartments ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : towers.length === 0 ? (
+              <div className="text-center py-12">
+                <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-400">No hay torres en este proyecto</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {towers.map(tower => {
+                  const towerFloors = projectFloors.filter(f => f.tower_id === tower.id)
+                  const isExpanded = expandedTowers.has(tower.id)
 
-                return (
-                  <div key={tower.id} className="space-y-2">
-                    {/* Torre */}
-                    <button
-                      onClick={() => toggleTower(tower.id)}
-                      className="w-full bg-slate-700 hover:bg-slate-600 rounded-lg border border-blue-500/30 hover:border-blue-500/50 p-4 transition-all duration-200 flex items-center gap-3"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                      )}
-                      <Building2 className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                      <div className="flex-1 text-left">
-                        <div className="text-lg font-semibold text-white">
-                          {tower.name || `Torre ${tower.tower_number}`}
+                  return (
+                    <div key={tower.id} className="space-y-2">
+                      {/* Torre */}
+                      <button
+                        onClick={() => toggleTower(tower.id)}
+                        className="w-full bg-slate-700 hover:bg-slate-600 rounded-lg border border-blue-500/30 hover:border-blue-500/50 p-4 transition-all duration-200 flex items-center gap-3"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                        )}
+                        <Building2 className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                        <div className="flex-1 text-left">
+                          <div className="text-lg font-semibold text-white">
+                            {tower.name || `Torre ${tower.tower_number}`}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-400">
-                          {towerFloors.length} {towerFloors.length === 1 ? 'piso' : 'pisos'}
-                        </div>
-                      </div>
-                    </button>
+                      </button>
 
-                    {/* Pisos de la torre */}
-                    {isExpanded && (
-                      <div className="ml-8 space-y-2">
-                        {towerFloors
-                          .sort((a, b) => a.floor_number - b.floor_number)
-                          .map(floor => {
-                            const floorApartments = projectApartments.filter(
-                              a => a.floor_id === floor.id
-                            )
-                            const isFloorExpanded = expandedFloors.has(floor.id)
+                      {/* Pisos de la torre */}
+                      {isExpanded && (
+                        <div className="ml-8 space-y-2">
+                          {towerFloors
+                            .sort((a, b) => a.floor_number - b.floor_number)
+                            .map(floor => {
+                              const floorApartments = projectApartments.filter(
+                                a => a.floor_id === floor.id
+                              )
+                              const isFloorExpanded = expandedFloors.has(floor.id)
 
-                            return (
-                              <div key={floor.id} className="space-y-2">
-                                {/* Piso */}
-                                <button
-                                  onClick={() => toggleFloor(floor.id)}
-                                  className="w-full bg-slate-600 hover:bg-slate-550 rounded-lg border border-purple-500/30 hover:border-purple-500/50 p-3 transition-all duration-200 flex items-center gap-3"
-                                >
-                                  {isFloorExpanded ? (
-                                    <ChevronDown className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                              return (
+                                <div key={floor.id} className="space-y-2">
+                                  {/* Piso */}
+                                  <button
+                                    onClick={() => toggleFloor(floor.id)}
+                                    className="w-full bg-slate-600 hover:bg-slate-550 rounded-lg border border-purple-500/30 hover:border-purple-500/50 p-3 transition-all duration-200 flex items-center gap-3"
+                                  >
+                                    {isFloorExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                                    )}
+                                    <div className="flex-1 text-left">
+                                      <div className="text-base font-semibold text-white">
+                                        Piso {floor.floor_number}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        {floorApartments.length} {floorApartments.length === 1 ? 'departamento' : 'departamentos'}
+                                      </div>
+                                    </div>
+                                  </button>
+
+                                  {/* Departamentos del piso */}
+                                  {isFloorExpanded && floorApartments.length > 0 && (
+                                    <div className="ml-8">
+                                      <div className="grid grid-cols-8 gap-2">
+                                        {sortApartments(floorApartments)
+                                          .map(apartment => (
+                                            <button
+                                              key={apartment.id}
+                                              onClick={() => handleApartmentClick(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
+                                              className={`${getApartmentColor(formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))} rounded-lg border border-green-500/30 p-3 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg relative`}
+                                              title={`Departamento ${formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)} - Click para ver tareas`}
+                                            >
+                                              <span className="text-sm font-bold">
+                                                {formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)}
+                                              </span>
+                                              {getTaskBadge(apartment.id)}
+                                            </button>
+                                          ))}
+                                      </div>
+                                    </div>
                                   )}
-                                  <div className="flex-1 text-left">
-                                    <div className="text-base font-semibold text-white">
-                                      Piso {floor.floor_number}
-                                    </div>
-                                    <div className="text-xs text-gray-400">
-                                      {floorApartments.length} {floorApartments.length === 1 ? 'departamento' : 'departamentos'}
-                                    </div>
-                                  </div>
-                                </button>
 
-                                {/* Departamentos del piso */}
-                                {isFloorExpanded && floorApartments.length > 0 && (
-                                  <div className="ml-8">
-                                    <div className="grid grid-cols-8 gap-2">
-                                      {sortApartments(floorApartments)
-                                        .map(apartment => (
-                                          <button
-                                            key={apartment.id}
-                                            onClick={() => handleApartmentClick(apartment.id, formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))}
-                                            className={`${getApartmentColor(formatApartmentNumber(apartment.apartment_code, apartment.apartment_number))} rounded-lg border border-green-500/30 p-3 flex items-center justify-center transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg relative`}
-                                            title={`Departamento ${formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)} - Click para ver tareas`}
-                                          >
-                                            <span className="text-sm font-bold">
-                                              {formatApartmentNumber(apartment.apartment_code, apartment.apartment_number)}
-                                            </span>
-                                            {getTaskBadge(apartment.id)}
-                                          </button>
-                                        ))}
+                                  {isFloorExpanded && floorApartments.length === 0 && (
+                                    <div className="ml-8 text-center py-4 text-gray-400 text-sm">
+                                      No hay departamentos en este piso
                                     </div>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
+                              )
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
-                                {isFloorExpanded && floorApartments.length === 0 && (
-                                  <div className="ml-8 text-center py-4 text-gray-400 text-sm">
-                                    No hay departamentos en este piso
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          {/* Botón de cerrar */}
+          <div className="flex justify-end pt-4 border-t border-slate-600">
+            <Button onClick={onClose} variant="outline">
+              Cerrar
+            </Button>
+          </div>
         </div>
-
-        {/* Botón de cerrar */}
-        <div className="flex justify-end pt-4 border-t border-slate-600">
-          <Button onClick={onClose} variant="outline">
-            Cerrar
-          </Button>
-        </div>
-      </div>
-    </Modal>
+      </Modal>
 
       {/* Modal de tareas del departamento */}
       {selectedApartment && (

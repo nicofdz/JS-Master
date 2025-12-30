@@ -336,7 +336,8 @@ export default function GastosPage() {
                 stock_min: material.stock_min || 0,
                 default_warehouse_id: material.warehouse_id || null,
                 notes: `Gasto #${createdExpense.id} - ${previewData.description || ''}`,
-                is_active: true
+                is_active: true,
+                project_id: previewData.project_id || null
               })
 
               // Registrar el ingreso de stock si hay cantidad y almacén
@@ -400,7 +401,8 @@ export default function GastosPage() {
             stock_min: previewData.materialStockMin || 0,
             default_warehouse_id: previewData.materialWarehouseId || null,
             notes: previewData.description || null,
-            is_active: true
+            is_active: true,
+            project_id: previewData.project_id || null
           })
 
           if (previewData.quantity && previewData.quantity > 0) {

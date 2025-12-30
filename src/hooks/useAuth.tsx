@@ -74,35 +74,35 @@ export function useAuthState(): AuthContextType {
     }
   }
 
+  // Helper to load assignments
+  const loadAssignments = async (userId: string, userRole: string) => {
+    if (userRole && userRole !== 'admin') {
+      const { data: assignments } = await supabase
+        .from('user_projects')
+        .select('project_id')
+        .eq('user_id', userId)
+
+      if (assignments) {
+        const newProjectIds = assignments.map(a => a.project_id).sort((a, b) => a - b)
+
+        setAssignedProjectIds(prev => {
+          const sortedPrev = [...prev].sort((a, b) => a - b)
+          if (JSON.stringify(sortedPrev) === JSON.stringify(newProjectIds)) {
+            return prev
+          }
+          return newProjectIds
+        })
+      }
+    } else if (userRole === 'admin') {
+      setAssignedProjectIds(prev => prev.length === 0 ? prev : [])
+    }
+  }
+
   // Inicializar autenticación
   useEffect(() => {
     let isMounted = true
 
-    // Helper to load assignments
-    const loadAssignments = async (userId: string, userRole: string) => {
-      if (!isMounted) return
-
-      if (userRole && userRole !== 'admin') {
-        const { data: assignments } = await supabase
-          .from('user_projects')
-          .select('project_id')
-          .eq('user_id', userId)
-
-        if (assignments && isMounted) {
-          const newProjectIds = assignments.map(a => a.project_id).sort((a, b) => a - b)
-
-          setAssignedProjectIds(prev => {
-            const sortedPrev = [...prev].sort((a, b) => a - b)
-            if (JSON.stringify(sortedPrev) === JSON.stringify(newProjectIds)) {
-              return prev
-            }
-            return newProjectIds
-          })
-        }
-      } else if (userRole === 'admin' && isMounted) {
-        setAssignedProjectIds(prev => prev.length === 0 ? prev : [])
-      }
-    }
+    // Obtener sesión inicial
 
     // Obtener sesión inicial
     const initAuth = async () => {
@@ -175,30 +175,6 @@ export function useAuthState(): AuthContextType {
           await createUserProfile(session.user)
         }
 
-        // Subscription for assignments changes
-        const assignmentsSubscription = supabase
-          .channel('user-assignments-changes')
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'user_projects',
-              filter: `user_id=eq.${session.user.id}`
-            },
-            async () => {
-              console.log('⚡ Cambios en asignaciones detectados, actualizando...')
-              if (existingProfile) {
-                await loadAssignments(session.user.id, existingProfile.role)
-              }
-            }
-          )
-          .subscribe()
-
-        return () => {
-          assignmentsSubscription.unsubscribe()
-        }
-
       } else if (isMounted) {
         setUser(null)
         setProfile(null)
@@ -213,6 +189,43 @@ export function useAuthState(): AuthContextType {
       subscription?.unsubscribe()
     }
   }, [])
+
+  // Efecto separado para subscripción de asignaciones
+  useEffect(() => {
+    let subscription: any = null
+
+    const setupSubscription = async () => {
+      if (user && profile) {
+        // Subscription for assignments changes
+        subscription = supabase
+          .channel('user-assignments-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'user_projects',
+              filter: `user_id=eq.${user.id}`
+            },
+            async () => {
+              console.log('⚡ Cambios en asignaciones detectados, actualizando...')
+              if (profile) {
+                await loadAssignments(user.id, profile.role)
+              }
+            }
+          )
+          .subscribe()
+      }
+    }
+
+    setupSubscription()
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
+  }, [user?.id, profile?.role]) // Re-run if user or profile role changes needing new filters
 
   // Funciones de autenticación
   const signIn = async (email: string, password: string) => {

@@ -66,8 +66,8 @@ export function AttendanceHistoryByCalendar({
   // Filtrar asistencias por el mes seleccionado
   const monthAttendances = useMemo(() => {
     return attendances.filter(a => {
-      const date = new Date(a.attendance_date)
-      return date.getFullYear() === selectedYear && (date.getMonth() + 1) === selectedMonth
+      const [year, month] = a.attendance_date.split('-').map(Number)
+      return year === selectedYear && month === selectedMonth
     })
   }, [attendances, selectedYear, selectedMonth])
 
@@ -271,12 +271,103 @@ export function AttendanceHistoryByCalendar({
 
   return (
     <div className="space-y-6">
-      {/* Resumen Mensual */}
+      {/* Resumen Mensual con Selector */}
       <Card className="bg-slate-800/50 border-slate-700">
         <div className="p-4">
-          <h3 className="text-lg font-semibold text-slate-100 mb-4">
-            Resumen del Mes - {monthName}
-          </h3>
+          <div className="flex items-center gap-6 mb-6 flex-wrap">
+            {/* Selector de mes (Movido a la izquierda) */}
+            <div className="relative flex items-center gap-2">
+              <button
+                onClick={handlePrevMonth}
+                className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                title="Mes Anterior"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-300" />
+              </button>
+
+              <div className="relative">
+                <button
+                  onClick={() => setShowMonthPicker(!showMonthPicker)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 rounded-md text-slate-100 font-medium transition-colors capitalize min-w-[160px] justify-center"
+                >
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  {monthName}
+                </button>
+
+                {/* Dropdown selector */}
+                {showMonthPicker && (
+                  <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 p-4 min-w-[220px]">
+                    <div className="space-y-3">
+                      {/* Selector de año */}
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Año</label>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => {
+                            setSelectedYear(parseInt(e.target.value))
+                            onMonthChange(parseInt(e.target.value), selectedMonth)
+                          }}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          {years.map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Selector de mes */}
+                      <div>
+                        <label className="block text-xs text-slate-400 mb-1">Mes</label>
+                        <select
+                          value={selectedMonth}
+                          onChange={(e) => {
+                            setSelectedMonth(parseInt(e.target.value))
+                            onMonthChange(selectedYear, parseInt(e.target.value))
+                          }}
+                          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={1}>Enero</option>
+                          <option value={2}>Febrero</option>
+                          <option value={3}>Marzo</option>
+                          <option value={4}>Abril</option>
+                          <option value={5}>Mayo</option>
+                          <option value={6}>Junio</option>
+                          <option value={7}>Julio</option>
+                          <option value={8}>Agosto</option>
+                          <option value={9}>Septiembre</option>
+                          <option value={10}>Octubre</option>
+                          <option value={11}>Noviembre</option>
+                          <option value={12}>Diciembre</option>
+                        </select>
+                      </div>
+
+                      <button
+                        onClick={() => setShowMonthPicker(false)}
+                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                      >
+                        Aplicar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleNextMonth}
+                className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
+                title="Mes Siguiente"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-300" />
+              </button>
+            </div>
+
+            <div className="h-6 w-px bg-slate-700 hidden sm:block" />
+
+            <h3 className="text-xl font-bold text-slate-100">
+              Resumen del Mes
+            </h3>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Total de días trabajados */}
             <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-4">
@@ -316,96 +407,6 @@ export function AttendanceHistoryByCalendar({
               </div>
               <p className="text-2xl font-bold text-red-400">{monthlyStats.absentDays}</p>
               <p className="text-xs text-slate-500 mt-1">Registros de ausencia</p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Filtros */}
-      <Card className="bg-slate-800/50 border-slate-700">
-        <div className="p-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-
-
-            {/* Selector de mes */}
-            <div className="relative flex items-center gap-3">
-              <button
-                onClick={handlePrevMonth}
-                className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5 text-slate-300" />
-              </button>
-
-              <button
-                onClick={() => setShowMonthPicker(!showMonthPicker)}
-                className="text-lg font-semibold text-slate-100 min-w-[200px] text-center capitalize hover:bg-slate-700/50 px-3 py-1 rounded transition-colors"
-              >
-                {monthName}
-              </button>
-
-              {/* Dropdown selector */}
-              {showMonthPicker && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 p-4 min-w-[220px]">
-                  <div className="space-y-3">
-                    {/* Selector de año */}
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Año</label>
-                      <select
-                        value={selectedYear}
-                        onChange={(e) => {
-                          setSelectedYear(parseInt(e.target.value))
-                          onMonthChange(parseInt(e.target.value), selectedMonth)
-                        }}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {years.map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Selector de mes */}
-                    <div>
-                      <label className="block text-xs text-slate-400 mb-1">Mes</label>
-                      <select
-                        value={selectedMonth}
-                        onChange={(e) => {
-                          setSelectedMonth(parseInt(e.target.value))
-                          onMonthChange(selectedYear, parseInt(e.target.value))
-                        }}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value={1}>Enero</option>
-                        <option value={2}>Febrero</option>
-                        <option value={3}>Marzo</option>
-                        <option value={4}>Abril</option>
-                        <option value={5}>Mayo</option>
-                        <option value={6}>Junio</option>
-                        <option value={7}>Julio</option>
-                        <option value={8}>Agosto</option>
-                        <option value={9}>Septiembre</option>
-                        <option value={10}>Octubre</option>
-                        <option value={11}>Noviembre</option>
-                        <option value={12}>Diciembre</option>
-                      </select>
-                    </div>
-
-                    <button
-                      onClick={() => setShowMonthPicker(false)}
-                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleNextMonth}
-                className="p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"
-              >
-                <ChevronRight className="w-5 h-5 text-slate-300" />
-              </button>
             </div>
           </div>
         </div>

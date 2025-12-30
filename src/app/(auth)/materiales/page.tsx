@@ -36,6 +36,7 @@ export default function MaterialesPage() {
 
 	// History Filters
 	const [movementType, setMovementType] = useState<'todos' | 'entrada' | 'salida'>('todos');
+	const [consumedFilter, setConsumedFilter] = useState<'todos' | 'consumido' | 'no_consumido'>('todos');
 	const [materialId, setMaterialId] = useState("");
 	const [projectId, setProjectId] = useState("");
 	const [workerId, setWorkerId] = useState("");
@@ -203,6 +204,81 @@ export default function MaterialesPage() {
 				</div>
 			</div>
 
+			{/* Quick Filters for History View */}
+			{view === "historial" && (
+				<div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+					<div className="flex flex-col sm:flex-row gap-6">
+						{/* Movement Type Filters */}
+						<div className="flex-1">
+							<label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Tipo de Movimiento</label>
+							<div className="flex flex-wrap gap-2">
+								<button
+									onClick={() => setMovementType('todos')}
+									className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${movementType === 'todos'
+										? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+										: 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
+										}`}
+								>
+									Todos
+								</button>
+								<button
+									onClick={() => setMovementType('entrada')}
+									className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${movementType === 'entrada'
+										? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+										: 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
+										}`}
+								>
+									Entradas
+								</button>
+								<button
+									onClick={() => setMovementType('salida')}
+									className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${movementType === 'salida'
+										? 'bg-red-600 text-white shadow-lg shadow-red-900/20'
+										: 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
+										}`}
+								>
+									Salidas
+								</button>
+							</div>
+						</div>
+
+						{/* Consumed Status Filters */}
+						<div className="flex-1">
+							<label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">Estado de Uso</label>
+							<div className="flex flex-wrap gap-2">
+								<button
+									onClick={() => setConsumedFilter('todos')}
+									className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${consumedFilter === 'todos'
+										? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+										: 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
+										}`}
+								>
+									Todos
+								</button>
+								<button
+									onClick={() => setConsumedFilter('consumido')}
+									className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${consumedFilter === 'consumido'
+										? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/20'
+										: 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
+										}`}
+								>
+									Usados
+								</button>
+								<button
+									onClick={() => setConsumedFilter('no_consumido')}
+									className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${consumedFilter === 'no_consumido'
+										? 'bg-slate-600 text-white shadow-lg shadow-slate-900/20'
+										: 'bg-slate-700/50 text-slate-300 hover:bg-slate-700 border border-slate-600'
+										}`}
+								>
+									Disponibles
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{view === "materiales" ? (
 				<MaterialList
 					onNewDelivery={handleNewDelivery}
@@ -217,6 +293,7 @@ export default function MaterialesPage() {
 				<MovementList
 					refreshToken={refreshKey}
 					movementType={movementType}
+					consumedFilter={consumedFilter}
 					materialId={materialId}
 					projectId={projectId}
 					workerId={workerId}

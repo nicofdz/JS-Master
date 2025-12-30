@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { ToolForm } from '@/components/tools/ToolForm'
+import { ToolDetailsModal } from '@/components/tools/ToolDetailsModal'
 import { ToolList } from '@/components/tools/ToolList'
 import { LoanHistory } from '@/components/tools/LoanHistory'
 import { LoanModal } from '@/components/tools/LoanModal'
@@ -21,12 +22,17 @@ export default function HerramientasPage() {
   const [activeTab, setActiveTab] = useState<'tools' | 'history'>('tools')
   const [showToolForm, setShowToolForm] = useState(false)
   const [showLoanModal, setShowLoanModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedTool, setSelectedTool] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'disponible' | 'prestada'>('all')
   const [activeFilter, setActiveFilter] = useState('active')
   const [confirmDeleteToolState, setConfirmDeleteToolState] = useState<{ isOpen: boolean, toolId: number | null }>({ isOpen: false, toolId: null })
-  const [confirmDeleteLoanState, setConfirmDeleteLoanState] = useState<{ isOpen: boolean, loanId: number | null }>({ isOpen: false, loanId: null })
+
+  const handleViewTool = (tool: any) => {
+    setSelectedTool(tool)
+    setShowDetailsModal(true)
+  }
 
   // Sidebar filters
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
@@ -124,6 +130,10 @@ export default function HerramientasPage() {
     return activeLoan?.id
   }
 
+  const getActiveLoan = (toolId: number) => {
+    return loans.find(loan => loan.tool_id === toolId && !loan.return_date)
+  }
+
   const handleLoan = async (borrowerId: number, lenderId: string, projectId?: number) => {
     try {
       await loanTool(selectedTool.id, borrowerId, lenderId, projectId)
@@ -149,21 +159,7 @@ export default function HerramientasPage() {
     await handleReturnTool(loanId, returnDetails)
   }
 
-  const handleDeleteLoan = (loanId: number) => {
-    setConfirmDeleteLoanState({ isOpen: true, loanId })
-  }
 
-  const executeDeleteLoan = async () => {
-    if (!confirmDeleteLoanState.loanId) return
-
-    try {
-      await deleteLoan(confirmDeleteLoanState.loanId)
-      toast.success('Registro de préstamo eliminado')
-      setConfirmDeleteLoanState({ isOpen: false, loanId: null })
-    } catch (error) {
-      toast.error('Error al eliminar el registro')
-    }
-  }
 
   const filteredTools = tools.filter(tool => {
     const matchesSearch = tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -452,6 +448,10 @@ export default function HerramientasPage() {
           {/* Tools List */}
           <ToolList
             tools={filteredTools}
+            loans={loans}
+            workers={workers}
+            users={users}
+            projects={projects}
             onEdit={(tool) => {
               setSelectedTool(tool)
               setShowToolForm(true)
@@ -459,8 +459,23 @@ export default function HerramientasPage() {
             onDelete={handleDeleteTool}
             onReactivate={handleReactivateTool}
             onLoan={handleLoanTool}
+            onView={handleViewTool}
           />
         </div>
+      )}
+
+      {showDetailsModal && selectedTool && (
+        <ToolDetailsModal
+          tool={selectedTool}
+          loans={loans}
+          workers={workers}
+          users={users}
+          projects={projects}
+          onClose={() => {
+            setShowDetailsModal(false)
+            setSelectedTool(null)
+          }}
+        />
       )}
 
       {activeTab === 'history' && (
@@ -469,7 +484,6 @@ export default function HerramientasPage() {
           workers={workers}
           projects={projects}
           onReturn={handleReturnToolForModal}
-          onDelete={handleDeleteLoan}
           statusFilter={historyStatusFilter}
           monthFilter={historyMonthFilter}
           yearFilter={historyYearFilter}
@@ -518,6 +532,8 @@ export default function HerramientasPage() {
         />
       )}
 
+
+
       {showLoanModal && selectedTool && (
         <LoanModal
           tool={selectedTool}
@@ -532,10 +548,10 @@ export default function HerramientasPage() {
           onLoan={handleLoan}
           onReturn={handleReturnToolForModal}
           activeLoanId={selectedTool ? getActiveLoanId(selectedTool.id) : undefined}
+          activeLoan={selectedTool ? getActiveLoan(selectedTool.id) : undefined}
         />
       )}
 
-      {/* Confirmation Modal */}
       <ConfirmationModal
         isOpen={confirmDeleteToolState.isOpen}
         onClose={() => setConfirmDeleteToolState({ isOpen: false, toolId: null })}
@@ -543,16 +559,6 @@ export default function HerramientasPage() {
         title="Deshabilitar Herramienta"
         message="¿Estás seguro de que quieres deshabilitar esta herramienta?"
         confirmText="Deshabilitar"
-        type="danger"
-      />
-
-      <ConfirmationModal
-        isOpen={confirmDeleteLoanState.isOpen}
-        onClose={() => setConfirmDeleteLoanState({ isOpen: false, loanId: null })}
-        onConfirm={executeDeleteLoan}
-        title="Eliminar Registro de Préstamo"
-        message="¿Estás seguro de que quieres eliminar este registro de préstamo? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
         type="danger"
       />
     </div>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Loader2, Package, Warehouse, History, User, Calendar, DollarSign } from "lucide-react";
+import { Loader2, Package, Warehouse, History, User, Calendar, DollarSign, Info, Layers, ArrowUpRight, ArrowDownRight, MoreVertical, Search, BarChart3, Tag, AlertTriangle, Globe } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { useMaterials } from "@/hooks/useMaterials";
 import { useMaterialMovements } from "@/hooks/useMaterialMovements";
 import { useWarehouses } from "@/hooks/useWarehouses";
@@ -26,13 +27,13 @@ export function MaterialDetailModal({ open, onClose, material }: MaterialDetailM
 	useEffect(() => {
 		if (open && material) {
 			setLoading(true);
-			
+
 			// Cargar stock del material
 			fetchStockForMaterials([material.id]);
-			
+
 			// Cargar almacenes
 			fetchWarehouses(true);
-			
+
 			// Cargar movimientos recientes del material (últimos 10)
 			fetchMovements({
 				material_id: material.id,
@@ -120,104 +121,132 @@ export function MaterialDetailModal({ open, onClose, material }: MaterialDetailM
 					<p className="ml-2 text-sm text-slate-500">Cargando información...</p>
 				</div>
 			) : (
-				<div className="space-y-6">
+				<div className="space-y-10">
 					{/* Información General del Material */}
-					<section>
-						<div className="flex items-center gap-2 mb-4">
-							<Package className="h-5 w-5 text-slate-400" />
-							<h3 className="text-lg font-semibold text-slate-100">Información General</h3>
+					<section className="space-y-4">
+						<div className="flex items-center gap-3 pb-3 border-b border-white/5">
+							<div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+								<Package className="h-5 w-5" />
+							</div>
+							<div className="flex flex-col">
+								<h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest leading-none">Identidad Técnica</h3>
+								<span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Atributos y categorización</span>
+							</div>
 						</div>
-						<div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4 grid grid-cols-2 gap-4">
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Nombre</label>
-								<p className="text-sm font-medium text-slate-100 mt-1">{material.name}</p>
+						<div className="glass-panel premium-border rounded-2xl p-6 grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 premium-shadow">
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre</label>
+								<p className="text-sm font-bold text-slate-200 uppercase tracking-tight line-clamp-1">{material.name}</p>
 							</div>
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Categoría</label>
-								<p className="text-sm text-slate-100 mt-1">{material.category}</p>
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoría</label>
+								<div className="flex items-center gap-1.5 pt-0.5">
+									<div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+									<p className="text-sm font-medium text-slate-300">{material.category}</p>
+								</div>
 							</div>
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Unidad</label>
-								<p className="text-sm text-slate-100 mt-1">{material.unit}</p>
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Medidas</label>
+								<p className="text-sm font-bold text-slate-200 uppercase">{material.unit}</p>
 							</div>
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Almacén Principal</label>
-								<p className="text-sm text-slate-100 mt-1">
-									{material.default_warehouse?.name || 'No asignado'}
-								</p>
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bodega Principal</label>
+								<div className="flex items-center gap-1.5 pt-0.5">
+									<Layers className="h-3.5 w-3.5 text-slate-600" />
+									<p className="text-sm font-medium text-slate-400">
+										{material.default_warehouse?.name || 'CENTRAL'}
+									</p>
+								</div>
 							</div>
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase flex items-center gap-1">
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 text-emerald-500/80">
 									<DollarSign className="h-3 w-3" />
-									Costo Unitario
+									Precio Unidad
 								</label>
-								<p className="text-sm font-medium text-slate-100 mt-1">
+								<p className="text-sm font-black text-emerald-400">
 									${material.unit_cost.toLocaleString('es-CL')}
 								</p>
 							</div>
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Stock Mínimo</label>
-								<p className="text-sm text-slate-100 mt-1">
-									{material.stock_min.toLocaleString()} {material.unit}
-								</p>
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Alerta Mínima</label>
+								<div className="flex items-center gap-1.5 pt-1">
+									<span className="text-sm font-black text-rose-400">
+										{material.stock_min.toLocaleString()}
+									</span>
+									<span className="text-[9px] font-bold text-slate-600 uppercase">UNIDADES</span>
+								</div>
 							</div>
 							{material.supplier && (
-								<div>
-									<label className="text-xs font-medium text-slate-400 uppercase">Proveedor</label>
-									<p className="text-sm text-slate-100 mt-1">{material.supplier}</p>
+								<div className="space-y-1">
+									<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Origen/Socio</label>
+									<p className="text-sm font-medium text-slate-300">{material.supplier}</p>
 								</div>
 							)}
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase flex items-center gap-1">
-									<Calendar className="h-3 w-3" />
-									Estado
-								</label>
-								<p className="text-sm mt-1">
-									<span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-										material.is_active 
-											? 'bg-green-900/50 text-green-300 border border-green-700' 
-											: 'bg-red-900/50 text-red-300 border border-red-700'
-									}`}>
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado</label>
+								<div className="pt-1">
+									<span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${material.is_active
+										? 'text-emerald-500 bg-emerald-500/10'
+										: 'text-rose-500 bg-rose-500/10'
+										}`}>
+										<div className={`w-1 h-1 rounded-full ${material.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
 										{material.is_active ? 'Activo' : 'Inactivo'}
 									</span>
-								</p>
+								</div>
+							</div>
+							<div className="space-y-1">
+								<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Proyecto Asociado</label>
+								<div className="flex items-center gap-1.5 pt-0.5">
+									<Globe className="h-3.5 w-3.5 text-slate-600" />
+									<p className="text-sm font-medium text-slate-400">
+										{material.project?.name || 'CENTRAL / GENERAL'}
+									</p>
+								</div>
 							</div>
 							{material.notes && (
-								<div className="col-span-2">
-									<label className="text-xs font-medium text-slate-400 uppercase">Notas</label>
-									<p className="text-sm text-slate-100 mt-1">{material.notes}</p>
+								<div className="md:col-span-4 space-y-2 pt-2 border-t border-white/5">
+									<label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+										<Tag className="h-3 w-3" /> Observaciones del Maestro
+									</label>
+									<p className="text-sm text-slate-400 leading-relaxed italic">&quot;{material.notes}&quot;</p>
 								</div>
 							)}
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Creado</label>
-								<p className="text-sm text-slate-100 mt-1">{formatDate(material.created_at)}</p>
-							</div>
-							<div>
-								<label className="text-xs font-medium text-slate-400 uppercase">Última Actualización</label>
-								<p className="text-sm text-slate-100 mt-1">{formatDate(material.updated_at)}</p>
-							</div>
 						</div>
 					</section>
 
 					{/* Información del Creador */}
 					{creatorInfo && (
-						<section>
-							<div className="flex items-center gap-2 mb-4">
-								<User className="h-5 w-5 text-slate-400" />
-								<h3 className="text-lg font-semibold text-slate-100">Quien lo Ingresó</h3>
+						<section className="space-y-4">
+							<div className="flex items-center gap-3 pb-3 border-b border-white/5">
+								<div className="p-2 bg-purple-500/10 rounded-xl text-purple-400">
+									<User className="h-5 w-5" />
+								</div>
+								<div className="flex flex-col">
+									<h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest leading-none">Auditoría Operativa</h3>
+									<span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Responsable del alta inicial</span>
+								</div>
 							</div>
-							<div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
-								<div className="flex items-center gap-3">
-									<div className="flex-shrink-0">
-										<div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+							<div className="glass-panel bg-gradient-to-r from-purple-500/5 to-transparent border border-white/5 rounded-2xl p-4">
+								<div className="flex items-center gap-4">
+									<div className="flex-shrink-0 relative">
+										<div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-purple-900/40">
 											{creatorInfo.full_name.charAt(0).toUpperCase()}
 										</div>
+										<div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-800 flex items-center justify-center">
+											<div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+										</div>
 									</div>
-									<div>
-										<p className="text-sm font-medium text-slate-100">{creatorInfo.full_name}</p>
+									<div className="flex flex-col">
+										<p className="text-sm font-bold text-slate-100">{creatorInfo.full_name}</p>
 										{creatorInfo.email && (
-											<p className="text-xs text-slate-300">{creatorInfo.email}</p>
+											<p className="text-xs font-medium text-slate-500 tracking-tight">{creatorInfo.email}</p>
 										)}
+									</div>
+									<div className="ml-auto flex items-center gap-4">
+										<div className="text-right">
+											<p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Registrado el</p>
+											<p className="text-xs font-bold text-slate-300">{formatDate(material.created_at)}</p>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -225,56 +254,57 @@ export function MaterialDetailModal({ open, onClose, material }: MaterialDetailM
 					)}
 
 					{/* Stock por Almacén */}
-					<section>
-						<div className="flex items-center gap-2 mb-4">
-							<Warehouse className="h-5 w-5 text-slate-400" />
-							<h3 className="text-lg font-semibold text-slate-100">Stock por Almacén</h3>
-							<span className="ml-auto text-sm font-medium text-slate-300">
-								Total: {totalStock.toLocaleString()} {material.unit}
-							</span>
+					<section className="space-y-4">
+						<div className="flex items-center gap-3 pb-3 border-b border-white/5">
+							<div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400">
+								<Warehouse className="h-5 w-5" />
+							</div>
+							<div className="flex flex-col">
+								<div className="flex items-baseline gap-2">
+									<h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest leading-none">Mapeo de Existencias</h3>
+									<span className="text-xs font-black text-emerald-400">{totalStock.toLocaleString()} {material.unit}</span>
+								</div>
+								<span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Disponibilidad en red de depósitos</span>
+							</div>
 						</div>
+
 						{stockByWarehouse.length > 0 ? (
-							<div className="bg-slate-700/30 border border-slate-600 rounded-lg overflow-hidden">
-								<table className="min-w-full divide-y divide-slate-600">
-									<thead className="bg-slate-700">
-										<tr>
-											<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-												Almacén
-											</th>
-											<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-												Cantidad
-											</th>
-											<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-												Estado
-											</th>
+							<div className="glass-panel premium-border rounded-2xl overflow-hidden premium-shadow">
+								<table className="min-w-full divide-y divide-white/5">
+									<thead>
+										<tr className="bg-slate-800/40">
+											<th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicación</th>
+											<th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Balance</th>
+											<th className="px-6 py-4 text-right text-[10px] font-bold text-slate-500 uppercase tracking-widest">Estado Crítico</th>
 										</tr>
 									</thead>
-									<tbody className="bg-slate-800/50 divide-y divide-slate-700">
+									<tbody className="divide-y divide-white/5 bg-slate-900/10">
 										{stockByWarehouse.map((item) => {
 											const isLowStock = item.quantity <= (material.stock_min || 0);
 											return (
-												<tr key={item.warehouse.id} className="hover:bg-slate-700/50 transition-colors">
-													<td className="px-4 py-3 text-sm font-medium text-slate-100">
-														{item.warehouse.name}
-														{item.warehouse.code && (
-															<span className="ml-2 text-xs text-slate-400">
-																({item.warehouse.code})
-															</span>
-														)}
+												<tr key={item.warehouse.id} className="group hover:bg-white/5 transition-all duration-300">
+													<td className="px-6 py-4">
+														<div className="flex items-center gap-2">
+															<span className="text-sm font-bold text-slate-200 group-hover:text-white transition-colors uppercase tracking-tight">{item.warehouse.name}</span>
+															{item.warehouse.code && (
+																<span className="text-[10px] font-bold text-slate-600 group-hover:text-slate-500 transition-colors uppercase">{item.warehouse.code}</span>
+															)}
+														</div>
 													</td>
-													<td className="px-4 py-3 text-sm text-slate-100">
-														{item.quantity.toLocaleString()} {material.unit}
+													<td className="px-6 py-4">
+														<div className="flex items-baseline gap-1.5">
+															<span className={`text-sm font-black ${isLowStock ? 'text-rose-400' : 'text-slate-200'}`}>
+																{item.quantity.toLocaleString()}
+															</span>
+															<span className="text-[10px] font-bold text-slate-600 uppercase">{material.unit}</span>
+														</div>
 													</td>
-													<td className="px-4 py-3">
-														{isLowStock ? (
-															<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-900/50 text-red-300 border border-red-700">
-																Stock Bajo
-															</span>
-														) : (
-															<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-300 border border-green-700">
-																Normal
-															</span>
-														)}
+													<td className="px-6 py-4 text-right">
+														<span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${isLowStock ? 'text-rose-500 bg-rose-500/10' : 'text-emerald-500 bg-emerald-500/10'
+															}`}>
+															<div className={`w-1 h-1 rounded-full ${isLowStock ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+															{isLowStock ? 'Bajo' : 'Óptimo'}
+														</span>
 													</td>
 												</tr>
 											);
@@ -283,92 +313,89 @@ export function MaterialDetailModal({ open, onClose, material }: MaterialDetailM
 								</table>
 							</div>
 						) : (
-							<div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4">
-								<p className="text-sm text-yellow-300">
-									No hay stock registrado en ningún almacén para este material.
-								</p>
+							<div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-5 flex items-center gap-4">
+								<div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
+									<AlertTriangle className="h-6 w-6" />
+								</div>
+								<div className="flex flex-col">
+									<p className="text-sm font-bold text-amber-200 uppercase tracking-tight">Inventario Agotado</p>
+									<p className="text-xs text-amber-500 font-medium">No se detectaron existencias en ningún depósito activo.</p>
+								</div>
 							</div>
 						)}
 					</section>
 
 					{/* Historial Reciente de Movimientos */}
-					<section>
-						<div className="flex items-center gap-2 mb-4">
-							<History className="h-5 w-5 text-slate-400" />
-							<h3 className="text-lg font-semibold text-slate-100">Historial Reciente</h3>
-							<span className="ml-auto text-xs text-slate-400">
-								Últimos {movements.length} movimientos
-							</span>
+					<section className="space-y-4">
+						<div className="flex items-center gap-3 pb-3 border-b border-white/5">
+							<div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
+								<History className="h-5 w-5" />
+							</div>
+							<div className="flex flex-col">
+								<h3 className="text-sm font-bold text-slate-200 uppercase tracking-widest leading-none">Registro de Trazabilidad</h3>
+								<span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-1">Últimos {movements.length} eventos registrados</span>
+							</div>
 						</div>
+
 						{movementsLoading ? (
-							<div className="flex items-center justify-center py-8">
-								<Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-								<p className="ml-2 text-sm text-slate-400">Cargando movimientos...</p>
+							<div className="flex flex-col items-center justify-center py-12 gap-3 glass-panel rounded-2xl premium-border">
+								<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+								<p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Recuperando flujo de datos...</p>
 							</div>
 						) : movements.length > 0 ? (
-							<div className="bg-slate-700/30 border border-slate-600 rounded-lg overflow-hidden">
+							<div className="glass-panel premium-border rounded-2xl overflow-hidden premium-shadow">
 								<div className="overflow-x-auto">
-									<table className="min-w-full divide-y divide-slate-600">
-										<thead className="bg-slate-700">
-											<tr>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Fecha
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Tipo
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Cantidad
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Almacén
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Proyecto
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Realizado por
-												</th>
-												<th className="px-4 py-3 text-left text-xs font-medium text-slate-200 uppercase">
-													Stock Después
-												</th>
+									<table className="min-w-full divide-y divide-white/5">
+										<thead>
+											<tr className="bg-slate-800/40">
+												<th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Cronología</th>
+												<th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Procedimiento</th>
+												<th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Magnitud</th>
+												<th className="px-6 py-4 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest">Balance Final</th>
 											</tr>
 										</thead>
-										<tbody className="bg-slate-800/50 divide-y divide-slate-700">
+										<tbody className="divide-y divide-white/5 bg-slate-900/10">
 											{movements.map((movement) => {
 												const isNegative = movement.movement_type === 'entrega' || movement.movement_type === 'ajuste_negativo';
 												return (
-													<tr key={movement.id} className="hover:bg-slate-700/50 transition-colors">
-														<td className="px-4 py-3 text-sm text-slate-100 whitespace-nowrap">
-															{formatDate(movement.created_at)}
+													<tr key={movement.id} className="group hover:bg-white/5 transition-all duration-300">
+														<td className="px-6 py-4">
+															<div className="flex flex-col">
+																<span className="text-xs font-bold text-slate-200 uppercase tracking-tight">{formatDate(movement.created_at).split(',')[0]}</span>
+																<span className="text-[10px] font-bold text-slate-600 uppercase">{formatDate(movement.created_at).split(',')[1]}</span>
+															</div>
 														</td>
-														<td className="px-4 py-3 text-sm">
-															<span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-																movement.movement_type === 'ingreso'
-																	? 'bg-green-900/50 text-green-300 border border-green-700'
-																	: movement.movement_type === 'entrega'
-																	? 'bg-blue-900/50 text-blue-300 border border-blue-700'
-																	: 'bg-red-900/50 text-red-300 border border-red-700'
-															}`}>
+														<td className="px-6 py-4">
+															<span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-widest ${movement.movement_type === 'ingreso'
+																? 'text-emerald-500 bg-emerald-500/10'
+																: movement.movement_type === 'entrega'
+																	? 'text-blue-500 bg-blue-500/10'
+																	: 'text-rose-500 bg-rose-500/10'
+																}`}>
+																<div className={`w-1 h-1 rounded-full ${movement.movement_type === 'ingreso' ? 'bg-emerald-500' :
+																	movement.movement_type === 'entrega' ? 'bg-blue-500' : 'bg-rose-500'
+																	}`} />
 																{formatMovementType(movement.movement_type)}
 															</span>
 														</td>
-														<td className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${
-															isNegative ? 'text-red-400' : 'text-green-400'
-														}`}>
-															{isNegative ? '-' : '+'}{movement.quantity.toLocaleString()} {material.unit}
+														<td className="px-6 py-4">
+															<div className="flex items-center gap-1">
+																{isNegative ? (
+																	<ArrowDownRight className="h-3.5 w-3.5 text-rose-500" />
+																) : (
+																	<ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+																)}
+																<span className={`text-sm font-black ${isNegative ? 'text-rose-400' : 'text-emerald-400'}`}>
+																	{movement.quantity.toLocaleString()}
+																</span>
+																<span className="text-[10px] font-bold text-slate-600 uppercase">{material.unit}</span>
+															</div>
 														</td>
-														<td className="px-4 py-3 text-sm text-slate-300">
-															{movement.warehouse_name || '-'}
-														</td>
-														<td className="px-4 py-3 text-sm text-slate-300">
-															{movement.project_name || '-'}
-														</td>
-														<td className="px-4 py-3 text-sm text-slate-300">
-															{movement.delivered_by_name || '-'}
-														</td>
-														<td className="px-4 py-3 text-sm font-medium text-slate-100">
-															{movement.stock_after.toLocaleString()} {material.unit}
+														<td className="px-6 py-4">
+															<div className="flex items-baseline gap-1">
+																<span className="text-sm font-bold text-slate-200">{movement.stock_after.toLocaleString()}</span>
+																<span className="text-[10px] font-bold text-slate-600 uppercase">{material.unit}</span>
+															</div>
 														</td>
 													</tr>
 												);
@@ -378,22 +405,17 @@ export function MaterialDetailModal({ open, onClose, material }: MaterialDetailM
 								</div>
 							</div>
 						) : (
-							<div className="bg-slate-700/30 border border-slate-600 rounded-lg p-4">
-								<p className="text-sm text-slate-300">
-									No hay movimientos registrados para este material.
-								</p>
+							<div className="bg-slate-800/20 border border-white/5 rounded-2xl p-8 text-center">
+								<p className="text-xs font-bold uppercase tracking-widest text-slate-600">Sin historial operativo disponible</p>
 							</div>
 						)}
 					</section>
 
 					{/* Botón de Cerrar */}
-					<div className="flex justify-end pt-4 border-t border-slate-700">
-						<button
-							onClick={onClose}
-							className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-						>
-							Cerrar
-						</button>
+					<div className="flex justify-end pt-6 border-t border-white/5">
+						<Button variant="secondary" onClick={onClose}>
+							Finalizar Consulta
+						</Button>
 					</div>
 				</div>
 			)}

@@ -15,6 +15,7 @@ export interface Tool {
   is_active: boolean
   created_at: string
   updated_at: string
+  project_id: number | null
 }
 
 export interface ToolLoan {
@@ -47,10 +48,40 @@ export function useTools() {
   const fetchTools = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+
+      // Obtener usuario actual y perfil
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      let query = supabase
         .from('tools')
         .select('*')
         .order('created_at', { ascending: false })
+
+      // Si es supervisor, filtrar por proyectos asignados
+      if (profile?.role === 'supervisor') {
+        const { data: assignments } = await supabase
+          .from('user_projects')
+          .select('project_id')
+          .eq('user_id', user.id)
+
+        const projectIds = assignments?.map(a => a.project_id) || []
+
+        if (projectIds.length > 0) {
+          query = query.in('project_id', projectIds)
+        } else {
+          // Si no tiene proyectos asignados, no ve ninguna herramienta
+          query = query.eq('id', -1)
+        }
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       setTools(data || [])

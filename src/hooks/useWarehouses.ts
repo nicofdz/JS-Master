@@ -8,6 +8,11 @@ export interface Warehouse {
   name: string
   code?: string | null
   is_active: boolean
+  project_id?: number | null
+  project?: {
+    id: number
+    name: string
+  } | null
   created_at: string
   updated_at: string
 }
@@ -16,6 +21,7 @@ export interface WarehouseFormData {
   name: string
   code?: string | null
   is_active?: boolean
+  project_id?: number | null
 }
 
 export function useWarehouses() {
@@ -31,7 +37,10 @@ export function useWarehouses() {
 
       let query = supabase
         .from('warehouses')
-        .select('*')
+        .select(`
+          *,
+          projects(id, name)
+        `)
         .order('name', { ascending: true })
 
       if (activeOnly) {
@@ -62,6 +71,7 @@ export function useWarehouses() {
           name: warehouseData.name,
           code: warehouseData.code || null,
           is_active: warehouseData.is_active ?? true,
+          project_id: warehouseData.project_id || null,
         }])
         .select()
         .single()

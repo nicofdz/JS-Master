@@ -43,8 +43,6 @@ export function TaskFormModalV2({
   massCreateData
 }: TaskFormModalV2Props) {
   const { projects, createTask, updateTask, assignWorkerToTask, removeWorkerFromTask, getWorkersForProject, refreshTasks } = useTasksV2()
-  const { templates } = useTaskTemplates()
-
   // Form states
   const [formData, setFormData] = useState({
     task_name: '',
@@ -65,8 +63,9 @@ export function TaskFormModalV2({
 
   // Use hooks with projectId parameter to filter data
   const projectIdForHooks = formData.project_id ? parseInt(formData.project_id) : undefined
+  const { templates } = useTaskTemplates(projectIdForHooks)
   const { towers } = useTowers(projectIdForHooks)
-  const { floors } = useFloors(projectIdForHooks)
+  const { floors } = useFloors(projectIdForHooks, { skipStats: true })
 
   // Cascade states
   const [availableTowers, setAvailableTowers] = useState<any[]>([])
@@ -208,12 +207,12 @@ export function TaskFormModalV2({
     return selectedWorkersData.length > 0 && selectedWorkersData.every(w => w.contract_type === 'por_dia')
   }, [selectedWorkersData])
 
-  // Auto-poner presupuesto en 0 si solo hay trabajadores "por_dia" (solo si NO está permitido mezclar)
+  // Auto-poner presupuesto en 0 si solo hay trabajadores "por_dia"
   useEffect(() => {
-    if (!allowMixedContracts && hasOnlyPorDia && formData.total_budget !== '0') {
+    if (hasOnlyPorDia && formData.total_budget !== '0') {
       setFormData(prev => ({ ...prev, total_budget: '0' }))
     }
-  }, [hasOnlyPorDia, allowMixedContracts])
+  }, [hasOnlyPorDia, formData.total_budget])
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -241,8 +240,17 @@ export function TaskFormModalV2({
           .map((w: any) => w.id)
         setSelectedWorkers(activeWorkers)
 
-        // Cargar timestamps de las asignaciones
+        // Cargar timestamps de las asignaciones y MATERIALES ASOCIADOS
         const timestamps: Record<number, { started_at: string; completed_at: string }> = {}
+        const initialMaterialDeliveries: Record<number, number[]> = {}
+
+        // Fetch assignments with materials for this task
+        if (task.workers.length > 0) {
+          // We need to fetch this async, so we'll do it in a separate effect or just here if possible?
+          // Task object from list might not have materials. We need to fetch them.
+          // For now, let's trigger a load.
+        }
+
         task.workers?.forEach((w: any) => {
           if (w.assignment_id) {
             timestamps[w.assignment_id] = {
@@ -252,6 +260,37 @@ export function TaskFormModalV2({
           }
         })
         setWorkerTimestamps(timestamps)
+
+        // Cargar materiales asociados
+        const loadExistingMaterials = async () => {
+          const workerIds = task.workers.map((w: any) => w.id)
+          // Necesitamos buscar 'task_assignment_materials' para este task_id y estos workers
+          // Como es complicado filtrar por worker indirectamente, mejor buscamos por assignment_id
+          const assignmentIds = task.workers
+            .filter((w: any) => w.assignment_id)
+            .map((w: any) => w.assignment_id)
+
+          if (assignmentIds.length > 0) {
+            const { data: limitMats } = await supabase
+              .from('task_assignment_materials')
+              .select('task_assignment_id, delivery_id')
+              .in('task_assignment_id', assignmentIds)
+
+            if (limitMats) {
+              const newDeliveriesState: Record<number, number[]> = {}
+              limitMats.forEach((m: any) => {
+                // Buscar worker_id para este assignment_id
+                const worker = task.workers.find((w: any) => w.assignment_id === m.task_assignment_id)
+                if (worker) {
+                  if (!newDeliveriesState[worker.id]) newDeliveriesState[worker.id] = []
+                  newDeliveriesState[worker.id].push(m.delivery_id)
+                }
+              })
+              setWorkerMaterialDeliveries(newDeliveriesState)
+            }
+          }
+        }
+        loadExistingMaterials()
       }
 
       // Load cascade data
@@ -554,7 +593,8 @@ export function TaskFormModalV2({
       task_category: template.category || '',
       priority: template.priority || 'medium',
       task_description: template.description || '',
-      estimated_hours: template.estimated_hours?.toString() || ''
+      estimated_hours: template.estimated_hours?.toString() || '',
+      total_budget: template.total_budget ? template.total_budget.toString() : '0'
     }))
     setSelectedTemplateId(templateId)
   }
@@ -581,8 +621,9 @@ export function TaskFormModalV2({
         `)
         .eq('worker_id', workerId)
         .eq('movement_type', 'entrega')
+        .eq('consumed', false) // Only show materials that haven't been consumed yet
         .order('created_at', { ascending: false })
-        .limit(10)
+        .limit(20) // Increased limit to see more available materials
 
       if (error) throw error
 
@@ -812,27 +853,53 @@ export function TaskFormModalV2({
             for (const workerId of selectedWorkers) {
               await assignWorkerToTask(taskId, workerId)
 
-              const { data: assignment } = await supabase
-                .from('task_assignments')
-                .select('id')
-                .eq('task_id', taskId)
-                .eq('worker_id', workerId)
-                .eq('is_deleted', false)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single()
+              // Intentar obtener la asignación con retries para asegurar consistencia tras el RPC
+              let assignment = null
+              let retries = 3
+              while (!assignment && retries > 0) {
+                const { data } = await supabase
+                  .from('task_assignments')
+                  .select('id')
+                  .eq('task_id', taskId)
+                  .eq('worker_id', workerId)
+                  .eq('is_deleted', false)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .single()
+
+                if (data) {
+                  assignment = data
+                } else {
+                  await new Promise(resolve => setTimeout(resolve, 300))
+                  retries--
+                }
+              }
 
               const deliveryIds = workerMaterialDeliveries[workerId] || []
-              if (deliveryIds.length > 0 && assignment?.id) {
+
+              if (assignment?.id) {
                 try {
-                  const materialInserts = deliveryIds.map(deliveryId => ({
-                    task_assignment_id: assignment.id,
-                    delivery_id: deliveryId
-                  }))
-                  await supabase.from('task_assignment_materials').insert(materialInserts)
+                  // 1. PRIMERO: Eliminar TODAS las asociaciones de materiales existentes para esta asignación
+                  // Esto asegura que "desmarcar" funcione y previene duplicados
+                  await supabase
+                    .from('task_assignment_materials')
+                    .delete()
+                    .eq('task_assignment_id', assignment.id)
+
+                  // 2. SEGUNDO: Insertar solo las seleccionadas (si hay)
+                  if (deliveryIds.length > 0) {
+                    const materialInserts = deliveryIds.map(deliveryId => ({
+                      task_assignment_id: assignment.id,
+                      delivery_id: deliveryId
+                    }))
+                    await supabase.from('task_assignment_materials').insert(materialInserts)
+                  }
                 } catch (err) {
                   console.error('Error linking material deliveries:', err)
                 }
+              } else {
+                console.error('Could not find assignment for worker', workerId)
+                toast.error('Advertencia: No se pudieron sincronizar los materiales del trabajador. Intente editar la tarea nuevamente.')
               }
             }
           }
@@ -895,9 +962,16 @@ export function TaskFormModalV2({
           <select
             value={selectedTemplateId}
             onChange={(e) => handleTemplateSelect(e.target.value)}
-            className="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+            disabled={!formData.project_id || templates.length === 0}
+            className="bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">-- Seleccionar Plantilla --</option>
+            <option value="">
+              {!formData.project_id
+                ? '-- Seleccionar Proyecto --'
+                : templates.length === 0
+                  ? '-- Sin Plantillas --'
+                  : '-- Seleccionar Plantilla --'}
+            </option>
             {templates.map(t => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -906,6 +980,74 @@ export function TaskFormModalV2({
       ) : null}
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Location Selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+          <div className="col-span-1 sm:col-span-2 md:col-span-4 mb-2">
+            <h3 className="text-sm font-medium text-slate-200 flex items-center gap-2">
+              <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+              Ubicación
+            </h3>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Proyecto</label>
+            <select
+              value={formData.project_id}
+              onChange={(e) => handleProjectChange(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Seleccionar...</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Torre</label>
+            <select
+              value={formData.tower_id}
+              onChange={(e) => handleTowerChange(e.target.value)}
+              disabled={!formData.project_id || loadingTowers}
+              className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <option value="">Seleccionar...</option>
+              {availableTowers.map(t => (
+                <option key={t.id} value={t.id}>{t.tower_number}</option>
+              ))}
+            </select>
+          </div>
+          {!isMassCreate && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Piso</label>
+                <select
+                  value={formData.floor_id}
+                  onChange={(e) => handleFloorChange(e.target.value)}
+                  disabled={!formData.tower_id || loadingFloors}
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  <option value="">Seleccionar...</option>
+                  {availableFloors.map(f => (
+                    <option key={f.id} value={f.id}>{f.floor_number}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Depto</label>
+                <select
+                  value={formData.apartment_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, apartment_id: e.target.value }))}
+                  disabled={!formData.floor_id || loadingApartments}
+                  className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  <option value="">Seleccionar (Opcional)...</option>
+                  {availableApartments.map(apt => (
+                    <option key={apt.id} value={apt.id}>{apt.apartment_number}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+        </div>
         {/* Mobile Template Selector */}
         {mode === 'create' && (
           <div className="sm:hidden space-y-2">
@@ -913,9 +1055,16 @@ export function TaskFormModalV2({
             <select
               value={selectedTemplateId}
               onChange={(e) => handleTemplateSelect(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!formData.project_id || templates.length === 0}
+              className="w-full bg-slate-700 border border-slate-600 text-slate-200 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">-- Seleccionar Plantilla --</option>
+              <option value="">
+                {!formData.project_id
+                  ? '-- Seleccionar Proyecto --'
+                  : templates.length === 0
+                    ? '-- Sin Plantillas --'
+                    : '-- Seleccionar Plantilla --'}
+              </option>
               {templates.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
@@ -1025,68 +1174,7 @@ export function TaskFormModalV2({
           </div>
         </div>
 
-        {/* Location Selection */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Proyecto</label>
-            <select
-              value={formData.project_id}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Seleccionar...</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">Torre</label>
-            <select
-              value={formData.tower_id}
-              onChange={(e) => handleTowerChange(e.target.value)}
-              disabled={!formData.project_id || loadingTowers}
-              className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              <option value="">Seleccionar...</option>
-              {availableTowers.map(t => (
-                <option key={t.id} value={t.id}>{t.tower_number}</option>
-              ))}
-            </select>
-          </div>
-          {!isMassCreate && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Piso</label>
-                <select
-                  value={formData.floor_id}
-                  onChange={(e) => handleFloorChange(e.target.value)}
-                  disabled={!formData.tower_id || loadingFloors}
-                  className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <option value="">Seleccionar...</option>
-                  {availableFloors.map(f => (
-                    <option key={f.id} value={f.id}>{f.floor_number}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Depto</label>
-                <select
-                  value={formData.apartment_id}
-                  onChange={(e) => setFormData(prev => ({ ...prev, apartment_id: e.target.value }))}
-                  disabled={!formData.floor_id || loadingApartments}
-                  className="w-full px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <option value="">Seleccionar (Opcional)...</option>
-                  {availableApartments.map(apt => (
-                    <option key={apt.id} value={apt.id}>{apt.apartment_number}</option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-        </div>
+
 
         {/* Worker Assignment Section - UPDATED & STANDARDIZED */}
         <div className="border border-slate-700 rounded-md overflow-hidden bg-slate-800/50">
@@ -1253,18 +1341,38 @@ export function TaskFormModalV2({
                                     </div>
                                   ) : workerDeliveries[worker.id] && workerDeliveries[worker.id].length > 0 ? (
                                     <div className="space-y-2">
-                                      {workerDeliveries[worker.id].map((delivery: any) => (
-                                        <div key={delivery.id} className="text-xs flex justify-between items-start border-b border-slate-800 pb-2 last:border-0 last:pb-0">
-                                          <div>
-                                            <div className="text-slate-300 font-medium">{delivery.materials?.name}</div>
-                                            <div className="text-slate-500">{new Date(delivery.created_at).toLocaleDateString()}</div>
+                                      {workerDeliveries[worker.id].map((delivery: any) => {
+                                        const isDeliverySelected = (workerMaterialDeliveries[worker.id] || []).includes(delivery.id)
+                                        return (
+                                          <div key={delivery.id} className="text-xs flex items-start gap-2 border-b border-slate-800 pb-2 last:border-0 last:pb-0">
+                                            <input
+                                              type="checkbox"
+                                              checked={isDeliverySelected}
+                                              onChange={(e) => {
+                                                const checked = e.target.checked
+                                                setWorkerMaterialDeliveries(prev => {
+                                                  const currentList = prev[worker.id] || []
+                                                  const newList = checked
+                                                    ? [...currentList, delivery.id]
+                                                    : currentList.filter(id => id !== delivery.id)
+                                                  return { ...prev, [worker.id]: newList }
+                                                })
+                                              }}
+                                              className="mt-1 w-3 h-3 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-offset-0 focus:ring-1 focus:ring-blue-500"
+                                            />
+                                            <div className="flex-1 flex justify-between items-start">
+                                              <div>
+                                                <div className="text-slate-300 font-medium">{delivery.materials?.name}</div>
+                                                <div className="text-slate-500">{new Date(delivery.created_at).toLocaleDateString()}</div>
+                                              </div>
+                                              <div className="text-right">
+                                                <div className="text-slate-300">{delivery.quantity} {delivery.materials?.unit}</div>
+                                                <div className="text-slate-500">${delivery.total_cost?.toLocaleString()}</div>
+                                              </div>
+                                            </div>
                                           </div>
-                                          <div className="text-right">
-                                            <div className="text-slate-300">{delivery.quantity} {delivery.materials?.unit}</div>
-                                            <div className="text-slate-500">${delivery.total_cost?.toLocaleString()}</div>
-                                          </div>
-                                        </div>
-                                      ))}
+                                        )
+                                      })}
                                     </div>
                                   ) : (
                                     <p className="text-xs text-slate-500 italic">No hay entregas registradas para este trabajador</p>
@@ -1331,8 +1439,9 @@ export function TaskFormModalV2({
                 type="number"
                 value={formData.total_budget}
                 onChange={(e) => setFormData(prev => ({ ...prev, total_budget: e.target.value }))}
-                className="w-full pl-6 px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-6 px-3 py-2 border border-slate-600 bg-slate-700 text-slate-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="0"
+                disabled={hasOnlyPorDia}
               />
             </div>
           </div>

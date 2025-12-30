@@ -16,8 +16,13 @@ export interface Material {
     id: number
     name: string
   } | null
+  project?: {
+    id: number
+    name: string
+  } | null
   notes?: string | null
   is_active: boolean
+  project_id?: number | null
   created_at: string
   updated_at: string
 }
@@ -40,6 +45,7 @@ export interface MaterialFormData {
   default_warehouse_id?: number | null
   notes?: string | null
   is_active?: boolean
+  project_id?: number | null
 }
 
 export interface MaterialFilters {
@@ -67,7 +73,8 @@ export function useMaterials(filters?: MaterialFilters) {
         .from('materials')
         .select(`
           *,
-          warehouses!default_warehouse_id(id, name)
+          warehouses!default_warehouse_id(id, name),
+          projects(id, name)
         `)
         .order('created_at', { ascending: false })
 
@@ -86,24 +93,56 @@ export function useMaterials(filters?: MaterialFilters) {
         query = query.eq('is_active', true)
       }
 
+      // Obtener usuario actual y perfil para filtrado por rol
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        // Si es supervisor, filtrar por proyectos asignados
+        if (profile?.role === 'supervisor') {
+          const { data: assignments } = await supabase
+            .from('user_projects')
+            .select('project_id')
+            .eq('user_id', user.id)
+
+          const projectIds = assignments?.map(a => a.project_id) || []
+
+          if (projectIds.length > 0) {
+            query = query.in('project_id', projectIds)
+          } else {
+            // Si no tiene proyectos asignados, no ve ningÃºn material
+            query = query.eq('id', -1)
+          }
+        }
+      }
+
       const { data, error } = await query
 
       if (error) throw error
 
-      // Formatear datos con relación a warehouses
+      // Formatear datos con relación a warehouses y projects
       let filteredData = (data || []).map((material: any) => ({
         ...material,
         default_warehouse: material.warehouses ? {
           id: material.warehouses.id,
           name: material.warehouses.name,
         } : null,
+        project: material.projects ? {
+          id: material.projects.id,
+          name: material.projects.name,
+        } : null
       }))
 
       // Filtro de stock bajo (necesita verificar stock)
       if (activeFilters?.lowStockOnly && filteredData.length > 0) {
         // Primero cargar stock para estos materiales
         const materialIds = filteredData.map(m => m.id)
-        
+
         const { data: stockDataResponse, error: stockError } = await supabase
           .from('material_stock_by_warehouse')
           .select(`
@@ -210,6 +249,7 @@ export function useMaterials(filters?: MaterialFilters) {
           default_warehouse_id: materialData.default_warehouse_id || null,
           notes: materialData.notes || null,
           is_active: materialData.is_active ?? true,
+          project_id: materialData.project_id || null,
         }])
         .select(`
           *,

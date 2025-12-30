@@ -7,6 +7,7 @@ export interface ApartmentTemplate {
   id: number
   project_id: number
   name: string
+  apartment_code?: string | null
   apartment_type: string
   status: string
   area: number | null
@@ -58,6 +59,7 @@ export function useApartmentTemplates(projectId?: number) {
   const createTemplate = async (data: {
     project_id: number
     name: string
+    apartment_code?: string | null
     apartment_type?: string
     status?: string
     area?: number | null
@@ -73,6 +75,7 @@ export function useApartmentTemplates(projectId?: number) {
         .insert({
           project_id: data.project_id,
           name: data.name,
+          apartment_code: data.apartment_code || null,
           apartment_type: data.apartment_type || 'Departamento',
           status: data.status || 'pending',
           area: data.area || null,
@@ -87,7 +90,7 @@ export function useApartmentTemplates(projectId?: number) {
 
       if (createError) throw createError
 
-      setTemplates(prev => [...prev, newTemplate].sort((a, b) => 
+      setTemplates(prev => [...prev, newTemplate].sort((a, b) =>
         a.name.localeCompare(b.name)
       ))
 
@@ -100,6 +103,7 @@ export function useApartmentTemplates(projectId?: number) {
 
   const updateTemplate = async (id: number, data: {
     name?: string
+    apartment_code?: string | null
     apartment_type?: string
     status?: string
     area?: number | null
@@ -122,7 +126,7 @@ export function useApartmentTemplates(projectId?: number) {
 
       if (updateError) throw updateError
 
-      setTemplates(prev => 
+      setTemplates(prev =>
         prev.map(t => t.id === id ? updatedTemplate : t)
           .sort((a, b) => a.name.localeCompare(b.name))
       )

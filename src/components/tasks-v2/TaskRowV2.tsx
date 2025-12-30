@@ -143,6 +143,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
   const [manualDurationMinutes, setManualDurationMinutes] = useState('')
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
   const durationInputRef = useRef<HTMLDivElement>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDurationClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -215,6 +216,7 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
 
   const handleDelete = async () => {
     try {
+      setIsDeleting(true)
       await deleteTask(task.id, deleteReason.trim() || 'Eliminada por usuario')
       toast.success('Tarea eliminada exitosamente')
       setShowDeleteConfirm(false)
@@ -226,6 +228,8 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
       }
     } catch (err: any) {
       toast.error(`Error al eliminar tarea: ${err.message || 'Error desconocido'}`)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -603,43 +607,60 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
             ? 'md:col-span-2'
             : 'md:col-span-3'
           } mb-2 md:mb-0`}>
-          {task.workers.length === 1 ? (
-            // Si hay 1 trabajador: mostrar nombre completo
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold shadow-sm flex-shrink-0">
-                {task.workers[0].full_name?.charAt(0) || '?'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-gray-900 truncate">
-                  {task.workers[0].full_name || 'Sin nombre'}
+          {(() => {
+            // Filtrar trabajadores removidos
+            const activeWorkers = task.workers.filter((w: any) => w.assignment_status !== 'removed')
+
+            if (activeWorkers.length === 0) {
+              return (
+                <div className="text-sm text-gray-500 italic">
+                  Sin trabajadores asignados
                 </div>
-                <div className="text-xs text-gray-500">1 trabajador</div>
-              </div>
-            </div>
-          ) : (
+              )
+            }
+
+            if (activeWorkers.length === 1) {
+              // Si hay 1 trabajador: mostrar nombre completo
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold shadow-sm flex-shrink-0">
+                    {activeWorkers[0].full_name?.charAt(0) || '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-gray-900 truncate">
+                      {activeWorkers[0].full_name || 'Sin nombre'}
+                    </div>
+                    <div className="text-xs text-gray-500">1 trabajador</div>
+                  </div>
+                </div>
+              )
+            }
+
             // Si hay más de 1: mostrar círculos con iniciales
-            <>
-              <div className="flex items-center gap-1">
-                {task.workers.slice(0, 3).map((worker, index) => (
-                  <div
-                    key={`${task.id}-${worker.assignment_id || worker.id}-${index}`}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold shadow-sm"
-                    title={worker.full_name || 'Sin nombre'}
-                  >
-                    {worker.full_name?.charAt(0) || '?'}
-                  </div>
-                ))}
-                {task.workers.length > 3 && (
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-semibold">
-                    +{task.workers.length - 3}
-                  </div>
-                )}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {task.workers.length} trabajadores
-              </div>
-            </>
-          )}
+            return (
+              <>
+                <div className="flex items-center gap-1">
+                  {activeWorkers.slice(0, 3).map((worker, index) => (
+                    <div
+                      key={`${task.id}-${worker.assignment_id || worker.id}-${index}`}
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold shadow-sm"
+                      title={worker.full_name || 'Sin nombre'}
+                    >
+                      {worker.full_name?.charAt(0) || '?'}
+                    </div>
+                  ))}
+                  {activeWorkers.length > 3 && (
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs font-semibold">
+                      +{activeWorkers.length - 3}
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {activeWorkers.length} trabajador{activeWorkers.length !== 1 ? 'es' : ''}
+                </div>
+              </>
+            )
+          })()}
         </div>
 
         {/* Presupuesto y Estado de Pago */}
@@ -1178,15 +1199,24 @@ export function TaskRowV2({ task, isExpanded, onToggleExpand, onTaskUpdate }: Ta
                 setDeleteReason('')
                 setShowReasonInput(false)
               }}
-              className="px-6 py-2 text-sm font-medium text-slate-100 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-md transition-colors"
+              disabled={isDeleting}
+              className="px-6 py-2 text-sm font-medium text-slate-100 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-md transition-colors disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               onClick={handleDelete}
-              className="px-6 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+              disabled={isDeleting}
+              className="px-6 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-              Eliminar
+              {isDeleting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                'Eliminar'
+              )}
             </button>
           </div>
         </div>

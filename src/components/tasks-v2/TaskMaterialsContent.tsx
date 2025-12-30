@@ -24,7 +24,8 @@ interface MaterialDelivery {
   worker_name: string
   date: string
   notes?: string
-  is_linked: boolean // Nuevo campo para diferenciar
+  is_linked: boolean
+  consumed: boolean // Nuevo campo agregado explícitamente
 }
 
 export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
@@ -77,6 +78,8 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
           unit_cost,
           total_cost,
           worker_id,
+          consumed,
+          movement_type,
           created_at,
           materials!inner(
             name,
@@ -135,17 +138,45 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
           worker_name: (Array.isArray(delivery.workers) && delivery.workers.length > 0 ? delivery.workers[0]?.full_name : (delivery.workers as any)?.full_name) || 'Sin nombre',
           date: delivery.created_at,
           notes: association?.notes,
-          is_linked: isLinked
+          is_linked: isLinked,
+          consumed: delivery.consumed || false
         }
       })
 
-      setMaterials(materialsData)
+      // 5. FILTRAR para mostrar SOLO materiales explícitamente asociados
+      const linkedMaterials = materialsData.filter(m => m.is_linked)
+
+      setMaterials(linkedMaterials)
     } catch (err: any) {
       console.error('Error loading materials:', err)
       toast.error(`Error al cargar materiales: ${err.message}`)
       setMaterials([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleMarkAsUsed = async (deliveryId: number) => {
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError) throw userError
+
+      const { error } = await supabase
+        .from('material_movements')
+        .update({
+          consumed: true,
+          consumed_at: new Date().toISOString(),
+          consumed_by: user?.id
+        })
+        .eq('id', deliveryId)
+
+      if (error) throw error
+
+      toast.success('Material marcado como usado')
+      loadMaterials() // Recargar para actualizar UI
+    } catch (err: any) {
+      console.error('Error marking as used:', err)
+      toast.error('Error al actualizar estado')
     }
   }
 
@@ -206,10 +237,18 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {materials.map((material) => (
-              <div key={material.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div key={material.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative">
+                {material.consumed && (
+                  <div className="absolute top-3 right-3">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      Usado
+                    </span>
+                  </div>
+                )}
                 <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs font-medium text-blue-600">Entrega #{material.delivery_id}</span>
+                    <span className="text-xs text-gray-400">•</span>
                     <span className="text-xs text-gray-500">{formatDate(material.date)}</span>
                   </div>
                 </div>
@@ -244,16 +283,27 @@ export function TaskMaterialsContent({ task }: TaskMaterialsContentProps) {
                   )}
                 </div>
                 <div className="mt-3 flex gap-2">
+                  {/* Mark as Used Button - Only if not consumed */}
+                  {!material.consumed && (
+                    <button
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors"
+                      onClick={() => handleMarkAsUsed(material.delivery_id)}
+                    >
+                      Marcar Usado
+                    </button>
+                  )}
+
                   <button
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                    className={`${!material.consumed ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors`}
                     onClick={() => {
                       setSelectedDeliveryId(material.delivery_id)
                       setShowDeliveryModal(true)
                     }}
                   >
                     <Eye className="w-3 h-3" />
-                    Ver Detalles
+                    {!material.consumed ? 'Detalles' : 'Ver Detalles'}
                   </button>
+
                   {material.is_linked && (
                     <button
                       className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors"

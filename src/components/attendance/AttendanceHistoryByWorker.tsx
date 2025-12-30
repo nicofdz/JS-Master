@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Card } from '@/components/ui/Card'
-import { ChevronLeft, ChevronRight, ChevronDown, Calendar, CheckCircle2, XCircle, Clock, Search, Users, UserCheck, UserX, FileText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, Calendar, CheckCircle2, XCircle, Clock, Search, Users, UserCheck, UserX, FileText, Briefcase } from 'lucide-react'
 import type { Contract } from '@/hooks/useContracts'
 import { WorkerReportModal } from './WorkerReportModal'
 import { GeneralReportModal } from './GeneralReportModal'
@@ -45,6 +45,8 @@ interface AttendanceHistoryByWorkerProps {
   onProjectChange: (projectId: number | null) => void
   onMonthChange: (year: number, month: number) => void
   onRefresh?: () => void
+  contractTypeFilter?: string
+  userRole: string | null
 }
 
 export function AttendanceHistoryByWorker({
@@ -55,7 +57,9 @@ export function AttendanceHistoryByWorker({
   selectedProjectId,
   onProjectChange,
   onMonthChange,
-  onRefresh
+  onRefresh,
+  contractTypeFilter = 'all',
+  userRole
 }: AttendanceHistoryByWorkerProps) {
   const currentDate = new Date()
   const [expandedWorker, setExpandedWorker] = useState<number | null>(null)
@@ -145,6 +149,14 @@ export function AttendanceHistoryByWorker({
         w.full_name.toLowerCase().includes(search) ||
         w.rut.toLowerCase().includes(search)
       )
+    }
+
+    // Filtrar por tipo de contrato
+    if (contractTypeFilter !== 'all') {
+      filtered = filtered.filter(w => {
+        const workerContracts = contracts.filter(c => c.worker_id === w.id)
+        return workerContracts.some(c => c.contract_type === contractTypeFilter)
+      })
     }
 
     // Separar activos e inactivos para ordenar
@@ -324,88 +336,69 @@ export function AttendanceHistoryByWorker({
 
       {/* Lista de trabajadores con estadísticas */}
       <div className="space-y-3">
-        {workersWithContracts.map(worker => {
-          const workerContracts = contractsByWorker[worker.id] || {}
-          const workerAttendances = attendances.filter(a => a.worker_id === worker.id)
+        {
+          workersWithContracts.map(worker => {
+            const workerContracts = contractsByWorker[worker.id] || {}
+            const workerAttendances = attendances.filter(a => a.worker_id === worker.id)
 
-          // Filtrar por proyecto si está seleccionado
-          const projectsToShow = selectedProjectId
-            ? Object.keys(workerContracts).filter(pid => parseInt(pid) === selectedProjectId)
-            : Object.keys(workerContracts)
+            // Filtrar por proyecto si está seleccionado
+            const projectsToShow = selectedProjectId
+              ? Object.keys(workerContracts).filter(pid => parseInt(pid) === selectedProjectId)
+              : Object.keys(workerContracts)
 
-          if (projectsToShow.length === 0) return null
+            if (projectsToShow.length === 0) return null
 
-          const isExpanded = expandedWorker === worker.id
+            const isExpanded = expandedWorker === worker.id
 
-          // Calcular estadísticas globales del trabajador en el mes
-          const totalPresent = workerAttendances.filter(a => a.is_present).length
-          const totalEarlyDepartures = workerAttendances.filter(a => a.early_departure).length
-          const totalOvertime = workerAttendances.filter(a => a.is_overtime).length
-          const totalHours = workerAttendances
-            .filter(a => a.is_present && a.hours_worked)
-            .reduce((sum, a) => sum + (a.hours_worked || 0), 0)
+            // Calcular estadísticas globales del trabajador en el mes
+            const totalPresent = workerAttendances.filter(a => a.is_present).length
+            const totalEarlyDepartures = workerAttendances.filter(a => a.early_departure).length
+            const totalOvertime = workerAttendances.filter(a => a.is_overtime).length
+            const totalHours = workerAttendances
+              .filter(a => a.is_present && a.hours_worked)
+              .reduce((sum, a) => sum + (a.hours_worked || 0), 0)
 
-          return (
-            <Card key={worker.id} className="relative bg-slate-800/50 border-slate-700 overflow-hidden">
-              {/* Header del trabajador - Clickeable */}
-              <button
-                onClick={() => setExpandedWorker(isExpanded ? null : worker.id)}
-                className="w-full p-4 text-left hover:bg-slate-700/30 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-100">
-                        {worker.full_name}
-                      </h3>
-                      {!worker.is_active && (
-                        <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-400">
-                          Inactivo
-                        </span>
-                      )}
-                      <ChevronDown
-                        className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''
-                          }`}
-                      />
-                    </div>
-                    <p className="text-sm text-slate-400 mb-3">{worker.rut}</p>
+            // Obtener tipos de contrato únicos del trabajador (filtrado por proyectos visibles)
+            const visibleContracts = Object.entries(workerContracts)
+              .filter(([pid]) => projectsToShow.includes(pid))
+              .flatMap(([, contracts]) => contracts)
 
-                    {/* Estadísticas del mes */}
-                    <div className="flex items-center gap-6 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span className="text-sm text-slate-300">
-                          <span className="font-semibold text-emerald-400">{totalPresent}</span> días
-                        </span>
-                      </div>
+            const uniqueContractTypes = Array.from(new Set(visibleContracts.map(c => c.contract_type)))
 
-                      {totalHours > 0 && (
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-blue-400" />
-                          <span className="text-sm text-slate-300">
-                            <span className="font-semibold text-blue-400">{Math.round(totalHours)}</span> horas
+            return (
+              <Card key={worker.id} className="relative bg-slate-800/50 border-slate-700 overflow-hidden">
+                {/* Header del trabajador - Clickeable */}
+                <button
+                  onClick={() => setExpandedWorker(isExpanded ? null : worker.id)}
+                  className="w-full p-4 text-left hover:bg-slate-700/30 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-slate-100">
+                          {worker.full_name}
+                        </h3>
+                        {!worker.is_active && (
+                          <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-400">
+                            Inactivo
                           </span>
-                        </div>
-                      )}
+                        )}
 
-                      {totalEarlyDepartures > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs px-2 py-1 rounded bg-yellow-900/30 text-yellow-400">
-                            ⚠️ {totalEarlyDepartures} salidas tempranas
+                        {/* Tipos de contrato */}
+                        {uniqueContractTypes.map(type => (
+                          <span
+                            key={type}
+                            className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${type === 'por_dia'
+                              ? 'bg-purple-900/30 text-purple-400 border border-purple-700'
+                              : 'bg-amber-900/30 text-amber-400 border border-amber-700'
+                              }`}
+                          >
+                            <Briefcase className="w-3 h-3" />
+                            {type === 'por_dia' ? 'Por día' : 'A trato'}
                           </span>
-                        </div>
-                      )}
+                        ))}
 
-                      {totalOvertime > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-400">
-                            ⏰ {totalOvertime} días con extras
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Proyectos donde trabajó */}
-                      <div className="flex items-center gap-2 flex-wrap max-w-md">
+                        {/* Proyectos donde trabajó */}
                         {projectsToShow.map(projectId => {
                           const project = projects.find(p => p.id === parseInt(projectId))
                           return (
@@ -418,314 +411,405 @@ export function AttendanceHistoryByWorker({
                             </span>
                           )
                         })}
+
+                        <ChevronDown
+                          className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''
+                            }`}
+                        />
+                      </div>
+                      <p className="text-sm text-slate-400 mb-3">{worker.rut}</p>
+
+                      {/* Estadísticas del mes */}
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span className="text-sm text-slate-300">
+                            <span className="font-semibold text-emerald-400">{totalPresent}</span> días
+                          </span>
+                        </div>
+
+                        {totalHours > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-blue-400" />
+                            <span className="text-sm text-slate-300">
+                              <span className="font-semibold text-blue-400">{Math.round(totalHours)}</span> horas
+                            </span>
+                          </div>
+                        )}
+
+                        {totalEarlyDepartures > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-1 rounded bg-yellow-900/30 text-yellow-400">
+                              ⚠️ {totalEarlyDepartures} salidas tempranas
+                            </span>
+                          </div>
+                        )}
+
+                        {totalOvertime > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-400">
+                              ⏰ {totalOvertime} días con extras
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
+
+                    {/* Botón de reporte individual */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setReportWorkerId(worker.id)
+                        setShowReportModal(true)
+                      }}
+                      className="flex-shrink-0 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2 text-sm font-medium"
+                      title="Generar reporte de asistencia del trabajador"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="hidden sm:inline">Generar Reporte</span>
+                    </button>
                   </div>
-                </div>
-              </button>
+                </button>
 
 
 
-              {/* Calendarios (solo visible si está expandido) */}
-              {isExpanded && (
-                <div className="px-4 pb-4 border-t border-slate-700">
-                  {/* Calendarios por proyecto */}
-                  <div className="mt-4 space-y-6">
-                    {projectsToShow.map(projectId => {
-                      const projectContracts = workerContracts[parseInt(projectId)]
-                      const project = projects.find(p => p.id === parseInt(projectId))
+                {/* Calendarios (solo visible si está expandido) */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-slate-700">
+                    {/* Calendarios por proyecto */}
+                    <div className="mt-4 space-y-6">
+                      {projectsToShow.map(projectId => {
+                        const projectContracts = workerContracts[parseInt(projectId)]
+                        const project = projects.find(p => p.id === parseInt(projectId))
 
-                      // Obtener mes/año de este trabajador
-                      const { year: workerYear, month: workerMonth } = getWorkerMonth(worker.id)
-                      const daysInMonth = getDaysInMonth(workerYear, workerMonth)
-                      const firstDay = getFirstDayOfMonth(workerYear, workerMonth)
+                        // Obtener mes/año de este trabajador
+                        const { year: workerYear, month: workerMonth } = getWorkerMonth(worker.id)
+                        const daysInMonth = getDaysInMonth(workerYear, workerMonth)
+                        const firstDay = getFirstDayOfMonth(workerYear, workerMonth)
 
-                      const monthName = new Date(workerYear, workerMonth - 1).toLocaleDateString('es-CL', {
-                        month: 'long',
-                        year: 'numeric'
-                      })
+                        const monthName = new Date(workerYear, workerMonth - 1).toLocaleDateString('es-CL', {
+                          month: 'long',
+                          year: 'numeric'
+                        })
 
-                      // Filtrar asistencias de este proyecto y mes
-                      const projectAttendances = workerAttendances.filter(a => {
-                        const contract = projectContracts.find(c => c.id === a.contract_id)
-                        const attendanceDate = new Date(a.attendance_date)
-                        const isInMonth = attendanceDate.getFullYear() === workerYear &&
-                          (attendanceDate.getMonth() + 1) === workerMonth
-                        return contract !== undefined && isInMonth
-                      })
+                        // Filtrar asistencias de este proyecto y mes
+                        const projectAttendances = workerAttendances.filter(a => {
+                          const contract = projectContracts.find(c => c.id === a.contract_id)
+                          const [year, month] = a.attendance_date.split('-').map(Number)
+                          const isInMonth = year === workerYear && month === workerMonth
+                          return contract !== undefined && isInMonth
+                        })
 
-                      // Calcular estadísticas
-                      const daysPresent = projectAttendances.filter(a => a.is_present).length
-                      const attendanceRate = daysInMonth > 0 ? Math.round((daysPresent / daysInMonth) * 100) : 0
+                        // Calcular estadísticas
+                        const daysPresent = projectAttendances.filter(a => a.is_present).length
+                        const attendanceRate = daysInMonth > 0 ? Math.round((daysPresent / daysInMonth) * 100) : 0
 
-                      // Handlers para este trabajador
-                      const handlePrevMonth = () => {
-                        if (workerMonth === 1) {
-                          handleWorkerMonthChange(worker.id, workerYear - 1, 12)
-                        } else {
-                          handleWorkerMonthChange(worker.id, workerYear, workerMonth - 1)
+                        // Handlers para este trabajador
+                        const handlePrevMonth = () => {
+                          if (workerMonth === 1) {
+                            handleWorkerMonthChange(worker.id, workerYear - 1, 12)
+                          } else {
+                            handleWorkerMonthChange(worker.id, workerYear, workerMonth - 1)
+                          }
                         }
-                      }
 
-                      const handleNextMonth = () => {
-                        if (workerMonth === 12) {
-                          handleWorkerMonthChange(worker.id, workerYear + 1, 1)
-                        } else {
-                          handleWorkerMonthChange(worker.id, workerYear, workerMonth + 1)
+                        const handleNextMonth = () => {
+                          if (workerMonth === 12) {
+                            handleWorkerMonthChange(worker.id, workerYear + 1, 1)
+                          } else {
+                            handleWorkerMonthChange(worker.id, workerYear, workerMonth + 1)
+                          }
                         }
-                      }
 
-                      const pickerKey = `${worker.id}-${projectId}`
-                      const isPickerOpen = showMonthPicker === pickerKey
+                        const pickerKey = `${worker.id}-${projectId}`
+                        const isPickerOpen = showMonthPicker === pickerKey
 
-                      // Generar opciones de años (últimos 3 años y próximos 1)
-                      const currentYear = new Date().getFullYear()
-                      const years = Array.from({ length: 5 }, (_, i) => currentYear - 3 + i)
+                        // Generar opciones de años (últimos 3 años y próximos 1)
+                        const currentYear = new Date().getFullYear()
+                        const years = Array.from({ length: 5 }, (_, i) => currentYear - 3 + i)
 
-                      return (
-                        <div key={projectId}>
-                          {/* Nombre del proyecto y selector de mes */}
-                          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                            <h4 className="text-md font-medium text-slate-200">
-                              📍 {project?.name}
-                            </h4>
+                        return (
+                          <div key={projectId}>
+                            {/* Nombre del proyecto y selector de mes */}
+                            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                              <h4 className="text-md font-medium text-slate-200">
+                                📍 {project?.name}
+                              </h4>
 
-                            <div className="flex items-center gap-3">
-                              {/* Selector de mes/año */}
-                              <div className="relative flex items-center gap-2">
-                                <button
-                                  onClick={handlePrevMonth}
-                                  className="p-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
-                                >
-                                  <ChevronLeft className="w-4 h-4 text-slate-300" />
-                                </button>
-
-                                <button
-                                  onClick={() => setShowMonthPicker(isPickerOpen ? null : pickerKey)}
-                                  className="text-sm font-medium text-slate-100 min-w-[140px] text-center capitalize hover:bg-slate-700/50 px-2 py-1 rounded transition-colors"
-                                >
-                                  {monthName}
-                                </button>
-
-                                {/* Dropdown selector */}
-                                {isPickerOpen && (
-                                  <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 p-3 min-w-[200px]">
-                                    <div className="space-y-3">
-                                      {/* Selector de año */}
-                                      <div>
-                                        <label className="block text-xs text-slate-400 mb-1">Año</label>
-                                        <select
-                                          value={workerYear}
-                                          onChange={(e) => {
-                                            handleWorkerMonthChange(worker.id, parseInt(e.target.value), workerMonth)
-                                          }}
-                                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                          {years.map(year => (
-                                            <option key={year} value={year}>{year}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-
-                                      {/* Selector de mes */}
-                                      <div>
-                                        <label className="block text-xs text-slate-400 mb-1">Mes</label>
-                                        <select
-                                          value={workerMonth}
-                                          onChange={(e) => {
-                                            handleWorkerMonthChange(worker.id, workerYear, parseInt(e.target.value))
-                                          }}
-                                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        >
-                                          <option value={1}>Enero</option>
-                                          <option value={2}>Febrero</option>
-                                          <option value={3}>Marzo</option>
-                                          <option value={4}>Abril</option>
-                                          <option value={5}>Mayo</option>
-                                          <option value={6}>Junio</option>
-                                          <option value={7}>Julio</option>
-                                          <option value={8}>Agosto</option>
-                                          <option value={9}>Septiembre</option>
-                                          <option value={10}>Octubre</option>
-                                          <option value={11}>Noviembre</option>
-                                          <option value={12}>Diciembre</option>
-                                        </select>
-                                      </div>
-
-                                      <button
-                                        onClick={() => setShowMonthPicker(null)}
-                                        className="w-full px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                                      >
-                                        Cerrar
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-
-                                <button
-                                  onClick={handleNextMonth}
-                                  className="p-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
-                                >
-                                  <ChevronRight className="w-4 h-4 text-slate-300" />
-                                </button>
-                              </div>
-
-                              {/* Estadísticas */}
-                              <div className="flex items-center gap-3 text-sm">
-                                <span className="text-slate-400">
-                                  {daysPresent}/{daysInMonth}
-                                </span>
-                                <span className={`font-semibold ${attendanceRate >= 80 ? 'text-emerald-400' :
-                                  attendanceRate >= 60 ? 'text-yellow-400' :
-                                    'text-red-400'
-                                  }`}>
-                                  {attendanceRate}%
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Calendario */}
-                          <div className="bg-slate-900/50 rounded-lg p-3 overflow-x-auto">
-                            <div className="grid grid-cols-7 gap-1 min-w-[600px]">
-                              {/* Encabezados de días */}
-                              {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
-                                <div
-                                  key={i}
-                                  className="text-center text-xs font-medium text-slate-500 py-1"
-                                >
-                                  {day}
-                                </div>
-                              ))}
-
-                              {/* Espacios vacíos antes del primer día */}
-                              {Array.from({ length: firstDay }).map((_, i) => (
-                                <div key={`empty-${i}`} className="h-8" />
-                              ))}
-
-                              {/* Días del mes */}
-                              {Array.from({ length: daysInMonth }).map((_, i) => {
-                                const day = i + 1
-                                const dateStr = `${workerYear}-${String(workerMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                                const attendance = projectAttendances.find(a => a.attendance_date === dateStr)
-
-                                // Verificar si tenía contrato activo ese día
-                                const hadContract = projectContracts.some(c => {
-                                  const startDate = new Date(c.fecha_inicio)
-                                  const endDate = c.fecha_termino ? new Date(c.fecha_termino) : new Date('2099-12-31')
-                                  const checkDate = new Date(dateStr)
-                                  return checkDate >= startDate && checkDate <= endDate
-                                })
-
-                                const isWeekend = (firstDay + i) % 7 >= 5
-                                const isPaid = attendance?.is_paid
-
-                                return (
+                              <div className="flex items-center gap-3">
+                                {/* Selector de mes/año */}
+                                <div className="relative flex items-center gap-2">
                                   <button
-                                    key={day}
-                                    onClick={() => handleDayClick(
-                                      dateStr,
-                                      worker.id,
-                                      // Use the contract_id from existing attendance, or the first contract for the project
-                                      attendance?.contract_id || (projectContracts.length > 0 ? projectContracts[0].id : 0),
-                                      worker.full_name,
-                                      attendance
-                                    )}
-                                    disabled={!hadContract || new Date(dateStr) > new Date()} // Disable if no contract or future date
-                                    className={`h-8 w-full flex items-center justify-center text-xs rounded relative group transition-all
-                                      ${!hadContract || new Date(dateStr) > new Date()
-                                        ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
-                                        : 'cursor-pointer hover:ring-2 hover:ring-blue-500'
-                                      }
-                                      ${hadContract && new Date(dateStr) <= new Date()
-                                        ? isWeekend
-                                          ? 'bg-slate-700/30'
-                                          : attendance?.is_present
-                                            ? attendance.early_departure
-                                              ? 'bg-yellow-900/30 border border-yellow-600 text-yellow-300'
-                                              : attendance.is_overtime
-                                                ? 'bg-blue-900/30 border border-blue-600 text-blue-300'
-                                                : 'bg-emerald-900/30 border border-emerald-600 text-emerald-300'
-                                            : 'bg-red-900/20 border border-red-600/50 text-red-400'
-                                        : ''
-                                      }
-                                      ${isPaid ? 'border-b-4 border-b-emerald-500' : ''}`}
-                                    title={
-                                      !hadContract
-                                        ? 'Sin contrato'
-                                        : new Date(dateStr) > new Date()
-                                          ? 'Fecha futura'
-                                          : attendance?.is_present
-                                            ? `Presente: ${attendance.hours_worked?.toFixed(1)}h${isPaid ? ' (Pagado)' : ''}`
-                                            : attendance
-                                              ? 'Ausente'
-                                              : 'Sin registro'
-                                    }
+                                    onClick={handlePrevMonth}
+                                    className="p-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
                                   >
-                                    <span className="font-medium">{day}</span>
-                                    {attendance?.is_present && (
-                                      <span className="absolute top-0 right-0 text-[8px]">
-                                        {attendance.early_departure ? '⚠️' :
-                                          attendance.is_overtime ? '⏰' : '✓'}
-                                      </span>
-                                    )}
+                                    <ChevronLeft className="w-4 h-4 text-slate-300" />
                                   </button>
-                                )
-                              })}
+
+                                  <button
+                                    onClick={() => setShowMonthPicker(isPickerOpen ? null : pickerKey)}
+                                    className="text-sm font-medium text-slate-100 min-w-[140px] text-center capitalize hover:bg-slate-700/50 px-2 py-1 rounded transition-colors"
+                                  >
+                                    {monthName}
+                                  </button>
+
+                                  {/* Dropdown selector */}
+                                  {isPickerOpen && (
+                                    <div className="absolute top-full left-0 mt-2 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 p-3 min-w-[200px]">
+                                      <div className="space-y-3">
+                                        {/* Selector de año */}
+                                        <div>
+                                          <label className="block text-xs text-slate-400 mb-1">Año</label>
+                                          <select
+                                            value={workerYear}
+                                            onChange={(e) => {
+                                              handleWorkerMonthChange(worker.id, parseInt(e.target.value), workerMonth)
+                                            }}
+                                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          >
+                                            {years.map(year => (
+                                              <option key={year} value={year}>{year}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        {/* Selector de mes */}
+                                        <div>
+                                          <label className="block text-xs text-slate-400 mb-1">Mes</label>
+                                          <select
+                                            value={workerMonth}
+                                            onChange={(e) => {
+                                              handleWorkerMonthChange(worker.id, workerYear, parseInt(e.target.value))
+                                            }}
+                                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                          >
+                                            <option value={1}>Enero</option>
+                                            <option value={2}>Febrero</option>
+                                            <option value={3}>Marzo</option>
+                                            <option value={4}>Abril</option>
+                                            <option value={5}>Mayo</option>
+                                            <option value={6}>Junio</option>
+                                            <option value={7}>Julio</option>
+                                            <option value={8}>Agosto</option>
+                                            <option value={9}>Septiembre</option>
+                                            <option value={10}>Octubre</option>
+                                            <option value={11}>Noviembre</option>
+                                            <option value={12}>Diciembre</option>
+                                          </select>
+                                        </div>
+
+                                        <button
+                                          onClick={() => setShowMonthPicker(null)}
+                                          className="w-full px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                                        >
+                                          Cerrar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <button
+                                    onClick={handleNextMonth}
+                                    className="p-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+                                  >
+                                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                                  </button>
+                                </div>
+
+                                {/* Estadísticas */}
+                                <div className="flex items-center gap-3 text-sm">
+                                  <span className="text-slate-400">
+                                    {daysPresent}/{daysInMonth}
+                                  </span>
+                                  <span className={`font-semibold ${attendanceRate >= 80 ? 'text-emerald-400' :
+                                    attendanceRate >= 60 ? 'text-yellow-400' :
+                                      'text-red-400'
+                                    }`}>
+                                    {attendanceRate}%
+                                  </span>
+                                </div>
+                              </div>
                             </div>
 
-                            {/* Leyenda */}
-                            <div className="flex items-center gap-4 mt-3 text-xs text-slate-400 flex-wrap">
-                              <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded bg-emerald-900/30 border border-emerald-600"></div>
-                                <span>Presente</span>
+                            {/* Calendario */}
+                            <div className="bg-slate-900/50 rounded-lg p-3 overflow-x-auto">
+                              <div className="grid grid-cols-7 gap-1 min-w-[600px]">
+                                {/* Encabezados de días */}
+                                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, i) => (
+                                  <div
+                                    key={i}
+                                    className="text-center text-xs font-medium text-slate-500 py-1"
+                                  >
+                                    {day}
+                                  </div>
+                                ))}
+
+                                {/* Espacios vacíos antes del primer día */}
+                                {Array.from({ length: firstDay }).map((_, i) => (
+                                  <div key={`empty-${i}`} className="h-8" />
+                                ))}
+
+                                {/* Días del mes */}
+                                {Array.from({ length: daysInMonth }).map((_, i) => {
+                                  const day = i + 1
+                                  const dateStr = `${workerYear}-${String(workerMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                                  const attendance = projectAttendances.find(a => a.attendance_date === dateStr)
+
+                                  // Primero intentar obtener el contrato del registro de asistencia
+                                  let displayContract = attendance?.contract_id
+                                    ? projectContracts.find(c => c.id === attendance.contract_id)
+                                    : null
+
+                                  // Si no hay registro de asistencia, buscar el contrato activo para ese día
+                                  if (!displayContract) {
+                                    displayContract = projectContracts.find(c => {
+                                      const startDate = new Date(c.fecha_inicio)
+                                      const endDate = c.fecha_termino ? new Date(c.fecha_termino) : new Date('2099-12-31')
+                                      const checkDate = new Date(dateStr)
+                                      return checkDate >= startDate && checkDate <= endDate
+                                    })
+                                  }
+
+                                  const hadContract = !!displayContract
+                                  const isWeekend = (firstDay + i) % 7 >= 5
+                                  const isPaid = attendance?.is_paid
+
+                                  // Determinar color de fondo base según tipo de contrato
+                                  const getContractTypeColor = () => {
+                                    if (!hadContract || new Date(dateStr) > new Date()) return 'bg-slate-800'
+
+                                    const baseColor = displayContract?.contract_type === 'por_dia'
+                                      ? 'bg-purple-900/20'
+                                      : 'bg-amber-900/20'
+
+                                    if (isWeekend) return baseColor
+
+                                    if (attendance?.is_present) {
+                                      if (attendance.early_departure) return 'bg-yellow-900/30 border border-yellow-600'
+                                      if (attendance.is_overtime) return 'bg-blue-900/30 border border-blue-600'
+                                      return displayContract?.contract_type === 'por_dia'
+                                        ? 'bg-purple-900/40 border border-purple-600'
+                                        : 'bg-amber-900/40 border border-amber-600'
+                                    } else if (attendance) {
+                                      return 'bg-red-900/20 border border-red-600/50'
+                                    }
+
+                                    return baseColor
+                                  }
+
+                                  // Construir tooltip detallado
+                                  const getTooltip = () => {
+                                    if (!hadContract) return 'Sin contrato'
+                                    if (new Date(dateStr) > new Date()) return 'Fecha futura'
+
+                                    const contractInfo = `Contrato: ${displayContract?.contract_number || 'N/A'} (${displayContract?.contract_type === 'por_dia' ? 'Por día' : 'A trato'})`
+
+                                    if (attendance?.is_present) {
+                                      const hours = `${attendance.hours_worked?.toFixed(1)}h`
+                                      const status = attendance.early_departure ? 'Salida temprana' : attendance.is_overtime ? 'Horas extra' : 'Presente'
+                                      const paid = isPaid ? ' - Pagado' : ''
+                                      return `${contractInfo}\n${status}: ${hours}${paid}`
+                                    }
+
+                                    return attendance ? `${contractInfo}\nAusente` : `${contractInfo}\nSin registro`
+                                  }
+
+                                  return (
+                                    <button
+                                      key={day}
+                                      onClick={() => handleDayClick(
+                                        dateStr,
+                                        worker.id,
+                                        attendance?.contract_id || (displayContract?.id || 0),
+                                        worker.full_name,
+                                        attendance
+                                      )}
+                                      disabled={!hadContract || new Date(dateStr) > new Date()}
+                                      className={`h-10 w-full flex flex-col items-center justify-center text-xs rounded relative group transition-all
+                                      ${!hadContract || new Date(dateStr) > new Date()
+                                          ? 'text-slate-600 cursor-not-allowed'
+                                          : 'cursor-pointer hover:ring-2 hover:ring-blue-500'
+                                        }
+                                      ${getContractTypeColor()}
+                                      ${isPaid ? 'border-b-4 border-b-emerald-500' : ''}`}
+                                      title={getTooltip()}
+                                    >
+                                      <span className="font-medium">{day}</span>
+                                      {hadContract && displayContract && (
+                                        <span className="text-[8px] opacity-60 truncate max-w-full px-0.5">
+                                          {displayContract.contract_number || 'N/A'}
+                                        </span>
+                                      )}
+                                      {attendance?.is_present && (
+                                        <span className="absolute top-0 right-0 text-[8px]">
+                                          {attendance.early_departure ? '⚠️' :
+                                            attendance.is_overtime ? '⏰' : '✓'}
+                                        </span>
+                                      )}
+                                    </button>
+                                  )
+                                })}
                               </div>
-                              <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded bg-yellow-900/30 border border-yellow-600"></div>
-                                <span>Salida temprana</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded bg-blue-900/30 border border-blue-600"></div>
-                                <span>Horas extra</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded bg-red-900/20 border border-red-600/50"></div>
-                                <span>Ausente</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <div className="w-3 h-3 rounded bg-slate-800"></div>
-                                <span>Sin contrato</span>
+
+                              {/* Leyenda */}
+                              <div className="flex items-center gap-4 mt-3 text-xs text-slate-400 flex-wrap">
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded bg-purple-900/40 border border-purple-600"></div>
+                                  <span>Por día</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded bg-amber-900/40 border border-amber-600"></div>
+                                  <span>A trato</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded bg-yellow-900/30 border border-yellow-600"></div>
+                                  <span>Salida temprana</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded bg-blue-900/30 border border-blue-600"></div>
+                                  <span>Horas extra</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded bg-red-900/20 border border-red-600/50"></div>
+                                  <span>Ausente</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <div className="w-3 h-3 rounded bg-slate-800"></div>
+                                  <span>Sin contrato</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </Card>
+            )
+          })
+        }
+
+        {
+          workersWithContracts.length === 0 && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <div className="p-12 text-center">
+                <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                <p className="text-slate-400 text-lg">
+                  {searchTerm
+                    ? `No se encontraron trabajadores que coincidan con "${searchTerm}"`
+                    : workerStatusFilter === 'active'
+                      ? 'No hay trabajadores activos con contratos'
+                      : workerStatusFilter === 'inactive'
+                        ? 'No hay trabajadores inactivos con contratos'
+                        : 'No hay trabajadores con contratos'
+                  }
+                </p>
+              </div>
             </Card>
           )
-        })}
-
-        {workersWithContracts.length === 0 && (
-          <Card className="bg-slate-800/50 border-slate-700">
-            <div className="p-12 text-center">
-              <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400 text-lg">
-                {searchTerm
-                  ? `No se encontraron trabajadores que coincidan con "${searchTerm}"`
-                  : workerStatusFilter === 'active'
-                    ? 'No hay trabajadores activos con contratos'
-                    : workerStatusFilter === 'inactive'
-                      ? 'No hay trabajadores inactivos con contratos'
-                      : 'No hay trabajadores con contratos'
-                }
-              </p>
-            </div>
-          </Card>
-        )}
-      </div>
+        }
+      </div >
 
       <WorkerReportModal
         isOpen={showReportModal}
@@ -737,6 +821,7 @@ export function AttendanceHistoryByWorker({
         projects={projects}
         selectedProjectId={selectedProjectId}
         preselectedWorkerId={reportWorkerId}
+        contracts={contracts}
       />
 
       <GeneralReportModal
@@ -756,8 +841,9 @@ export function AttendanceHistoryByWorker({
         workerName={selectedEditData?.workerName || ''}
         date={selectedEditData?.date || ''}
         onSave={handleEditSave}
+        userRole={userRole}
       />
-    </div>
+    </div >
   )
 }
 

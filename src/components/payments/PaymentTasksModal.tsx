@@ -24,6 +24,7 @@ interface PaymentTasksModalProps {
     workerName: string
     paymentDate: string
     totalAmount: number
+    createdByName?: string | null
 }
 
 export function PaymentTasksModal({
@@ -32,7 +33,8 @@ export function PaymentTasksModal({
     paymentId,
     workerName,
     paymentDate,
-    totalAmount
+    totalAmount,
+    createdByName
 }: PaymentTasksModalProps) {
     const [tasks, setTasks] = useState<PaymentTask[]>([])
     const [loading, setLoading] = useState(false)
@@ -142,6 +144,12 @@ export function PaymentTasksModal({
                                 <div className="text-sm text-slate-400 mb-1">Total Pagado</div>
                                 <div className="text-lg font-semibold text-blue-400">{formatCurrency(totalAmount)}</div>
                             </div>
+                            {createdByName && (
+                                <div className="col-span-2 pt-2 border-t border-slate-600/50">
+                                    <div className="text-sm text-slate-400 mb-1">Realizado por</div>
+                                    <div className="text-base font-medium text-slate-200">{createdByName}</div>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

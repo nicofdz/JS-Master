@@ -54,6 +54,7 @@ export interface PaymentHistoryItem {
     start_date?: string
     end_date?: string
     notes?: string | null
+    created_by_name?: string | null
 }
 
 export interface PaymentHistoryChartData {
@@ -563,7 +564,8 @@ export function usePaymentsV2() {
                         daily_rate: Number(payment.daily_rate || 0),
                         start_date: payment.start_date,
                         end_date: payment.end_date,
-                        notes: payment.notes || null
+                        notes: payment.notes || null,
+                        created_by_name: payment.created_by_name || null
                     })
                 }
             }

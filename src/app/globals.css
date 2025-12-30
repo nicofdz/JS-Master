@@ -78,18 +78,26 @@ body {
   input,
   select,
   textarea {
-    color: #e2e8f0 !important;
-    background-color: #1e293b !important;
-    border-color: #475569 !important;
-    pointer-events: auto !important;
+    color: #e2e8f0;
+    background-color: #1e293b;
+    border-color: #334155;
+    transition: all 0.2s ease;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    outline: none;
   }
 
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
-    -webkit-text-fill-color: #e2e8f0 !important;
+    -webkit-box-shadow: 0 0 0 30px #1e293b inset;
+    -webkit-text-fill-color: #e2e8f0;
   }
 
   select option {
@@ -99,7 +107,7 @@ body {
 
   input::placeholder,
   textarea::placeholder {
-    color: #64748b !important;
+    color: #64748b;
   }
 
   /* Asegurar que los campos dentro de modales sean interactivos */
@@ -108,9 +116,6 @@ body {
   .modal textarea:not([disabled]) {
     cursor: text;
     user-select: text;
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
   }
 
   .modal select:not([disabled]) {
@@ -219,6 +224,29 @@ body {
   .modal_trabajadores {
     max-width: 42rem !important;
     /* Ancho apropiado para formulario de trabajadores */
+  }
+
+  /* --- Utilidades Premium --- */
+  .glass-panel {
+    @apply bg-slate-900/90 backdrop-blur-xl;
+  }
+
+  .premium-gradient {
+    background-image: linear-gradient(135deg,
+        rgba(30, 41, 59, 0.9) 0%,
+        rgba(15, 23, 42, 0.7) 100%);
+  }
+
+  .premium-border {
+    @apply border border-white/10;
+  }
+
+  .premium-shadow {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .premium-shadow-sm {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
   }
 }
 

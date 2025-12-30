@@ -32,6 +32,7 @@ export default function AsistenciaPage() {
   const [historyProjectId, setHistoryProjectId] = useState<number | null>(null)
   const [registerWorkerFilter, setRegisterWorkerFilter] = useState<string>('all')
   const [historyWorkerFilter, setHistoryWorkerFilter] = useState<string>('all')
+  const [contractTypeFilter, setContractTypeFilter] = useState<string>('all')
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
 
   const [historyYear, setHistoryYear] = useState(new Date().getFullYear())
@@ -647,75 +648,71 @@ export default function AsistenciaPage() {
         </button>
       </div>
 
-      {/* Toggle secundario: Solo visible en modo Historial */}
+      {/* Toggle secundario e Toolbar: Solo visible en modo Historial */}
       {viewMode === 'history' && (
-        <div className="flex w-full sm:w-auto sm:inline-flex bg-slate-900/50 p-1 rounded-xl border border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
-          <button
-            onClick={() => setHistoryMode('by-worker')}
-            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${historyMode === 'by-worker'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-          >
-            <div className={`p-1 rounded-md ${historyMode === 'by-worker' ? 'bg-white/20' : 'bg-slate-800'}`}>
-              <User className="w-4 h-4" />
-            </div>
-            Por Trabajador
-          </button>
-          <button
-            onClick={() => setHistoryMode('by-calendar')}
-            className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${historyMode === 'by-calendar'
-              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-          >
-            <div className={`p-1 rounded-md ${historyMode === 'by-calendar' ? 'bg-white/20' : 'bg-slate-800'}`}>
-              <Calendar className="w-4 h-4" />
-            </div>
-            Por Calendario
-          </button>
-        </div>
-      )}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex w-full sm:w-auto sm:inline-flex bg-slate-900/50 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setHistoryMode('by-worker')}
+              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${historyMode === 'by-worker'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+            >
+              <div className={`p-1 rounded-md ${historyMode === 'by-worker' ? 'bg-white/20' : 'bg-slate-800'}`}>
+                <User className="w-4 h-4" />
+              </div>
+              Por Trabajador
+            </button>
+            <button
+              onClick={() => setHistoryMode('by-calendar')}
+              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 flex-1 sm:flex-initial ${historyMode === 'by-calendar'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+            >
+              <div className={`p-1 rounded-md ${historyMode === 'by-calendar' ? 'bg-white/20' : 'bg-slate-800'}`}>
+                <Calendar className="w-4 h-4" />
+              </div>
+              Por Calendario
+            </button>
+          </div>
 
-      {/* Barra de Herramientas Común (Filtros) */}
-      <div className="flex justify-end">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setIsFilterSidebarOpen(true)}
-            className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
-          >
-            <Filter className="w-5 h-5" />
-            Filtros
-            {((viewMode === 'register' && (registerProjectId !== null || registerWorkerFilter !== 'all')) ||
-              (viewMode === 'history' && (historyProjectId !== null || historyWorkerFilter !== 'all'))) && (
+          {/* Barra de Herramientas (Filtros) */}
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsFilterSidebarOpen(true)}
+              className="flex items-center gap-2 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <Filter className="w-5 h-5" />
+              Filtros
+              {historyProjectId !== null || historyWorkerFilter !== 'all' || contractTypeFilter !== 'all' ? (
                 <span className="ml-1 bg-blue-500/20 text-blue-300 text-xs font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
                   !
                 </span>
-              )}
-          </Button>
+              ) : null}
+            </Button>
 
-          {((viewMode === 'register' && (registerProjectId !== null || registerWorkerFilter !== 'all')) ||
-            (viewMode === 'history' && (historyProjectId !== null || historyWorkerFilter !== 'all'))) && (
+            {(historyProjectId !== null || historyWorkerFilter !== 'all' || contractTypeFilter !== 'all') && (
               <Button
                 variant="ghost"
                 onClick={() => {
-                  if (viewMode === 'register') {
-                    setRegisterProjectId(null)
-                    setRegisterWorkerFilter('all')
-                  } else {
-                    setHistoryProjectId(null)
-                    setHistoryWorkerFilter('all')
-                  }
+                  setHistoryProjectId(null)
+                  setHistoryWorkerFilter('all')
+                  setContractTypeFilter('all')
                 }}
-                className="text-slate-400 hover:text-white hover:bg-slate-800"
-                title="Limpiar filtros"
+                className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors gap-2"
               >
-                <XCircle className="w-5 h-5" />
+                <X className="w-4 h-4" />
+                Limpiar Filtros
               </Button>
             )}
+          </div>
         </div>
-      </div>
+      )}
+
+
 
       {/* Contenido según modo seleccionado */}
       {
@@ -994,6 +991,8 @@ export default function AsistenciaPage() {
                 onProjectChange={setHistoryProjectId}
                 onMonthChange={handleHistoryMonthChange}
                 onRefresh={loadHistoryAttendances}
+                contractTypeFilter={contractTypeFilter}
+                userRole={userRole}
               />
             ) : (
               <AttendanceHistoryByCalendar
@@ -1024,6 +1023,8 @@ export default function AsistenciaPage() {
           if (viewMode === 'register') setRegisterWorkerFilter(val)
           else setHistoryWorkerFilter(val)
         }}
+        currentContractTypeFilter={contractTypeFilter}
+        onContractTypeFilterChange={setContractTypeFilter}
         projects={projects}
         workers={workers}
       />

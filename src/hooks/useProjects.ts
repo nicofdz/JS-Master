@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from './useAuth'
 
 export interface Project {
   id: number
@@ -45,24 +46,21 @@ export interface Project {
 }
 
 export const useProjects = () => {
+  const { user, profile } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const fetchProjects = useCallback(async (includeDeleted = false) => {
     try {
+      if (!user) {
+        // Si no hay usuario, limpiar proyectos y salir (o esperar a que cargue auth)
+        setProjects([])
+        return
+      }
+
       setLoading(true)
       setError(null)
-
-      // 1. Obtener usuario actual y su rol
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user found')
-
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
 
       const isAdmin = profile?.role === 'admin'
       console.log('useProjects: Role:', profile?.role, 'IsAdmin:', isAdmin)
@@ -111,7 +109,7 @@ export const useProjects = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, profile])
 
   const createProject = async (projectData: any) => {
     try {
@@ -496,8 +494,10 @@ export const useProjects = () => {
   }
 
   useEffect(() => {
-    fetchProjects()
-  }, [])
+    if (user) {
+      fetchProjects()
+    }
+  }, [fetchProjects, user])
 
   return {
     projects,

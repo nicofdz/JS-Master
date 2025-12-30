@@ -10,10 +10,12 @@ import { useWarehouses } from "@/hooks/useWarehouses";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkers } from "@/hooks/useWorkers";
 import { supabase } from "@/lib/supabase";
+import { MovementDetailModal } from "./MovementDetailModal";
 
 type MovementListProps = {
 	refreshToken?: number;
 	movementType: 'todos' | 'entrada' | 'salida';
+	consumedFilter: 'todos' | 'consumido' | 'no_consumido';
 	materialId: string;
 	projectId: string;
 	workerId: string;
@@ -25,6 +27,7 @@ type MovementListProps = {
 export function MovementList({
 	refreshToken,
 	movementType,
+	consumedFilter,
 	materialId,
 	projectId,
 	workerId,
@@ -33,6 +36,8 @@ export function MovementList({
 	dateTo
 }: MovementListProps) {
 	const { movements, loading, fetchMovements } = useMaterialMovements();
+	const [selectedMovementId, setSelectedMovementId] = useState<number | null>(null);
+	const [showDetailModal, setShowDetailModal] = useState(false);
 
 	// Aplicar filtros
 	useEffect(() => {
@@ -86,12 +91,33 @@ export function MovementList({
 		}).format(date);
 	};
 
-	// Filtrar movimientos por tipo si es necesario (para salida que incluye ajuste_negativo)
-	const filteredMovements = movementType === 'salida'
+	// Filtrar movimientos por tipo y consumed
+	let filteredMovements = movementType === 'salida'
 		? movements.filter(m => m.movement_type === 'entrega' || m.movement_type === 'ajuste_negativo')
 		: movementType === 'entrada'
 			? movements.filter(m => m.movement_type === 'ingreso')
 			: movements;
+
+	// Aplicar filtro de consumed
+	if (consumedFilter === 'consumido') {
+		filteredMovements = filteredMovements.filter(m => m.consumed === true)
+	} else if (consumedFilter === 'no_consumido') {
+		filteredMovements = filteredMovements.filter(m => m.consumed === false || m.consumed === undefined)
+	}
+
+	const handleRowClick = (movementId: number) => {
+		setSelectedMovementId(movementId)
+		setShowDetailModal(true)
+	}
+
+	const handleCloseModal = () => {
+		setShowDetailModal(false)
+		setSelectedMovementId(null)
+	}
+
+	const handleMovementUpdate = () => {
+		fetchMovements({ limit: 100 })
+	}
 
 	return (
 		<div className="space-y-4">
@@ -113,7 +139,11 @@ export function MovementList({
 						filteredMovements.map((movement) => {
 							const isNegative = movement.movement_type === 'entrega' || movement.movement_type === 'ajuste_negativo';
 							return (
-								<div key={movement.id} className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4">
+								<div
+									key={movement.id}
+									className="bg-slate-800 rounded-lg shadow border border-slate-700 p-4 cursor-pointer hover:border-blue-500 transition-all"
+									onClick={() => handleRowClick(movement.id)}
+								>
 									<div className="flex justify-between items-start mb-2">
 										<p className="text-xs text-slate-400">{formatDate(movement.created_at)}</p>
 										<span className={`text-xs font-semibold px-2 py-1 rounded-full capitalize border ${isNegative ? 'bg-red-900/30 text-red-400 border-red-800/50' : 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50'
@@ -149,6 +179,14 @@ export function MovementList({
 												<span className="font-medium text-slate-300">{movement.warehouse_name}</span>
 											</div>
 										)}
+										{movement.consumed !== undefined && (
+											<div className="flex justify-between">
+												<span>Usado:</span>
+												<span className={`font-medium ${movement.consumed ? 'text-yellow-400' : 'text-slate-300'}`}>
+													{movement.consumed ? 'Sí' : 'No'}
+												</span>
+											</div>
+										)}
 									</div>
 
 									{(movement.notes || movement.reason) && (
@@ -176,6 +214,7 @@ export function MovementList({
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Entregado por</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Almacén</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Notas</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Usado</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Stock antes</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-slate-200 uppercase tracking-wider">Stock después</th>
 							</tr>
@@ -183,14 +222,14 @@ export function MovementList({
 						<tbody className="bg-slate-900/30 divide-y divide-slate-700">
 							{loading ? (
 								<tr>
-									<td colSpan={11} className="px-6 py-8 text-center">
+									<td colSpan={12} className="px-6 py-8 text-center">
 										<Loader2 className="h-6 w-6 animate-spin mx-auto text-slate-500" />
 										<p className="mt-2 text-sm text-slate-400">Cargando movimientos...</p>
 									</td>
 								</tr>
 							) : filteredMovements.length === 0 ? (
 								<tr>
-									<td colSpan={11} className="px-6 py-8 text-center text-slate-500">
+									<td colSpan={12} className="px-6 py-8 text-center text-slate-500">
 										No se encontraron movimientos
 									</td>
 								</tr>
@@ -198,7 +237,11 @@ export function MovementList({
 								filteredMovements.map((movement) => {
 									const isNegative = movement.movement_type === 'entrega' || movement.movement_type === 'ajuste_negativo';
 									return (
-										<tr key={movement.id} className="hover:bg-slate-800/50 transition-colors">
+										<tr
+											key={movement.id}
+											className="hover:bg-slate-800/50 transition-colors cursor-pointer"
+											onClick={() => handleRowClick(movement.id)}
+										>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{formatDate(movement.created_at)}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200 font-medium">{movement.material_name || '-'}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -219,6 +262,13 @@ export function MovementList({
 											<td className="px-6 py-4 text-sm text-slate-400 italic truncate max-w-xs" title={movement.notes || movement.reason || ''}>
 												{movement.notes || movement.reason || '-'}
 											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-sm">
+												{movement.consumed !== undefined ? (
+													<span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${movement.consumed ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-800/50' : 'bg-slate-700/30 text-slate-400 border border-slate-600/50'}`}>
+														{movement.consumed ? 'Sí' : 'No'}
+													</span>
+												) : '-'}
+											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">{movement.stock_before.toLocaleString()}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-slate-200 font-medium">{movement.stock_after.toLocaleString()}</td>
 										</tr>
@@ -229,6 +279,14 @@ export function MovementList({
 					</table>
 				</div>
 			</div>
+
+			{/* Movement Detail Modal */}
+			<MovementDetailModal
+				isOpen={showDetailModal}
+				onClose={handleCloseModal}
+				movementId={selectedMovementId}
+				onUpdate={handleMovementUpdate}
+			/>
 		</div>
 	);
 }

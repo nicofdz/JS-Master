@@ -19,7 +19,7 @@ type Floor = any & {
 }
 type FloorInsert = any
 
-export function useFloors(projectId?: number) {
+export function useFloors(projectId?: number, options?: { skipStats?: boolean }) {
   const { user, profile, assignedProjectIds } = useAuth()
   const [floors, setFloors] = useState<Floor[]>([])
   const [projects, setProjects] = useState<any[]>([])
@@ -94,38 +94,42 @@ export function useFloors(projectId?: number) {
       if (error) throw error
 
       // Obtener todos los IDs de apartamentos para consultar sus tareas (tasks V2)
-      const allApartmentIds: number[] = []
-        ; (data || []).forEach(floor => {
-          const apartments = floor.apartments || []
-          apartments.forEach((apt: any) => {
-            if (apt.is_active !== false && apt.id) {
-              allApartmentIds.push(apt.id)
-            }
-          })
-        })
-
-      // Consultar tareas de todos los apartamentos (tasks V2)
       let tasksByApartment: Record<number, Array<{ id: number; status: string }>> = {}
-      if (allApartmentIds.length > 0) {
-        const { data: tasksData, error: tasksError } = await supabase
-          .from('tasks')
-          .select('id, apartment_id, status')
-          .in('apartment_id', allApartmentIds)
-          .eq('is_deleted', false) // Excluir tareas eliminadas (soft delete)
 
-        if (tasksError) {
-          console.error('Error fetching tasks:', tasksError)
-        } else if (tasksData) {
-          // Agrupar tareas por apartment_id
-          tasksData.forEach((task: any) => {
-            if (!tasksByApartment[task.apartment_id]) {
-              tasksByApartment[task.apartment_id] = []
-            }
-            tasksByApartment[task.apartment_id].push({
-              id: task.id,
-              status: task.status
+      // Solo cargar tareas si NO estamos saltando estadísticas
+      if (!options?.skipStats) {
+        const allApartmentIds: number[] = []
+          ; (data || []).forEach(floor => {
+            const apartments = floor.apartments || []
+            apartments.forEach((apt: any) => {
+              if (apt.is_active !== false && apt.id) {
+                allApartmentIds.push(apt.id)
+              }
             })
           })
+
+        // Consultar tareas de todos los apartamentos (tasks V2)
+        if (allApartmentIds.length > 0) {
+          const { data: tasksData, error: tasksError } = await supabase
+            .from('tasks')
+            .select('id, apartment_id, status')
+            .in('apartment_id', allApartmentIds)
+            .eq('is_deleted', false) // Excluir tareas eliminadas (soft delete)
+
+          if (tasksError) {
+            console.error('Error fetching tasks:', tasksError)
+          } else if (tasksData) {
+            // Agrupar tareas por apartment_id
+            tasksData.forEach((task: any) => {
+              if (!tasksByApartment[task.apartment_id]) {
+                tasksByApartment[task.apartment_id] = []
+              }
+              tasksByApartment[task.apartment_id].push({
+                id: task.id,
+                status: task.status
+              })
+            })
+          }
         }
       }
 
@@ -205,11 +209,11 @@ export function useFloors(projectId?: number) {
           tower_number: tower?.tower_number || 1,
           tower_name: tower?.name || `Torre ${tower?.tower_number || 1}`,
           apartments_count: totalApartments,
-          progress_percentage,
-          total_tasks: totalTasks,
-          completed_tasks: completedTasks,
-          delayed_tasks: delayedTasks,
-          apartments_without_tasks: apartmentsWithoutTasks,
+          progress_percentage: options?.skipStats ? 0 : progress_percentage,
+          total_tasks: options?.skipStats ? 0 : totalTasks,
+          completed_tasks: options?.skipStats ? 0 : completedTasks,
+          delayed_tasks: options?.skipStats ? 0 : delayedTasks,
+          apartments_without_tasks: options?.skipStats ? 0 : apartmentsWithoutTasks,
           apartments: apartmentsWithTasks // Incluir apartamentos con tareas
         }
 
@@ -711,9 +715,9 @@ export function useFloors(projectId?: number) {
   useEffect(() => {
     if (userRole) {
       fetchProjects()
-      fetchFloors()
+      fetchFloors(false)
     }
-  }, [projectId, userRole, assignedProjectIds])
+  }, [projectId, userRole, assignedProjectIds, options?.skipStats])
 
   return {
     floors,

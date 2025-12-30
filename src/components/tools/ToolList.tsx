@@ -1,9 +1,10 @@
 'use client'
 
-import { Edit, Trash2, Hand, Eye } from 'lucide-react'
+import { Edit, Trash2, Hand, Eye, MapPin, User as UserIcon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+
 
 interface Tool {
   id: number
@@ -17,15 +18,31 @@ interface Tool {
   is_active: boolean
 }
 
+interface Loan {
+  id: number
+  tool_id: number
+  borrower_id: number
+  lender_id: string
+  loan_date: string
+  return_date: string | null
+  return_details: string | null
+  project_id?: number | null
+}
+
 interface ToolListProps {
   tools: Tool[]
+  loans?: Loan[]
+  workers?: Array<{ id: number; full_name: string }>
+  users?: Array<{ id: string; full_name: string }>
+  projects?: Array<{ id: number; name: string }>
   onEdit: (tool: Tool) => void
   onDelete: (toolId: number) => void
   onReactivate: (toolId: number) => void
   onLoan: (toolId: number) => void
+  onView: (tool: Tool) => void
 }
 
-export function ToolList({ tools, onEdit, onDelete, onReactivate, onLoan }: ToolListProps) {
+export function ToolList({ tools, loans = [], workers = [], users = [], projects = [], onEdit, onDelete, onReactivate, onLoan, onView }: ToolListProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'disponible':
@@ -88,123 +105,181 @@ export function ToolList({ tools, onEdit, onDelete, onReactivate, onLoan }: Tool
 
   return (
     <div className="space-y-4">
-      {tools.map((tool) => (
-        <Card key={tool.id} className={`bg-slate-800/50 border-slate-700 hover:bg-slate-800/80 transition-all duration-200 ${!tool.is_active ? 'opacity-60' : ''}`}>
-          <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-start justify-between">
-              {/* Tool Image */}
-              <div className="w-full sm:w-32 h-48 sm:h-32 bg-slate-900/50 rounded-lg sm:mr-6 mb-4 sm:mb-0 flex-shrink-0 overflow-hidden border border-slate-700/50">
-                {tool.image_url ? (
-                  <img
-                    src={tool.image_url}
-                    alt={tool.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-600">
-                    <Hand className="w-8 h-8 opacity-20" />
-                  </div>
-                )}
-              </div>
+      {tools.map((tool) => {
+        const activeLoan = tool.status === 'prestada'
+          ? loans.find(l => l.tool_id === tool.id && !l.return_date)
+          : null
 
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <h3 className="text-lg font-semibold text-slate-100 mr-2">
-                    {tool.name}
-                  </h3>
-                  <Badge className={getStatusColor(tool.status)}>
-                    {getStatusText(tool.status)}
-                  </Badge>
-                  <Badge className={getActiveStatusColor(tool.is_active)}>
-                    {getActiveStatusText(tool.is_active)}
-                  </Badge>
+        const borrowerName = activeLoan
+          ? workers.find(w => w.id === activeLoan.borrower_id)?.full_name
+          : null
+
+        const lenderName = activeLoan
+          ? users.find(u => u.id === activeLoan.lender_id)?.full_name
+          : null
+
+        const projectName = activeLoan?.project_id
+          ? projects.find(p => p.id === activeLoan.project_id)?.name
+          : null
+
+        return (
+          <Card key={tool.id} className={`bg-slate-800/50 border-slate-700 hover:bg-slate-800/80 transition-all duration-200 ${!tool.is_active ? 'opacity-60' : ''}`}>
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-start justify-between">
+                {/* Tool Image */}
+                <div className="w-full sm:w-32 h-48 sm:h-32 bg-slate-900/50 rounded-lg sm:mr-6 mb-4 sm:mb-0 flex-shrink-0 overflow-hidden border border-slate-700/50">
+                  {tool.image_url ? (
+                    <img
+                      src={tool.image_url}
+                      alt={tool.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-600">
+                      <Hand className="w-8 h-8 opacity-20" />
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-slate-400">Marca</p>
-                    <p className="text-sm text-slate-200">{tool.brand}</p>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <h3 className="text-lg font-semibold text-slate-100 mr-2">
+                      {tool.name}
+                    </h3>
+
+                    {/* Active Status */}
+                    <Badge className={getActiveStatusColor(tool.is_active)}>
+                      {getActiveStatusText(tool.is_active)}
+                    </Badge>
+
+                    {/* Loan Details Group - All Orange */}
+                    {activeLoan ? (
+                      <>
+                        {/* Project */}
+                        {projectName && (
+                          <Badge className="bg-blue-900/30 text-blue-400 border border-blue-600/50 hover:bg-blue-900/50">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {projectName}
+                          </Badge>
+                        )}
+
+                        {/* Status (Prestada) */}
+                        <Badge className={getStatusColor(tool.status)}>
+                          {getStatusText(tool.status)}
+                        </Badge>
+
+                        {/* Borrower */}
+                        {borrowerName && (
+                          <Badge className="bg-orange-900/30 text-orange-400 border border-orange-600/50 hover:bg-orange-900/50">
+                            <UserIcon className="w-3 h-3 mr-1" />
+                            {borrowerName}
+                          </Badge>
+                        )}
+                      </>
+                    ) : (
+                      /* Normal Status if not loaned */
+                      <Badge className={getStatusColor(tool.status)}>
+                        {getStatusText(tool.status)}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm font-medium text-slate-400">Marca</p>
+                      <p className="text-sm text-slate-200">{tool.brand}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-slate-400">Valor</p>
+                      <p className="text-sm text-slate-200 font-semibold">
+                        {formatCurrency(tool.value)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-slate-400">Ubicación</p>
+                      <p className="text-sm text-slate-200">{tool.location}</p>
+                    </div>
                   </div>
 
                   <div>
-                    <p className="text-sm font-medium text-slate-400">Valor</p>
-                    <p className="text-sm text-slate-200 font-semibold">
-                      {formatCurrency(tool.value)}
+                    <p className="text-sm font-medium text-slate-400 mb-1">Detalles</p>
+                    <p className="text-sm text-slate-300 line-clamp-2">
+                      {tool.details}
                     </p>
                   </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-slate-400">Ubicación</p>
-                    <p className="text-sm text-slate-200">{tool.location}</p>
-                  </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-slate-400 mb-1">Detalles</p>
-                  <p className="text-sm text-slate-300 line-clamp-2">
-                    {tool.details}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-4 sm:mt-0 sm:ml-4 sm:flex-nowrap justify-end w-full sm:w-auto">
-                <Button
-                  onClick={() => onEdit(tool)}
-                  size="sm"
-                  className="bg-blue-900/20 hover:bg-blue-900/40 text-blue-400 border border-blue-800/50 flex-1 sm:flex-none"
-                >
-                  <Edit className="w-4 h-4 sm:mr-1" />
-                  <span className="sm:hidden">Editar</span>
-                </Button>
-
-                {tool.is_active ? (
+                <div className="flex flex-wrap gap-2 mt-4 sm:mt-0 sm:ml-4 sm:flex-nowrap justify-end w-full sm:w-auto">
                   <Button
-                    onClick={() => onDelete(tool.id)}
+                    onClick={() => onView(tool)}
                     size="sm"
-                    className="bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-800/50 flex-1 sm:flex-none"
-                    title="Deshabilitar herramienta"
-                  >
-                    <Trash2 className="w-4 h-4 sm:mr-1" />
-                    <span className="sm:hidden">Borrar</span>
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => onReactivate(tool.id)}
-                    size="sm"
-                    className="bg-green-100 hover:bg-green-200 text-green-700 flex-1 sm:flex-none"
-                    title="Reactivar herramienta"
+                    className="bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600/50 flex-1 sm:flex-none"
+                    title="Ver detalles"
                   >
                     <Eye className="w-4 h-4 sm:mr-1" />
-                    <span className="sm:hidden">Reactivar</span>
+                    <span className="sm:hidden">Ver</span>
                   </Button>
-                )}
 
-                {tool.status === 'disponible' && tool.is_active && (
                   <Button
-                    onClick={() => onLoan(tool.id)}
+                    onClick={() => onEdit(tool)}
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                    className="bg-blue-900/20 hover:bg-blue-900/40 text-blue-400 border border-blue-800/50 flex-1 sm:flex-none"
                   >
-                    <Hand className="w-4 h-4 mr-1" />
-                    Prestar
+                    <Edit className="w-4 h-4 sm:mr-1" />
+                    <span className="sm:hidden">Editar</span>
                   </Button>
-                )}
 
-                {tool.status === 'prestada' && (
-                  <Button
-                    onClick={() => onLoan(tool.id)}
-                    size="sm"
-                    className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Ver Préstamo
-                  </Button>
-                )}
+                  {tool.is_active ? (
+                    <Button
+                      onClick={() => onDelete(tool.id)}
+                      size="sm"
+                      className="bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-800/50 flex-1 sm:flex-none"
+                      title="Deshabilitar herramienta"
+                    >
+                      <Trash2 className="w-4 h-4 sm:mr-1" />
+                      <span className="sm:hidden">Borrar</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => onReactivate(tool.id)}
+                      size="sm"
+                      className="bg-green-100 hover:bg-green-200 text-green-700 flex-1 sm:flex-none"
+                      title="Reactivar herramienta"
+                    >
+                      <Eye className="w-4 h-4 sm:mr-1" />
+                      <span className="sm:hidden">Reactivar</span>
+                    </Button>
+                  )}
+
+                  {tool.status === 'disponible' && tool.is_active && (
+                    <Button
+                      onClick={() => onLoan(tool.id)}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                    >
+                      <Hand className="w-4 h-4 mr-1" />
+                      Prestar
+                    </Button>
+                  )}
+
+                  {tool.status === 'prestada' && (
+                    <Button
+                      onClick={() => onLoan(tool.id)}
+                      size="sm"
+                      className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Devolver
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        )
+      })}
     </div>
   )
 }

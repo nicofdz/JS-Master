@@ -267,6 +267,7 @@ export default function PagosPage() {
     workerName: string
     paymentDate: string
     totalAmount: number
+    createdByName?: string | null
   } | null>(null)
   const [selectedPaymentDaysForModal, setSelectedPaymentDaysForModal] = useState<{
     id: number
@@ -281,6 +282,7 @@ export default function PagosPage() {
     startDate?: string
     endDate?: string
     projectId?: number | null
+    createdByName?: string | null
   } | null>(null)
 
   // Estado para edición de fecha
@@ -1206,13 +1208,6 @@ export default function PagosPage() {
         {currentView === 'pending' && (
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => setShowProcessPaymentModal(true)}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-            >
-              <DollarSign className="w-4 h-4" />
-              Procesar Tareas
-            </Button>
-            <Button
               onClick={() => setShowCustomPaymentModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
             >
@@ -1314,8 +1309,9 @@ export default function PagosPage() {
               className={`cursor-pointer transition-all hover:shadow-lg bg-white border-gray-200 ${activeFilter === 'tasks' ? 'ring-2 ring-blue-500' : ''
                 }`}
               onClick={() => {
-                setActiveFilter(activeFilter === 'tasks' ? null : 'tasks')
-                setTypeFilter('a_trato')
+                const isDeselecting = activeFilter === 'tasks'
+                setActiveFilter(isDeselecting ? null : 'tasks')
+                setTypeFilter(isDeselecting ? 'all' : 'a_trato')
               }}
             >
               <CardContent className="p-6">
@@ -1335,8 +1331,9 @@ export default function PagosPage() {
               className={`cursor-pointer transition-all hover:shadow-lg bg-white border-gray-200 ${activeFilter === 'days' ? 'ring-2 ring-blue-500' : ''
                 }`}
               onClick={() => {
-                setActiveFilter(activeFilter === 'days' ? null : 'days')
-                setTypeFilter('por_dia')
+                const isDeselecting = activeFilter === 'days'
+                setActiveFilter(isDeselecting ? null : 'days')
+                setTypeFilter(isDeselecting ? 'all' : 'por_dia')
               }}
             >
               <CardContent className="p-6">
@@ -1661,7 +1658,8 @@ export default function PagosPage() {
                                   id: payment.id,
                                   workerName: payment.worker_name,
                                   paymentDate: payment.payment_date,
-                                  totalAmount: payment.total_amount
+                                  totalAmount: payment.total_amount,
+                                  createdByName: payment.created_by_name
                                 })
                                 setShowPaymentTasksModal(true)
                               }}
@@ -1687,7 +1685,8 @@ export default function PagosPage() {
                                   dailyRate: payment.daily_rate || 0,
                                   startDate: (payment as any).start_date,
                                   endDate: (payment as any).end_date,
-                                  projectId: payment.project_id
+                                  projectId: payment.project_id,
+                                  createdByName: payment.created_by_name
                                 })
                                 setShowPaymentDaysModal(true)
                               }}
@@ -1805,7 +1804,8 @@ export default function PagosPage() {
                                       id: payment.id,
                                       workerName: payment.worker_name,
                                       paymentDate: payment.payment_date,
-                                      totalAmount: payment.total_amount
+                                      totalAmount: payment.total_amount,
+                                      createdByName: payment.created_by_name
                                     })
                                     setShowPaymentTasksModal(true)
                                   }}
@@ -1833,7 +1833,8 @@ export default function PagosPage() {
                                       dailyRate: payment.daily_rate || 0,
                                       startDate: (payment as any).start_date,
                                       endDate: (payment as any).end_date,
-                                      projectId: payment.project_id
+                                      projectId: payment.project_id,
+                                      createdByName: payment.created_by_name
                                     })
                                     setShowPaymentDaysModal(true)
                                   }}
@@ -1997,17 +1998,15 @@ export default function PagosPage() {
           }}
           paymentId={selectedPaymentForModal.id}
           workerName={selectedPaymentForModal.workerName}
-          paymentDate={selectedPaymentForModal.paymentDate}
-          totalAmount={selectedPaymentForModal.totalAmount}
+          paymentDate={selectedPaymentForModal?.paymentDate || ''}
+          totalAmount={selectedPaymentForModal?.totalAmount || 0}
+          createdByName={selectedPaymentForModal?.createdByName}
         />
       )}
-      {selectedPaymentDaysForModal && (
+      {showPaymentDaysModal && selectedPaymentDaysForModal && (
         <PaymentDaysModal
           isOpen={showPaymentDaysModal}
-          onClose={() => {
-            setShowPaymentDaysModal(false)
-            setSelectedPaymentDaysForModal(null)
-          }}
+          onClose={() => setShowPaymentDaysModal(false)}
           paymentId={selectedPaymentDaysForModal.id}
           workerId={selectedPaymentDaysForModal.workerId}
           workerName={selectedPaymentDaysForModal.workerName}
@@ -2020,6 +2019,7 @@ export default function PagosPage() {
           startDate={selectedPaymentDaysForModal.startDate}
           endDate={selectedPaymentDaysForModal.endDate}
           projectId={selectedPaymentDaysForModal.projectId}
+          createdByName={selectedPaymentDaysForModal.createdByName}
         />
       )}
 

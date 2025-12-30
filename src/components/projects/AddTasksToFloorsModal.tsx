@@ -1,15 +1,24 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Modal } from '@/components/ui/Modal'
+import { ModalV2 } from '@/components/tasks-v2/ModalV2'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Select } from '@/components/ui/Select'
 import { useTaskTemplates } from '@/hooks'
 import { useFloors, useApartments } from '@/hooks'
 import { supabase } from '@/lib/supabase'
-import { CheckCircle, Plus, Edit2, Trash2 } from 'lucide-react'
+import {
+  CheckCircle,
+  Plus,
+  Search,
+  Layers,
+  Home,
+  ArrowRight,
+  LayoutGrid,
+  Settings,
+  AlertCircle
+} from 'lucide-react'
 import toast from 'react-hot-toast'
+import { TaskTemplatesModal } from '@/components/tasks-v2/TaskTemplatesModal'
 
 interface AddTasksToFloorsModalProps {
   isOpen: boolean
@@ -19,62 +28,53 @@ interface AddTasksToFloorsModalProps {
   onSuccess?: () => void
 }
 
-export function AddTasksToFloorsModal({ 
-  isOpen, 
-  onClose, 
+export function AddTasksToFloorsModal({
+  isOpen,
+  onClose,
   projectId,
   towerId,
-  onSuccess 
+  onSuccess
 }: AddTasksToFloorsModalProps) {
-  const { templates, loading: templatesLoading, refresh: refreshTemplates, createTemplate, updateTemplate, deleteTemplate } = useTaskTemplates()
+  const { templates, loading: templatesLoading, refresh: refreshTemplates } = useTaskTemplates(projectId)
   const { floors, loading: floorsLoading } = useFloors(projectId)
   const { apartments } = useApartments()
-  
+
+  // States
   const [selectedTemplates, setSelectedTemplates] = useState<Set<number>>(new Set())
   const [applyMode, setApplyMode] = useState<'specific' | 'all'>('specific')
   const [selectedFloors, setSelectedFloors] = useState<Set<number>>(new Set())
   const [apartmentApplyMode, setApartmentApplyMode] = useState<'all' | 'specific'>('all')
   const [selectedApartments, setSelectedApartments] = useState<Set<number>>(new Set())
-  const [availableApartments, setAvailableApartments] = useState<Array<{ id: number; apartment_number: string; floor_id: number; floor_number?: number; tower_name?: string; existing_tasks?: string[] }>>([])
+  const [availableApartments, setAvailableApartments] = useState<Array<{
+    id: number;
+    apartment_number: string;
+    floor_id: number;
+    floor_number?: number;
+    tower_name?: string;
+    existing_tasks?: string[]
+  }>>([])
   const [loadingApartments, setLoadingApartments] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  
-  // Estados para el modal de crear/editar template
-  const [showTemplateModal, setShowTemplateModal] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<{ id: number; name: string; category: string; estimated_hours: number } | null>(null)
-  const [templateForm, setTemplateForm] = useState({
-    name: '',
-    category: '',
-    estimated_hours: 8
-  })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showManageTemplates, setShowManageTemplates] = useState(false)
 
-  // Filtrar y ordenar pisos por torre si se especifica (memoizado para evitar re-renders infinitos)
+  // Filter and sort floors
   const availableFloors = useMemo(() => {
-    const filtered = towerId 
+    const filtered = towerId
       ? floors.filter(f => f.tower_id === towerId)
       : floors
-    
-    // Ordenar numéricamente por floor_number
-    // Asegurarse de que floor_number sea tratado como número
+
     return [...filtered].sort((a, b) => {
-      // floor_number debería ser siempre un número según el schema, pero por seguridad
       const numA = Number(a.floor_number) || 0
       const numB = Number(b.floor_number) || 0
-      
-      if (numA !== numB) {
-        return numA - numB
-      }
-      
-      // Si los números son iguales, ordenar por ID como fallback
+      if (numA !== numB) return numA - numB
       return a.id - b.id
     })
   }, [floors, towerId])
 
-  // IDs de pisos disponibles (memoizado para usar en dependencias)
-  const availableFloorIds = useMemo(() => {
-    return availableFloors.map(f => f.id)
-  }, [availableFloors])
+  const availableFloorIds = useMemo(() => availableFloors.map(f => f.id), [availableFloors])
 
+  // Reset state on open
   useEffect(() => {
     if (isOpen) {
       setSelectedTemplates(new Set())
@@ -83,20 +83,20 @@ export function AddTasksToFloorsModal({
       setApplyMode('specific')
       setApartmentApplyMode('all')
       setAvailableApartments([])
+      setSearchTerm('')
     }
   }, [isOpen])
 
-  // Cargar departamentos cuando cambien los pisos seleccionados
+  // Load apartments logic (copied from original with tweaks)
   useEffect(() => {
     const loadApartments = async () => {
       if (selectedFloors.size === 0 && applyMode === 'all') {
-        // Si es "todos los pisos", cargar todos los departamentos
         if (availableFloorIds.length === 0) {
           setAvailableApartments([])
           setLoadingApartments(false)
           return
         }
-        
+
         setLoadingApartments(true)
         try {
           const { data, error } = await supabase
@@ -119,27 +119,18 @@ export function AddTasksToFloorsModal({
 
           if (error) throw error
 
-          // Obtener IDs de departamentos para cargar tareas
           const apartmentIds = (data || []).map((apt: any) => apt.id)
-          
-          // Cargar tareas existentes de todos los departamentos (tasks V2)
-          const { data: tasksData, error: tasksError } = await supabase
+
+          const { data: tasksData } = await supabase
             .from('tasks')
             .select('apartment_id, task_name')
             .in('apartment_id', apartmentIds)
-            .eq('is_deleted', false) // Excluir tareas eliminadas
+            .eq('is_deleted', false)
 
-          if (tasksError) {
-            console.error('Error loading tasks:', tasksError)
-          }
-
-          // Agrupar tareas por departamento
           const tasksByApartment: Record<number, string[]> = {}
           if (tasksData) {
             tasksData.forEach((task: any) => {
-              if (!tasksByApartment[task.apartment_id]) {
-                tasksByApartment[task.apartment_id] = []
-              }
+              if (!tasksByApartment[task.apartment_id]) tasksByApartment[task.apartment_id] = []
               tasksByApartment[task.apartment_id].push(task.task_name)
             })
           }
@@ -153,28 +144,7 @@ export function AddTasksToFloorsModal({
             existing_tasks: tasksByApartment[apt.id] || []
           }))
 
-          // Ordenar numéricamente por apartment_number (extraer número del string)
-          const sorted = processed.sort((a, b) => {
-            // Extraer números del apartment_number (ej: "A1 D-104" -> 104, "10" -> 10)
-            const extractNumber = (str: string): number => {
-              const numbers = str.match(/\d+/g)
-              if (!numbers || numbers.length === 0) return 0
-              // Usar el último número encontrado (generalmente el más relevante)
-              return parseInt(numbers[numbers.length - 1]) || 0
-            }
-            
-            const numA = extractNumber(a.apartment_number)
-            const numB = extractNumber(b.apartment_number)
-            
-            if (numA !== numB) {
-              return numA - numB
-            }
-            
-            // Si los números son iguales, ordenar alfabéticamente
-            return a.apartment_number.localeCompare(b.apartment_number)
-          })
-
-          setAvailableApartments(sorted)
+          setAvailableApartments(sortApartments(processed))
         } catch (err) {
           console.error('Error loading apartments:', err)
           setAvailableApartments([])
@@ -182,7 +152,6 @@ export function AddTasksToFloorsModal({
           setLoadingApartments(false)
         }
       } else if (selectedFloors.size > 0) {
-        // Si hay pisos específicos seleccionados
         setLoadingApartments(true)
         try {
           const { data, error } = await supabase
@@ -205,27 +174,18 @@ export function AddTasksToFloorsModal({
 
           if (error) throw error
 
-          // Obtener IDs de departamentos para cargar tareas
           const apartmentIds = (data || []).map((apt: any) => apt.id)
-          
-          // Cargar tareas existentes de todos los departamentos (tasks V2)
-          const { data: tasksData, error: tasksError } = await supabase
+
+          const { data: tasksData } = await supabase
             .from('tasks')
             .select('apartment_id, task_name')
             .in('apartment_id', apartmentIds)
-            .eq('is_deleted', false) // Excluir tareas eliminadas
+            .eq('is_deleted', false)
 
-          if (tasksError) {
-            console.error('Error loading tasks:', tasksError)
-          }
-
-          // Agrupar tareas por departamento
           const tasksByApartment: Record<number, string[]> = {}
           if (tasksData) {
             tasksData.forEach((task: any) => {
-              if (!tasksByApartment[task.apartment_id]) {
-                tasksByApartment[task.apartment_id] = []
-              }
+              if (!tasksByApartment[task.apartment_id]) tasksByApartment[task.apartment_id] = []
               tasksByApartment[task.apartment_id].push(task.task_name)
             })
           }
@@ -239,28 +199,7 @@ export function AddTasksToFloorsModal({
             existing_tasks: tasksByApartment[apt.id] || []
           }))
 
-          // Ordenar numéricamente por apartment_number (extraer número del string)
-          const sorted = processed.sort((a, b) => {
-            // Extraer números del apartment_number (ej: "A1 D-104" -> 104, "10" -> 10)
-            const extractNumber = (str: string): number => {
-              const numbers = str.match(/\d+/g)
-              if (!numbers || numbers.length === 0) return 0
-              // Usar el último número encontrado (generalmente el más relevante)
-              return parseInt(numbers[numbers.length - 1]) || 0
-            }
-            
-            const numA = extractNumber(a.apartment_number)
-            const numB = extractNumber(b.apartment_number)
-            
-            if (numA !== numB) {
-              return numA - numB
-            }
-            
-            // Si los números son iguales, ordenar alfabéticamente
-            return a.apartment_number.localeCompare(b.apartment_number)
-          })
-
-          setAvailableApartments(sorted)
+          setAvailableApartments(sortApartments(processed))
         } catch (err) {
           console.error('Error loading apartments:', err)
           setAvailableApartments([])
@@ -272,7 +211,6 @@ export function AddTasksToFloorsModal({
       }
     }
 
-    // Solo cargar si hay condiciones válidas
     if (applyMode === 'all' || selectedFloors.size > 0) {
       loadApartments()
     } else {
@@ -281,81 +219,25 @@ export function AddTasksToFloorsModal({
     }
   }, [selectedFloors, applyMode, availableFloorIds])
 
-  // Categorías disponibles para las plantillas
-  const categories = ['Estructura', 'Carpintería', 'Pisos', 'Terminaciones', 'Instalaciones', 'Acabados', 'Otros']
-
-  const handleOpenCreateTemplate = () => {
-    setEditingTemplate(null)
-    setTemplateForm({ name: '', category: '', estimated_hours: 8 })
-    setShowTemplateModal(true)
-  }
-
-  const handleOpenEditTemplate = (template: { id: number; name: string; category: string; estimated_hours: number }) => {
-    setEditingTemplate(template)
-    setTemplateForm({
-      name: template.name,
-      category: template.category,
-      estimated_hours: template.estimated_hours
-    })
-    setShowTemplateModal(true)
-  }
-
-  const handleSaveTemplate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!templateForm.name.trim() || !templateForm.category.trim()) {
-      toast.error('Por favor, complete todos los campos requeridos')
-      return
-    }
-
-    try {
-      if (editingTemplate) {
-        await updateTemplate(editingTemplate.id, templateForm)
-        toast.success('Plantilla actualizada exitosamente')
-      } else {
-        await createTemplate(templateForm)
-        toast.success('Plantilla creada exitosamente')
+  const sortApartments = (list: any[]) => {
+    return list.sort((a, b) => {
+      const extractNumber = (str: string): number => {
+        const numbers = str.match(/\d+/g)
+        if (!numbers || numbers.length === 0) return 0
+        return parseInt(numbers[numbers.length - 1]) || 0
       }
-      
-      await refreshTemplates()
-      setShowTemplateModal(false)
-      setEditingTemplate(null)
-      setTemplateForm({ name: '', category: '', estimated_hours: 8 })
-    } catch (err: any) {
-      console.error('Error saving template:', err)
-      toast.error(err.message || 'Error al guardar la plantilla')
-    }
-  }
-
-  const handleDeleteTemplate = async (templateId: number, templateName: string) => {
-    if (!confirm(`¿Está seguro de eliminar la plantilla "${templateName}"?`)) {
-      return
-    }
-
-    try {
-      await deleteTemplate(templateId)
-      toast.success('Plantilla eliminada exitosamente')
-      await refreshTemplates()
-      // Remover de seleccionados si estaba seleccionada
-      setSelectedTemplates(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(templateId)
-        return newSet
-      })
-    } catch (err: any) {
-      console.error('Error deleting template:', err)
-      toast.error(err.message || 'Error al eliminar la plantilla')
-    }
+      const numA = extractNumber(a.apartment_number)
+      const numB = extractNumber(b.apartment_number)
+      if (numA !== numB) return numA - numB
+      return a.apartment_number.localeCompare(b.apartment_number)
+    })
   }
 
   const toggleTemplate = (templateId: number) => {
     setSelectedTemplates(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(templateId)) {
-        newSet.delete(templateId)
-      } else {
-        newSet.add(templateId)
-      }
+      if (newSet.has(templateId)) newSet.delete(templateId)
+      else newSet.add(templateId)
       return newSet
     })
   }
@@ -363,32 +245,41 @@ export function AddTasksToFloorsModal({
   const toggleFloor = (floorId: number) => {
     setSelectedFloors(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(floorId)) {
-        newSet.delete(floorId)
-      } else {
-        newSet.add(floorId)
-      }
+      if (newSet.has(floorId)) newSet.delete(floorId)
+      else newSet.add(floorId)
       return newSet
     })
-    // Limpiar selección de departamentos cuando cambian los pisos
     setSelectedApartments(new Set())
   }
 
   const toggleApartment = (apartmentId: number) => {
     setSelectedApartments(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(apartmentId)) {
-        newSet.delete(apartmentId)
-      } else {
-        newSet.add(apartmentId)
-      }
+      if (newSet.has(apartmentId)) newSet.delete(apartmentId)
+      else newSet.add(apartmentId)
       return newSet
     })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const selectAllFilteredTemplates = () => {
+    const ids = filteredTemplates.map(t => t.id)
+    setSelectedTemplates(prev => {
+      const newSet = new Set(prev)
+      ids.forEach(id => newSet.add(id))
+      return newSet
+    })
+  }
 
+  const deselectAllFilteredTemplates = () => {
+    const ids = filteredTemplates.map(t => t.id)
+    setSelectedTemplates(prev => {
+      const newSet = new Set(prev)
+      ids.forEach(id => newSet.delete(id))
+      return newSet
+    })
+  }
+
+  const handleSubmit = async () => {
     if (selectedTemplates.size === 0) {
       toast.error('Por favor, seleccione al menos una tarea.')
       return
@@ -407,15 +298,12 @@ export function AddTasksToFloorsModal({
     try {
       setSubmitting(true)
 
-      // Determinar qué departamentos usar
       let apartmentsToUse: Array<{ id: number }>
-      
+
       if (apartmentApplyMode === 'specific') {
-        // Usar solo los departamentos seleccionados
         apartmentsToUse = Array.from(selectedApartments).map(id => ({ id }))
       } else {
-        // Usar todos los departamentos de los pisos seleccionados
-        const floorsToUse = applyMode === 'all' 
+        const floorsToUse = applyMode === 'all'
           ? availableFloors.map(f => f.id)
           : Array.from(selectedFloors)
 
@@ -435,7 +323,6 @@ export function AddTasksToFloorsModal({
         apartmentsToUse = allApartments
       }
 
-      // Crear tareas para cada departamento (tasks V2)
       const tasksToCreate = []
       for (const apartment of apartmentsToUse) {
         for (const templateId of selectedTemplates) {
@@ -447,15 +334,14 @@ export function AddTasksToFloorsModal({
               task_description: null,
               task_category: template.category,
               status: 'pending',
-              priority: 'medium',
-              total_budget: 0, // Sin trabajadores asignados inicialmente
+              priority: template.priority || 'medium',
+              total_budget: 0,
               estimated_hours: template.estimated_hours || 8
             })
           }
         }
       }
 
-      // Insertar todas las tareas en batch (tasks V2)
       if (tasksToCreate.length > 0) {
         const { error: tasksError } = await supabase
           .from('tasks')
@@ -466,13 +352,13 @@ export function AddTasksToFloorsModal({
 
       const totalTasks = tasksToCreate.length
       const totalApartments = apartmentsToUse.length
-      const floorsToUse = applyMode === 'all' 
+      const floorsToUse = applyMode === 'all'
         ? availableFloors.map(f => f.id)
         : Array.from(selectedFloors)
       const totalFloors = floorsToUse.length
 
       toast.success(`✅ Se crearon ${totalTasks} tareas en ${totalApartments} departamento(s) de ${totalFloors} piso(s).`)
-      
+
       onSuccess?.()
       onClose()
     } catch (err) {
@@ -484,387 +370,300 @@ export function AddTasksToFloorsModal({
   }
 
   const activeTemplates = templates.filter(t => t.is_active)
+  const filteredTemplates = activeTemplates.filter(t =>
+    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.category.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleTemplateModalClose = () => {
+    setShowManageTemplates(false)
+    refreshTemplates()
+  }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Agregar Tareas a Pisos"
-      size="xl"
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Selección de Tareas */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-medium text-gray-700">
-              Seleccionar Tareas *
-            </label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleOpenCreateTemplate}
-              className="flex items-center gap-1 text-xs"
-            >
-              <Plus className="w-3 h-3" />
-              Nueva Plantilla
-            </Button>
-          </div>
-          <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
-            {templatesLoading ? (
-              <p className="text-gray-500 text-center py-4">Cargando tareas...</p>
-            ) : activeTemplates.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No hay tareas disponibles</p>
-            ) : (
-              activeTemplates.map(template => (
-                <div
-                  key={template.id}
-                  className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded group"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedTemplates.has(template.id)}
-                    onChange={() => toggleTemplate(template.id)}
-                    className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{template.name}</div>
-                    <div className="text-sm text-gray-500">
-                      {template.category} • {template.estimated_hours || 8} horas estimadas
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleOpenEditTemplate(template)
-                      }}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Editar plantilla"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteTemplate(template.id, template.name)
-                      }}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Eliminar plantilla"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          {selectedTemplates.size > 0 && (
-            <p className="text-sm text-gray-600 mt-2">
-              {selectedTemplates.size} tarea(s) seleccionada(s)
-            </p>
-          )}
-        </div>
-
-        {/* Modo de Aplicación */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Aplicar a:
-          </label>
-          <div className="space-y-3">
-            <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="applyMode"
-                value="specific"
-                checked={applyMode === 'specific'}
-                onChange={() => {
-                  setApplyMode('specific')
-                  // Limpiar selección de departamentos cuando cambia el modo de pisos
-                  setSelectedApartments(new Set())
-                }}
-                className="w-4 h-4 text-blue-600"
-              />
-              <div>
-                <div className="font-medium text-gray-900">Pisos específicos</div>
-                <div className="text-sm text-gray-500">Seleccione los pisos donde aplicar las tareas</div>
-              </div>
-            </label>
-
-            <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-              <input
-                type="radio"
-                name="applyMode"
-                value="all"
-                checked={applyMode === 'all'}
-                onChange={() => {
-                  setApplyMode('all')
-                  // Limpiar selección de pisos cuando se cambia a "Todos los pisos"
-                  setSelectedFloors(new Set())
-                  // También limpiar selección de departamentos
-                  setSelectedApartments(new Set())
-                }}
-                className="w-4 h-4 text-blue-600"
-              />
-              <div>
-                <div className="font-medium text-gray-900">Todos los pisos</div>
-                <div className="text-sm text-gray-500">
-                  Aplicar a todos los pisos {towerId ? 'de esta torre' : 'del proyecto'} ({availableFloors.length} piso(s))
-                </div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {/* Selección de Pisos (solo si modo específico) */}
-        {applyMode === 'specific' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Seleccionar Pisos *
-            </label>
-            {floorsLoading ? (
-              <p className="text-gray-500 text-center py-4">Cargando pisos...</p>
-            ) : availableFloors.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No hay pisos disponibles</p>
-            ) : (
-              <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
-                {availableFloors.map(floor => (
-                  <label
-                    key={floor.id}
-                    className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedFloors.has(floor.id)}
-                      onChange={() => toggleFloor(floor.id)}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">
-                        Piso {floor.floor_number} {floor.tower_name ? `- ${floor.tower_name}` : ''}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {floor.apartments_count || 0} departamento(s)
-                      </div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
-            {selectedFloors.size > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
-                {selectedFloors.size} piso(s) seleccionado(s)
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Modo de Aplicación de Departamentos */}
-        {(applyMode === 'all' || selectedFloors.size > 0) && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Aplicar a Departamentos:
-            </label>
-            <div className="space-y-3">
-              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="apartmentApplyMode"
-                  value="all"
-                  checked={apartmentApplyMode === 'all'}
-                  onChange={() => {
-                    setApartmentApplyMode('all')
-                    setSelectedApartments(new Set())
-                  }}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <div>
-                  <div className="font-medium text-gray-900">Todos los departamentos</div>
-                  <div className="text-sm text-gray-500">
-                    Aplicar a todos los departamentos de los pisos seleccionados ({availableApartments.length} departamento(s))
-                  </div>
-                </div>
-              </label>
-
-              <label className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <input
-                  type="radio"
-                  name="apartmentApplyMode"
-                  value="specific"
-                  checked={apartmentApplyMode === 'specific'}
-                  onChange={() => {
-                    setApartmentApplyMode('specific')
-                    // No limpiar selectedApartments aquí, permitir que el usuario seleccione
-                  }}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <div>
-                  <div className="font-medium text-gray-900">Departamentos específicos</div>
-                  <div className="text-sm text-gray-500">Seleccione los departamentos donde aplicar las tareas</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {/* Selección de Departamentos (solo si modo específico) */}
-        {apartmentApplyMode === 'specific' && (applyMode === 'all' || selectedFloors.size > 0) && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Seleccionar Departamentos *
-            </label>
-            {loadingApartments ? (
-              <p className="text-gray-500 text-center py-4">Cargando departamentos...</p>
-            ) : availableApartments.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No hay departamentos disponibles en los pisos seleccionados</p>
-            ) : (
-              <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
-                {availableApartments.map(apartment => (
-                  <label
-                    key={apartment.id}
-                    className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedApartments.has(apartment.id)}
-                      onChange={() => toggleApartment(apartment.id)}
-                      className="w-4 h-4 text-blue-600 rounded"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">
-                        Dpto. {apartment.apartment_number}
-                      </div>
-                      <div className="text-sm text-gray-500 mb-2">
-                        Piso {apartment.floor_number} {apartment.tower_name ? `- ${apartment.tower_name}` : ''}
-                      </div>
-                      {apartment.existing_tasks && apartment.existing_tasks.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {apartment.existing_tasks.map((taskName, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
-                            >
-                              {taskName}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
-            {selectedApartments.size > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
-                {selectedApartments.size} departamento(s) seleccionado(s)
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Resumen */}
-        {selectedTemplates.size > 0 && (
-          <div className="bg-slate-700 border border-slate-600 rounded-lg p-4">
-            <div className="flex items-start space-x-2">
-              <CheckCircle className="w-5 h-5 text-blue-400 mt-0.5" />
-              <div className="flex-1">
-                <div className="font-medium text-slate-100 mb-1">Resumen</div>
-                <div className="text-sm text-slate-300 space-y-1">
-                  <p>• {selectedTemplates.size} tarea(s) seleccionada(s)</p>
-                  <p>• Se aplicarán a {applyMode === 'all' ? `todos los ${availableFloors.length} piso(s)` : `${selectedFloors.size} piso(s) seleccionado(s)`}</p>
-                  <p>• Departamentos: {apartmentApplyMode === 'all' ? `todos los departamentos (${availableApartments.length})` : `${selectedApartments.size} departamento(s) seleccionado(s)`}</p>
-                  <p>• Las tareas se crearán con estado &quot;Pendiente&quot;</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Botones */}
-        <div className="flex justify-end gap-2 pt-4">
+    <>
+      <ModalV2
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Asignación Masiva de Tareas"
+        size="2xl"
+        headerRight={
           <Button
-            type="button"
             variant="outline"
-            onClick={onClose}
-            disabled={submitting}
+            size="sm"
+            onClick={() => setShowManageTemplates(true)}
+            className="flex items-center gap-2 text-xs border-slate-600 text-slate-300 hover:text-white hover:border-blue-500"
           >
-            Cancelar
+            <Settings className="w-3.5 h-3.5" />
+            Gestionar Plantillas
           </Button>
-          <Button
-            type="submit"
-            disabled={submitting || selectedTemplates.size === 0 || (applyMode === 'specific' && selectedFloors.size === 0) || (apartmentApplyMode === 'specific' && selectedApartments.size === 0)}
-          >
-            {submitting ? 'Creando Tareas...' : 'Aplicar Tareas'}
-          </Button>
-        </div>
-      </form>
-
-      {/* Modal para crear/editar plantilla */}
-      <Modal
-        isOpen={showTemplateModal}
-        onClose={() => {
-          setShowTemplateModal(false)
-          setEditingTemplate(null)
-          setTemplateForm({ name: '', category: '', estimated_hours: 8 })
-        }}
-        title={editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
-        size="md"
+        }
       >
-        <form onSubmit={handleSaveTemplate} className="space-y-4">
-          <Input
-            label="Nombre de la Tarea"
-            value={templateForm.name}
-            onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
-            required
-            placeholder="Ej: Tabiques, Instalación de puertas..."
-          />
+        <div className="flex flex-col h-full bg-slate-900 rounded-lg">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden min-h-[500px]">
+            {/* Panel Izquierdo: Selección de Plantillas */}
+            <div className="lg:col-span-5 border-r border-slate-700 bg-slate-800/50 flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-slate-700">
+                <h3 className="text-white font-medium flex items-center gap-2 mb-3">
+                  <LayoutGrid className="w-4 h-4 text-blue-400" />
+                  Seleccionar Tareas
+                  <span className="ml-auto text-xs font-normal text-slate-400">
+                    {selectedTemplates.size} selec.
+                  </span>
+                </h3>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Categoría *
-            </label>
-            <Select
-              value={templateForm.category}
-              onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
-              required
-            >
-              <option value="">Seleccionar categoría</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </Select>
+                <div className="relative mb-3">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Buscar plantillas..."
+                    className="w-full bg-slate-900 border border-slate-600 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex gap-2 text-xs">
+                  <button onClick={selectAllFilteredTemplates} className="text-blue-400 hover:text-blue-300">
+                    Todas
+                  </button>
+                  <span className="text-slate-600">|</span>
+                  <button onClick={deselectAllFilteredTemplates} className="text-slate-400 hover:text-slate-300">
+                    Ninguna
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                {templatesLoading ? (
+                  <div className="p-4 text-center text-slate-500 text-sm">Cargando...</div>
+                ) : filteredTemplates.length === 0 ? (
+                  <div className="p-4 text-center text-slate-500 text-sm">No se encontraron tareas</div>
+                ) : (
+                  filteredTemplates.map(template => {
+                    const isSelected = selectedTemplates.has(template.id)
+                    return (
+                      <div
+                        key={template.id}
+                        onClick={() => toggleTemplate(template.id)}
+                        className={`
+                          p-3 rounded-lg cursor-pointer border transition-all duration-200 group
+                          ${isSelected
+                            ? 'bg-blue-600/10 border-blue-500/50 shadow-sm'
+                            : 'bg-slate-800 border-slate-700 hover:border-slate-600 hover:bg-slate-700/50'
+                          }
+                        `}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-500 group-hover:border-slate-400'
+                            }`}>
+                            {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                          </div>
+                          <div>
+                            <div className={`text-sm font-medium transition-colors ${isSelected ? 'text-blue-200' : 'text-slate-200'}`}>
+                              {template.name}
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-1.5">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 border border-slate-600">
+                                {template.category}
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 border border-slate-600">
+                                {template.estimated_hours}h
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Panel Derecho: Configuración de Destino */}
+            <div className="lg:col-span-7 flex flex-col overflow-hidden bg-slate-900">
+              <div className="p-4 border-b border-slate-700">
+                <h3 className="text-white font-medium flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-400" />
+                  Definir Ubicación
+                </h3>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+                {/* Selección de Pisos */}
+                <section>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 block">
+                    1. Selección de Pisos
+                  </label>
+                  <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700 mb-4 inline-flex">
+                    <button
+                      onClick={() => setApplyMode('specific')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${applyMode === 'specific' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                      Seleccionar Específicos
+                    </button>
+                    <button
+                      onClick={() => {
+                        setApplyMode('all')
+                        setSelectedFloors(new Set())
+                        setSelectedApartments(new Set())
+                      }}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${applyMode === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                      Todos los Pisos
+                    </button>
+                  </div>
+
+                  {applyMode === 'specific' && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                      {availableFloors.map(floor => {
+                        const isSelected = selectedFloors.has(floor.id)
+                        return (
+                          <div
+                            key={floor.id}
+                            onClick={() => toggleFloor(floor.id)}
+                            className={`
+                              p-2 rounded-md border text-center cursor-pointer transition-all text-sm
+                              ${isSelected
+                                ? 'bg-blue-900/30 border-blue-500/50 text-blue-200'
+                                : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
+                              }
+                            `}
+                          >
+                            Piso {floor.floor_number}
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              {floor.apartments_count || 0} depts
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {applyMode === 'all' && (
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-slate-300 text-sm flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Se aplicará a <strong>{availableFloors.length} pisos</strong> del proyecto.
+                    </div>
+                  )}
+                </section>
+
+                <div className="border-t border-slate-800" />
+
+                {/* Selección de Departamentos */}
+                <section className={!(applyMode === 'all' || selectedFloors.size > 0) ? 'opacity-50 pointer-events-none' : ''}>
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 block">
+                    2. Selección de Departamentos
+                  </label>
+
+                  <div className="flex bg-slate-800 p-1 rounded-lg border border-slate-700 mb-4 inline-flex">
+                    <button
+                      onClick={() => {
+                        setApartmentApplyMode('all')
+                        setSelectedApartments(new Set())
+                      }}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${apartmentApplyMode === 'all' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                      Todos en los pisos
+                    </button>
+                    <button
+                      onClick={() => setApartmentApplyMode('specific')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${apartmentApplyMode === 'specific' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                      Específicos
+                    </button>
+                  </div>
+
+                  {loadingApartments ? (
+                    <div className="py-8 text-center text-slate-500 text-sm animate-pulse">Cargando departamentos...</div>
+                  ) : apartmentApplyMode === 'specific' ? (
+                    availableApartments.length === 0 ? (
+                      <div className="p-3 border border-dashed border-slate-700 rounded-lg text-slate-500 text-sm text-center">
+                        Selecciona un piso primero
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {availableApartments.map(apt => {
+                          const isSelected = selectedApartments.has(apt.id)
+                          return (
+                            <div
+                              key={apt.id}
+                              onClick={() => toggleApartment(apt.id)}
+                              className={`
+                                p-2 rounded-md border text-left cursor-pointer transition-all text-sm relative group
+                                ${isSelected
+                                  ? 'bg-purple-900/30 border-purple-500/50 text-purple-200'
+                                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
+                                }
+                              `}
+                            >
+                              <div className="font-medium">{apt.apartment_number}</div>
+                              <div className="text-[10px] text-slate-500">Piso {apt.floor_number}</div>
+                              {apt.existing_tasks && apt.existing_tasks.length > 0 && (
+                                <div className="absolute top-2 right-2 flex gap-0.5">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Tiene tareas"></div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  ) : (
+                    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-slate-300 text-sm flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      Se aplicará a <strong>{availableApartments.length} departamentos</strong> encontrados.
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* Footer dentro del panel derecho */}
+              <div className="p-4 border-t border-slate-700 bg-slate-800/30">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="text-xs text-slate-400">
+                    <div>Resumen de asignación:</div>
+                    <div className="text-slate-200 font-medium">
+                      {selectedTemplates.size} tareas &rarr; {
+                        apartmentApplyMode === 'all'
+                          ? `${availableApartments.length} deptos`
+                          : `${selectedApartments.size} deptos`
+                      }
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={onClose} disabled={submitting}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={
+                        submitting ||
+                        selectedTemplates.size === 0 ||
+                        (applyMode === 'specific' && selectedFloors.size === 0) ||
+                        (apartmentApplyMode === 'specific' && selectedApartments.size === 0)
+                      }
+                      className="bg-blue-600 hover:bg-blue-500 text-white min-w-[120px]"
+                    >
+                      {submitting ? 'Asignando...' : 'Confirmar Asignación'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+      </ModalV2>
 
-          <Input
-            label="Horas Estimadas"
-            type="number"
-            min="1"
-            value={templateForm.estimated_hours}
-            onChange={(e) => setTemplateForm({ ...templateForm, estimated_hours: parseInt(e.target.value) || 8 })}
-            required
-          />
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowTemplateModal(false)
-                setEditingTemplate(null)
-                setTemplateForm({ name: '', category: '', estimated_hours: 8 })
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit">
-              {editingTemplate ? 'Actualizar' : 'Crear'} Plantilla
-            </Button>
-          </div>
-        </form>
-      </Modal>
-    </Modal>
+      {/* Modal separado para gestionar plantillas */}
+      <TaskTemplatesModal
+        isOpen={showManageTemplates}
+        onClose={handleTemplateModalClose}
+        projectId={projectId}
+      />
+    </>
   )
 }
-

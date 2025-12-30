@@ -16,8 +16,8 @@ interface LoanHistoryProps {
   workers: Array<{ id: number; full_name: string }>
   projects: Array<{ id: number; name: string }>
   onReturn: (loanId: number, returnDetails: string) => void | Promise<void>
-  onDelete: (loanId: number) => void | Promise<void>
   statusFilter: string
+
   monthFilter: string
   yearFilter: string
   workerFilter: string
@@ -29,7 +29,6 @@ export function LoanHistory({
   workers,
   projects,
   onReturn,
-  onDelete,
   statusFilter,
   monthFilter,
   yearFilter,
@@ -234,15 +233,6 @@ export function LoanHistory({
                           {loan.tool_name}
                         </h3>
                         {getStatusBadge(loan)}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(loan.id)}
-                          className="h-10 w-10 text-red-400 hover:text-red-300 hover:bg-red-900/30 border border-red-900/50 rounded-md transition-colors"
-                          title="Eliminar registro"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
                       </div>
                     </div>
                   </div>

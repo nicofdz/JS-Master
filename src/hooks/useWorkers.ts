@@ -263,6 +263,33 @@ export function useWorkers() {
     fetchWorkers(true)
   }
 
+  // Obtener trabajadores activos de un proyecto específico
+  const getWorkersByProject = async (projectId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('contract_history')
+        .select(`
+          worker:workers (*)
+        `)
+        .eq('project_id', projectId)
+        .eq('status', 'activo')
+        .eq('is_active', true)
+
+      if (error) throw error
+
+      // Mapear y eliminar duplicados (aunque no debería haber si la lógica de contratos es correcta)
+      const projectWorkers = data?.map((item: any) => item.worker).filter(Boolean) || []
+
+      // Eliminar duplicados basado en ID
+      const uniqueWorkers = Array.from(new Map(projectWorkers.map((w: any) => [w.id, w])).values()) as Worker[]
+
+      return uniqueWorkers
+    } catch (err: any) {
+      console.error('Error fetching project workers:', err)
+      return []
+    }
+  }
+
   // Cargar datos al montar el componente
   useEffect(() => {
     fetchWorkers()
@@ -279,6 +306,7 @@ export function useWorkers() {
     hardDeleteWorker,
     toggleWorkerStatus,
     refresh,
-    refreshAll
+    refreshAll,
+    getWorkersByProject
   }
 }

@@ -19,6 +19,13 @@ interface Project {
     name: string
 }
 
+interface Contract {
+    id: number
+    worker_id: number
+    project_id: number
+    status: string
+}
+
 interface WorkerReportModalProps {
     isOpen: boolean
     onClose: () => void
@@ -26,6 +33,7 @@ interface WorkerReportModalProps {
     projects: Project[]
     selectedProjectId: number | null
     preselectedWorkerId?: number | null
+    contracts?: Contract[]
 }
 
 export function WorkerReportModal({
@@ -34,7 +42,8 @@ export function WorkerReportModal({
     workers,
     projects,
     selectedProjectId,
-    preselectedWorkerId
+    preselectedWorkerId,
+    contracts = []
 }: WorkerReportModalProps) {
     const [selectedWorkerId, setSelectedWorkerId] = useState<number | null>(preselectedWorkerId || null)
     const [startDate, setStartDate] = useState<string>('')
@@ -429,13 +438,24 @@ export function WorkerReportModal({
         doc.save(fileName)
     }
 
-    // Filtrar trabajadores por proyecto si hay uno seleccionado
+    // Filtrar trabajadores con contratos activos
+    const workersWithActiveContracts = workers.filter(w => {
+        return contracts.some(c =>
+            c.worker_id === w.id &&
+            c.status === 'activo'
+        )
+    })
+
+    // Filtrar por proyecto si hay uno seleccionado
     const availableWorkers = selectedProjectId
-        ? workers.filter(w => {
-            // TODO: Filtrar trabajadores que tienen contrato en el proyecto seleccionado
-            return true
+        ? workersWithActiveContracts.filter(w => {
+            return contracts.some(c =>
+                c.worker_id === w.id &&
+                c.project_id === selectedProjectId &&
+                c.status === 'activo'
+            )
         })
-        : workers
+        : workersWithActiveContracts
 
     return (
         <Modal
@@ -468,7 +488,8 @@ export function WorkerReportModal({
                     <select
                         value={selectedWorkerId?.toString() || ''}
                         onChange={(e) => setSelectedWorkerId(e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={!!preselectedWorkerId}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <option value="">Seleccionar trabajador...</option>
                         {availableWorkers.map(worker => (
@@ -477,6 +498,11 @@ export function WorkerReportModal({
                             </option>
                         ))}
                     </select>
+                    {preselectedWorkerId && (
+                        <p className="text-xs text-slate-400 mt-1">
+                            Trabajador preseleccionado desde la tarjeta
+                        </p>
+                    )}
                 </div>
 
                 {/* Rango de fechas */}

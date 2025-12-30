@@ -5,6 +5,7 @@ import { X, Upload, FileText, Calendar, DollarSign, Package, Building, Plus, Tra
 import { ExpenseModal } from './ExpenseModal'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { WarehouseFormModal } from '@/components/materials/WarehouseFormModal'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
@@ -12,6 +13,7 @@ import { Expense } from '@/hooks/useExpenses'
 import { useProjects } from '@/hooks/useProjects'
 import { useMaterials } from '@/hooks/useMaterials'
 import { useWarehouses } from '@/hooks/useWarehouses'
+import { Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface MaterialItem {
@@ -96,7 +98,7 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
     materialStockMin: 0,
     materialWarehouseId: null
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [materialErrors, setMaterialErrors] = useState<Record<string, Record<string, string>>>({})
   const [receiptFile, setReceiptFile] = useState<File | null>(null)
@@ -105,6 +107,7 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
   const [categoryDropdowns, setCategoryDropdowns] = useState<Record<string, boolean>>({})
   const categoryInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const categoryDropdownRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false)
 
   // Cargar almacenes, materiales y categorías al montar
   useEffect(() => {
@@ -152,7 +155,7 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
       const existingIds = formData.materials
         .filter(m => m.existingMaterialId)
         .map(m => m.existingMaterialId!)
-      
+
       if (existingIds.length > 0) {
         fetchStockForMaterials(existingIds)
       }
@@ -213,15 +216,15 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre del gasto es requerido'
     }
-    
+
     if (!formData.type) {
       newErrors.type = 'El tipo de gasto es requerido'
     }
-    
+
     if (!formData.supplier.trim()) {
       newErrors.supplier = 'El proveedor es requerido'
     }
-    
+
     if (!formData.date) {
       newErrors.date = 'La fecha es requerida'
     }
@@ -236,13 +239,13 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
       // Validar cada material
       formData.materials.forEach((material, index) => {
         const matErrors: Record<string, string> = {}
-        
+
         // Si es material existente, solo validar cantidad, precio y almacén
         if (material.existingMaterialId) {
           if (!material.quantity || material.quantity <= 0) {
             matErrors.quantity = 'La cantidad debe ser mayor a 0'
           }
-          
+
           if (!material.unit_cost || material.unit_cost <= 0) {
             matErrors.unit_cost = 'El precio unitario debe ser mayor a 0'
           }
@@ -255,11 +258,11 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
           if (!material.name.trim()) {
             matErrors.name = 'El nombre del material es requerido'
           }
-          
+
           if (!material.quantity || material.quantity <= 0) {
             matErrors.quantity = 'La cantidad debe ser mayor a 0'
           }
-          
+
           if (!material.unit_cost || material.unit_cost <= 0) {
             matErrors.unit_cost = 'El precio unitario debe ser mayor a 0'
           }
@@ -321,14 +324,14 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (validateForm()) {
       const expenseData = {
         ...formData,
         quantity: formData.quantity || null,
         project_id: formData.project_id || null
       }
-      
+
       if (onPreview) {
         onPreview(expenseData, receiptFile || undefined)
       } else {
@@ -399,7 +402,7 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
     }
 
     setFormData(newFormData)
-    
+
     // Limpiar error del campo
     if (errors[field]) {
       setErrors(prev => ({
@@ -456,7 +459,7 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
     const updatedMaterials = formData.materials?.map(m => {
       if (m.id === materialId) {
         const updated = { ...m, [field]: value }
-        
+
         // Si se selecciona un material existente, actualizar nombre y stock
         if (field === 'existingMaterialId') {
           const existingMaterial = existingMaterials.find(mat => mat.id === value)
@@ -473,12 +476,12 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
             updated.addToCatalog = true // Siempre true para materiales nuevos
           }
         }
-        
+
         return updated
       }
       return m
     }) || []
-    
+
     setFormData({
       ...formData,
       materials: updatedMaterials
@@ -508,13 +511,13 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
       const netAmount = formData.materials.reduce((sum, m) => {
         return sum + (m.quantity * m.unit_cost)
       }, 0)
-      
+
       // Redondear a 2 decimales para evitar problemas de precisión
       const roundedNetAmount = Math.round(netAmount * 100) / 100
-      
+
       // Calcular IVA desde el neto y luego el total
       const { ivaAmount, totalAmount } = calculateIVAFromNet(roundedNetAmount)
-      
+
       setFormData(prev => ({
         ...prev,
         net_amount: roundedNetAmount, // El subtotal de materiales es el neto
@@ -575,591 +578,611 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
   }
 
   return (
-    <ExpenseModal isOpen={true} onClose={onClose}>
-      <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-slate-100">
-            {expense ? 'Editar Gasto' : 'Agregar Nuevo Gasto'}
-          </h2>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Información básica */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Nombre del Gasto *
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Ej: Cemento Portland 50kg"
-                className={errors.name ? 'border-red-500' : ''}
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-400">{errors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Tipo de Gasto *
-              </label>
-              <Select
-                value={formData.type}
-                onChange={(e) => handleChange('type', e.target.value)}
-                className={errors.type ? 'border-red-500' : ''}
-              >
-                <option value="">Seleccione tipo de gasto</option>
-                {expenseTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </Select>
-              {errors.type && (
-                <p className="mt-1 text-sm text-red-400">{errors.type}</p>
-              )}
-            </div>
+    <>
+      <ExpenseModal isOpen={true} onClose={onClose}>
+        <div className="p-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-slate-100">
+              {expense ? 'Editar Gasto' : 'Agregar Nuevo Gasto'}
+            </h2>
           </div>
 
-          {/* Cantidad (para tipos que requieren cantidad, incluyendo materiales cuando NO va al catálogo) */}
-          {typesWithQuantity.includes(formData.type) && (
-            formData.type !== 'materiales' || (formData.type === 'materiales' && !formData.addToMaterials)
-          ) && (
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                {getQuantityLabel(formData.type)} *
-              </label>
-              <Input
-                type="number"
-                value={formData.quantity || ''}
-                onChange={(e) => handleChange('quantity', parseInt(e.target.value) || null)}
-                placeholder={getQuantityPlaceholder(formData.type)}
-                className={errors.quantity ? 'border-red-500' : ''}
-              />
-              {errors.quantity && (
-                <p className="mt-1 text-sm text-red-400">{errors.quantity}</p>
-              )}
-            </div>
-          )}
-          
-          {/* Mensaje cuando materiales va al catálogo */}
-          {formData.type === 'materiales' && formData.addToMaterials && (
-            <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
-              <p className="text-sm text-slate-300">
-                <span className="font-medium">Cantidad:</span> revisar catálogo de materiales
-              </p>
-            </div>
-          )}
-
-          {/* Fecha y Tipo de Documento */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Fecha del Gasto *
-              </label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) => handleChange('date', e.target.value)}
-                className={errors.date ? 'border-red-500' : ''}
-              />
-              {errors.date && (
-                <p className="mt-1 text-sm text-red-400">{errors.date}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Tipo de Documento *
-              </label>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center text-slate-300">
-                  <input
-                    type="radio"
-                    name="document_type"
-                    value="boleta"
-                    checked={formData.document_type === 'boleta'}
-                    onChange={(e) => handleChange('document_type', e.target.value)}
-                    className="mr-2"
-                  />
-                  Boleta
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Información básica */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Nombre del Gasto *
                 </label>
-                <label className="flex items-center text-slate-300">
-                  <input
-                    type="radio"
-                    name="document_type"
-                    value="factura"
-                    checked={formData.document_type === 'factura'}
-                    onChange={(e) => handleChange('document_type', e.target.value)}
-                    className="mr-2"
-                  />
-                  Factura
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Monto Total (solo editable si NO es tipo materiales) */}
-          {formData.type !== 'materiales' && (
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Total con IVA *
-              </label>
-              <Input
-                type="number"
-                value={formData.total_amount || ''}
-                onChange={(e) => handleChange('total_amount', parseInt(e.target.value) || 0)}
-                placeholder="Ej: 450000"
-                className={errors.total_amount ? 'border-red-500' : ''}
-              />
-              {errors.total_amount && (
-                <p className="mt-1 text-sm text-red-400">{errors.total_amount}</p>
-              )}
-            </div>
-          )}
-
-          {/* Cálculos de IVA */}
-          {formData.total_amount > 0 && (
-            <div className="bg-slate-700/30 border border-slate-600 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-slate-300 mb-3">Desglose del IVA</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Monto Neto</label>
-                  <div className="text-sm font-semibold text-slate-100">
-                    ${formData.net_amount.toLocaleString('es-CL')}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">IVA (19%)</label>
-                  <div className="text-sm font-semibold text-slate-100">
-                    ${formData.iva_amount.toLocaleString('es-CL')}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Total</label>
-                  <div className="text-sm font-semibold text-slate-100">
-                    ${formData.total_amount.toLocaleString('es-CL')}
-                  </div>
-                </div>
-              </div>
-              {formData.document_type === 'factura' && (
-                <div className="mt-2 text-xs text-green-400">
-                  ✓ IVA recuperable: ${formData.iva_amount.toLocaleString('es-CL')}
-                </div>
-              )}
-              {formData.document_type === 'boleta' && (
-                <div className="mt-2 text-xs text-slate-400">
-                  ℹ IVA no recuperable
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Proveedor y Proyecto */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Proveedor *
-              </label>
-              <Input
-                value={formData.supplier}
-                onChange={(e) => handleChange('supplier', e.target.value)}
-                placeholder="Ej: Distribuidora Construcción S.A."
-                className={errors.supplier ? 'border-red-500' : ''}
-              />
-              {errors.supplier && (
-                <p className="mt-1 text-sm text-red-400">{errors.supplier}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Proyecto (Opcional)
-              </label>
-              <Select
-                value={formData.project_id || ''}
-                onChange={(e) => handleChange('project_id', e.target.value ? parseInt(e.target.value) : null)}
-                disabled={projectsLoading}
-              >
-                <option value="">Sin proyecto específico</option>
-                {projectsLoading ? (
-                  <option disabled>Cargando proyectos...</option>
-                ) : projects.length === 0 ? (
-                  <option disabled>No hay proyectos disponibles</option>
-                ) : (
-                  projects.map(project => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))
-                )}
-              </Select>
-              {projectsLoading && (
-                <p className="mt-1 text-xs text-gray-500">Cargando proyectos...</p>
-              )}
-            </div>
-          </div>
-
-          {/* Descripción */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Descripción (Opcional)
-            </label>
-            <Textarea
-              value={formData.description || ''}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Detalles adicionales del gasto..."
-              rows={3}
-            />
-          </div>
-
-          {/* Checkbox para agregar a catálogo (solo cuando type === 'materiales') */}
-          {formData.type === 'materiales' && (
-            <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="addToMaterials"
-                  checked={formData.addToMaterials || false}
-                  onChange={(e) => handleChange('addToMaterials', e.target.checked)}
-                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                <Input
+                  value={formData.name}
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  placeholder="Ej: Cemento Portland 50kg"
+                  className={errors.name ? 'border-red-500' : ''}
                 />
-                <label htmlFor="addToMaterials" className="text-sm font-medium text-slate-200 cursor-pointer">
-                  Agregar a catálogo de materiales
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-400">{errors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Tipo de Gasto *
                 </label>
-              </div>
-            </div>
-          )}
-
-          {/* Lista dinámica de materiales */}
-          {formData.type === 'materiales' && formData.addToMaterials && formData.materials && (
-            <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-100">Materiales de la Factura</h3>
-                <button
-                  type="button"
-                  onClick={addMaterial}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                <Select
+                  value={formData.type}
+                  onChange={(e) => handleChange('type', e.target.value)}
+                  className={errors.type ? 'border-red-500' : ''}
                 >
-                  <Plus className="w-4 h-4" />
-                  Agregar Material
-                </button>
+                  <option value="">Seleccione tipo de gasto</option>
+                  {expenseTypes.map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </Select>
+                {errors.type && (
+                  <p className="mt-1 text-sm text-red-400">{errors.type}</p>
+                )}
               </div>
-
-              {errors.materials && (
-                <p className="mb-4 text-sm text-red-400">{errors.materials}</p>
-              )}
-
-              <div className="space-y-4">
-                {formData.materials.map((material, index) => (
-                  <div key={material.id} className="bg-slate-800/50 border border-slate-600 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-medium text-slate-200">Material #{index + 1}</h4>
-                      {formData.materials && formData.materials.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeMaterial(material.id)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="md:col-span-3">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Seleccionar Material *
-                        </label>
-                        <Select
-                          value={material.existingMaterialId?.toString() || ''}
-                          onChange={(e) => updateMaterial(material.id, 'existingMaterialId', e.target.value ? parseInt(e.target.value) : null)}
-                          className={materialErrors[material.id]?.existingMaterialId ? 'border-red-500' : ''}
-                        >
-                          <option value="">➕ Nuevo material</option>
-                          {existingMaterials.map((mat) => (
-                            <option key={mat.id} value={mat.id.toString()}>
-                              {mat.name} ({mat.category} - {mat.unit})
-                            </option>
-                          ))}
-                        </Select>
-                        {materialErrors[material.id]?.existingMaterialId && (
-                          <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].existingMaterialId}</p>
-                        )}
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Nombre del Material *
-                        </label>
-                        <Input
-                          value={material.name}
-                          onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
-                          placeholder="Ej: Tornillo hilo fino #6x15/8''"
-                          disabled={material.existingMaterialId !== null && material.existingMaterialId !== undefined}
-                          className={materialErrors[material.id]?.name ? 'border-red-500' : ''}
-                        />
-                        {materialErrors[material.id]?.name && (
-                          <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].name}</p>
-                        )}
-                        {material.existingMaterialId && (
-                          <p className="mt-1 text-xs text-slate-400">Nombre del material existente (no editable)</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Cantidad *
-                        </label>
-                        <Input
-                          type="number"
-                          value={material.quantity || ''}
-                          onChange={(e) => updateMaterial(material.id, 'quantity', parseInt(e.target.value) || 0)}
-                          min="1"
-                          placeholder="0"
-                          className={materialErrors[material.id]?.quantity ? 'border-red-500' : ''}
-                        />
-                        {materialErrors[material.id]?.quantity && (
-                          <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].quantity}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Precio Unitario *
-                        </label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={material.unit_cost || ''}
-                          onChange={(e) => updateMaterial(material.id, 'unit_cost', parseFloat(e.target.value) || 0)}
-                          min="0"
-                          placeholder="0.00"
-                          className={materialErrors[material.id]?.unit_cost ? 'border-red-500' : ''}
-                        />
-                        {materialErrors[material.id]?.unit_cost && (
-                          <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].unit_cost}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Subtotal
-                        </label>
-                        <div className="bg-slate-700/50 p-2 rounded border border-slate-600 text-slate-100 font-medium">
-                          ${((material.quantity || 0) * (material.unit_cost || 0)).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                      </div>
-
-                      {/* Almacén para ingreso (requerido para materiales existentes) */}
-                      <div className="md:col-span-3">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Almacén para Ingreso {material.existingMaterialId ? '*' : '(Opcional)'}
-                        </label>
-                        <Select
-                          value={material.warehouse_id?.toString() || ''}
-                          onChange={(e) => updateMaterial(material.id, 'warehouse_id', e.target.value ? parseInt(e.target.value) : null)}
-                          className={materialErrors[material.id]?.warehouse_id ? 'border-red-500' : ''}
-                        >
-                          <option value="">Selecciona almacén</option>
-                          {warehouses.filter(w => w.is_active).map((wh) => (
-                            <option key={wh.id} value={wh.id.toString()}>{wh.name}</option>
-                          ))}
-                        </Select>
-                        {materialErrors[material.id]?.warehouse_id && (
-                          <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].warehouse_id}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Campos para agregar a catálogo (siempre visible para materiales nuevos) */}
-                    {!material.existingMaterialId && (
-                      <div className="mb-4 pt-4 border-t border-slate-600">
-                        <div className="mb-3">
-                          <span className="text-sm font-medium text-slate-200">Datos del nuevo material</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                          <div className="relative">
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Categoría *
-                            </label>
-                            <Input
-                              ref={(el) => {
-                                categoryInputRefs.current[material.id] = el
-                              }}
-                              value={material.category}
-                              onChange={(e) => {
-                                updateMaterial(material.id, 'category', e.target.value)
-                                setCategoryDropdowns(prev => ({ ...prev, [material.id]: true }))
-                              }}
-                              onFocus={() => {
-                                setCategoryDropdowns(prev => ({ ...prev, [material.id]: true }))
-                              }}
-                              onBlur={() => {
-                                // Delay para permitir click en sugerencia
-                                setTimeout(() => {
-                                  setCategoryDropdowns(prev => ({ ...prev, [material.id]: false }))
-                                }, 200)
-                              }}
-                              placeholder="Ej: Fijaciones, Adhesivos"
-                              className={materialErrors[material.id]?.category ? 'border-red-500' : ''}
-                            />
-                            {categoryDropdowns[material.id] && (() => {
-                              const filteredCategories = material.category
-                                ? categories.filter(cat => 
-                                    cat.toLowerCase().includes(material.category.toLowerCase()) && 
-                                    cat !== material.category
-                                  )
-                                : categories
-                              return filteredCategories.length > 0 ? (
-                                <div
-                                  ref={(el) => {
-                                    categoryDropdownRefs.current[material.id] = el
-                                  }}
-                                  className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-lg max-h-48 overflow-auto"
-                                >
-                                  {filteredCategories.map((category) => (
-                                    <button
-                                      key={category}
-                                      type="button"
-                                      onMouseDown={(e) => {
-                                        e.preventDefault() // Prevenir blur antes del click
-                                        updateMaterial(material.id, 'category', category)
-                                        setCategoryDropdowns(prev => ({ ...prev, [material.id]: false }))
-                                        categoryInputRefs.current[material.id]?.blur()
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 focus:bg-slate-700 focus:outline-none"
-                                    >
-                                      {category}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : null
-                            })()}
-                            {materialErrors[material.id]?.category && (
-                              <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].category}</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Unidad *
-                            </label>
-                            <Select
-                              value={material.unit}
-                              onChange={(e) => updateMaterial(material.id, 'unit', e.target.value)}
-                              className={materialErrors[material.id]?.unit ? 'border-red-500' : ''}
-                            >
-                              <option value="unidad">Unidad</option>
-                              <option value="caja">Caja</option>
-                              <option value="kg">Kg</option>
-                              <option value="mts">Mts</option>
-                              <option value="m2">m²</option>
-                              <option value="m3">m³</option>
-                              <option value="lt">Litro</option>
-                            </Select>
-                            {materialErrors[material.id]?.unit && (
-                              <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].unit}</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Stock Mínimo
-                            </label>
-                            <Input
-                              type="number"
-                              value={material.stock_min || 0}
-                              onChange={(e) => updateMaterial(material.id, 'stock_min', parseInt(e.target.value) || 0)}
-                              min="0"
-                              className={materialErrors[material.id]?.stock_min ? 'border-red-500' : ''}
-                            />
-                            {materialErrors[material.id]?.stock_min && (
-                              <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].stock_min}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Resumen de totales */}
-              {formData.total_amount > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-600">
-                  <div className="bg-slate-800/50 p-3 rounded border border-slate-600">
-                    <p className="text-xs text-slate-400 mb-1">Subtotal Materiales (Neto sin IVA)</p>
-                    <p className="text-lg font-semibold text-slate-100">
-                      ${formData.materials.reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
-          )}
 
-          {/* Comprobante */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Comprobante (Opcional)
-            </label>
-            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-600 border-dashed rounded-md hover:border-slate-500 transition-colors">
-              <div className="space-y-1 text-center">
-                <Upload className="mx-auto h-12 w-12 text-slate-400" />
-                <div className="flex text-sm text-slate-300">
-                  <label
-                    htmlFor="receipt-upload"
-                    className="relative cursor-pointer bg-slate-700 rounded-md font-medium text-blue-400 hover:text-blue-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2 py-1"
-                  >
-                    <span>Subir archivo</span>
-                    <input
-                      id="receipt-upload"
-                      name="receipt-upload"
-                      type="file"
-                      className="sr-only"
-                      accept="image/*,.pdf"
-                      onChange={handleFileChange}
-                    />
+            {/* Cantidad (para tipos que requieren cantidad, incluyendo materiales cuando NO va al catálogo) */}
+            {typesWithQuantity.includes(formData.type) && (
+              formData.type !== 'materiales' || (formData.type === 'materiales' && !formData.addToMaterials)
+            ) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    {getQuantityLabel(formData.type)} *
                   </label>
-                  <p className="pl-1">o arrastra y suelta</p>
+                  <Input
+                    type="number"
+                    value={formData.quantity || ''}
+                    onChange={(e) => handleChange('quantity', parseInt(e.target.value) || null)}
+                    placeholder={getQuantityPlaceholder(formData.type)}
+                    className={errors.quantity ? 'border-red-500' : ''}
+                  />
+                  {errors.quantity && (
+                    <p className="mt-1 text-sm text-red-400">{errors.quantity}</p>
+                  )}
                 </div>
-                <p className="text-xs text-slate-400">
-                  PNG, JPG, PDF hasta 10MB
+              )}
+
+            {/* Mensaje cuando materiales va al catálogo */}
+            {formData.type === 'materiales' && formData.addToMaterials && (
+              <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                <p className="text-sm text-slate-300">
+                  <span className="font-medium">Cantidad:</span> revisar catálogo de materiales
                 </p>
               </div>
+            )}
+
+            {/* Fecha y Tipo de Documento */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Fecha del Gasto *
+                </label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleChange('date', e.target.value)}
+                  className={errors.date ? 'border-red-500' : ''}
+                />
+                {errors.date && (
+                  <p className="mt-1 text-sm text-red-400">{errors.date}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Tipo de Documento *
+                </label>
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center text-slate-300">
+                    <input
+                      type="radio"
+                      name="document_type"
+                      value="boleta"
+                      checked={formData.document_type === 'boleta'}
+                      onChange={(e) => handleChange('document_type', e.target.value)}
+                      className="mr-2"
+                    />
+                    Boleta
+                  </label>
+                  <label className="flex items-center text-slate-300">
+                    <input
+                      type="radio"
+                      name="document_type"
+                      value="factura"
+                      checked={formData.document_type === 'factura'}
+                      onChange={(e) => handleChange('document_type', e.target.value)}
+                      className="mr-2"
+                    />
+                    Factura
+                  </label>
+                </div>
+              </div>
             </div>
-            
-            {receiptPreview && (
-              <div className="mt-4">
-                <p className="text-sm font-medium text-slate-300 mb-2">Vista previa:</p>
-                <div className="border border-slate-600 rounded-lg p-2 bg-slate-700/30">
-                  <p className="text-sm text-slate-300">{receiptFile?.name || 'Archivo existente'}</p>
+
+            {/* Monto Total (solo editable si NO es tipo materiales) */}
+            {formData.type !== 'materiales' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Total con IVA *
+                </label>
+                <Input
+                  type="number"
+                  value={formData.total_amount || ''}
+                  onChange={(e) => handleChange('total_amount', parseInt(e.target.value) || 0)}
+                  placeholder="Ej: 450000"
+                  className={errors.total_amount ? 'border-red-500' : ''}
+                />
+                {errors.total_amount && (
+                  <p className="mt-1 text-sm text-red-400">{errors.total_amount}</p>
+                )}
+              </div>
+            )}
+
+            {/* Cálculos de IVA */}
+            {formData.total_amount > 0 && (
+              <div className="bg-slate-700/30 border border-slate-600 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-slate-300 mb-3">Desglose del IVA</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Monto Neto</label>
+                    <div className="text-sm font-semibold text-slate-100">
+                      ${formData.net_amount.toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">IVA (19%)</label>
+                    <div className="text-sm font-semibold text-slate-100">
+                      ${formData.iva_amount.toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Total</label>
+                    <div className="text-sm font-semibold text-slate-100">
+                      ${formData.total_amount.toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                </div>
+                {formData.document_type === 'factura' && (
+                  <div className="mt-2 text-xs text-green-400">
+                    ✓ IVA recuperable: ${formData.iva_amount.toLocaleString('es-CL')}
+                  </div>
+                )}
+                {formData.document_type === 'boleta' && (
+                  <div className="mt-2 text-xs text-slate-400">
+                    ℹ IVA no recuperable
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Proveedor y Proyecto */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Proveedor *
+                </label>
+                <Input
+                  value={formData.supplier}
+                  onChange={(e) => handleChange('supplier', e.target.value)}
+                  placeholder="Ej: Distribuidora Construcción S.A."
+                  className={errors.supplier ? 'border-red-500' : ''}
+                />
+                {errors.supplier && (
+                  <p className="mt-1 text-sm text-red-400">{errors.supplier}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Proyecto (Opcional)
+                </label>
+                <Select
+                  value={formData.project_id || ''}
+                  onChange={(e) => handleChange('project_id', e.target.value ? parseInt(e.target.value) : null)}
+                  disabled={projectsLoading}
+                >
+                  <option value="">Sin proyecto específico</option>
+                  {projectsLoading ? (
+                    <option disabled>Cargando proyectos...</option>
+                  ) : projects.length === 0 ? (
+                    <option disabled>No hay proyectos disponibles</option>
+                  ) : (
+                    projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))
+                  )}
+                </Select>
+                {projectsLoading && (
+                  <p className="mt-1 text-xs text-gray-500">Cargando proyectos...</p>
+                )}
+              </div>
+            </div>
+
+            {/* Descripción */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Descripción (Opcional)
+              </label>
+              <Textarea
+                value={formData.description || ''}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Detalles adicionales del gasto..."
+                rows={3}
+              />
+            </div>
+
+            {/* Checkbox para agregar a catálogo (solo cuando type === 'materiales') */}
+            {formData.type === 'materiales' && (
+              <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="addToMaterials"
+                    checked={formData.addToMaterials || false}
+                    onChange={(e) => handleChange('addToMaterials', e.target.checked)}
+                    className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="addToMaterials" className="text-sm font-medium text-slate-200 cursor-pointer">
+                    Agregar a catálogo de materiales
+                  </label>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Botones */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-slate-700">
-            <Button
-              type="button"
-              onClick={onClose}
-              className="bg-gray-600 hover:bg-gray-700 text-white"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {expense ? 'Actualizar Gasto' : 'Vista Previa'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </ExpenseModal>
+            {/* Lista dinámica de materiales */}
+            {formData.type === 'materiales' && formData.addToMaterials && formData.materials && (
+              <div className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-slate-100">Materiales de la Factura</h3>
+                  <button
+                    type="button"
+                    onClick={addMaterial}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar Material
+                  </button>
+                </div>
+
+                {errors.materials && (
+                  <p className="mb-4 text-sm text-red-400">{errors.materials}</p>
+                )}
+
+                <div className="space-y-4">
+                  {formData.materials.map((material, index) => (
+                    <div key={material.id} className="bg-slate-800/50 border border-slate-600 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-medium text-slate-200">Material #{index + 1}</h4>
+                        {formData.materials && formData.materials.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeMaterial(material.id)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="md:col-span-3">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Seleccionar Material *
+                          </label>
+                          <Select
+                            value={material.existingMaterialId?.toString() || ''}
+                            onChange={(e) => updateMaterial(material.id, 'existingMaterialId', e.target.value ? parseInt(e.target.value) : null)}
+                            className={materialErrors[material.id]?.existingMaterialId ? 'border-red-500' : ''}
+                          >
+                            <option value="">➕ Nuevo material</option>
+                            {existingMaterials.map((mat) => (
+                              <option key={mat.id} value={mat.id.toString()}>
+                                {mat.name} ({mat.category} - {mat.unit})
+                              </option>
+                            ))}
+                          </Select>
+                          {materialErrors[material.id]?.existingMaterialId && (
+                            <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].existingMaterialId}</p>
+                          )}
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Nombre del Material *
+                          </label>
+                          <Input
+                            value={material.name}
+                            onChange={(e) => updateMaterial(material.id, 'name', e.target.value)}
+                            placeholder="Ej: Tornillo hilo fino #6x15/8''"
+                            disabled={material.existingMaterialId !== null && material.existingMaterialId !== undefined}
+                            className={materialErrors[material.id]?.name ? 'border-red-500' : ''}
+                          />
+                          {materialErrors[material.id]?.name && (
+                            <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].name}</p>
+                          )}
+                          {material.existingMaterialId && (
+                            <p className="mt-1 text-xs text-slate-400">Nombre del material existente (no editable)</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Cantidad *
+                          </label>
+                          <Input
+                            type="number"
+                            value={material.quantity || ''}
+                            onChange={(e) => updateMaterial(material.id, 'quantity', parseInt(e.target.value) || 0)}
+                            min="1"
+                            placeholder="0"
+                            className={materialErrors[material.id]?.quantity ? 'border-red-500' : ''}
+                          />
+                          {materialErrors[material.id]?.quantity && (
+                            <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].quantity}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Precio Unitario *
+                          </label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={material.unit_cost || ''}
+                            onChange={(e) => updateMaterial(material.id, 'unit_cost', parseFloat(e.target.value) || 0)}
+                            min="0"
+                            placeholder="0.00"
+                            className={materialErrors[material.id]?.unit_cost ? 'border-red-500' : ''}
+                          />
+                          {materialErrors[material.id]?.unit_cost && (
+                            <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].unit_cost}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Subtotal
+                          </label>
+                          <div className="bg-slate-700/50 p-2 rounded border border-slate-600 text-slate-100 font-medium">
+                            ${((material.quantity || 0) * (material.unit_cost || 0)).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        </div>
+
+                        {/* Almacén para ingreso (requerido para materiales existentes) */}
+                        <div className="md:col-span-3">
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Almacén para Ingreso {material.existingMaterialId ? '*' : '(Opcional)'}
+                          </label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={material.warehouse_id?.toString() || ''}
+                              onChange={(e) => updateMaterial(material.id, 'warehouse_id', e.target.value ? parseInt(e.target.value) : null)}
+                              className={materialErrors[material.id]?.warehouse_id ? 'border-red-500' : ''}
+                            >
+                              <option value="">Selecciona almacén</option>
+                              {warehouses.filter(w => w.is_active).map((wh) => (
+                                <option key={wh.id} value={wh.id.toString()}>{wh.name}</option>
+                              ))}
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="px-3 border-slate-600 text-slate-400 hover:text-white hover:bg-slate-700"
+                              onClick={() => setShowWarehouseModal(true)}
+                              title="Administrar bodegas"
+                            >
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          {materialErrors[material.id]?.warehouse_id && (
+                            <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].warehouse_id}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Campos para agregar a catálogo (siempre visible para materiales nuevos) */}
+                      {!material.existingMaterialId && (
+                        <div className="mb-4 pt-4 border-t border-slate-600">
+                          <div className="mb-3">
+                            <span className="text-sm font-medium text-slate-200">Datos del nuevo material</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div className="relative">
+                              <label className="block text-sm font-medium text-slate-300 mb-2">
+                                Categoría *
+                              </label>
+                              <Input
+                                ref={(el) => {
+                                  categoryInputRefs.current[material.id] = el
+                                }}
+                                value={material.category}
+                                onChange={(e) => {
+                                  updateMaterial(material.id, 'category', e.target.value)
+                                  setCategoryDropdowns(prev => ({ ...prev, [material.id]: true }))
+                                }}
+                                onFocus={() => {
+                                  setCategoryDropdowns(prev => ({ ...prev, [material.id]: true }))
+                                }}
+                                onBlur={() => {
+                                  // Delay para permitir click en sugerencia
+                                  setTimeout(() => {
+                                    setCategoryDropdowns(prev => ({ ...prev, [material.id]: false }))
+                                  }, 200)
+                                }}
+                                placeholder="Ej: Fijaciones, Adhesivos"
+                                className={materialErrors[material.id]?.category ? 'border-red-500' : ''}
+                              />
+                              {categoryDropdowns[material.id] && (() => {
+                                const filteredCategories = material.category
+                                  ? categories.filter(cat =>
+                                    cat.toLowerCase().includes(material.category.toLowerCase()) &&
+                                    cat !== material.category
+                                  )
+                                  : categories
+                                return filteredCategories.length > 0 ? (
+                                  <div
+                                    ref={(el) => {
+                                      categoryDropdownRefs.current[material.id] = el
+                                    }}
+                                    className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-lg max-h-48 overflow-auto"
+                                  >
+                                    {filteredCategories.map((category) => (
+                                      <button
+                                        key={category}
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                          e.preventDefault() // Prevenir blur antes del click
+                                          updateMaterial(material.id, 'category', category)
+                                          setCategoryDropdowns(prev => ({ ...prev, [material.id]: false }))
+                                          categoryInputRefs.current[material.id]?.blur()
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 focus:bg-slate-700 focus:outline-none"
+                                      >
+                                        {category}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null
+                              })()}
+                              {materialErrors[material.id]?.category && (
+                                <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].category}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-300 mb-2">
+                                Unidad *
+                              </label>
+                              <Select
+                                value={material.unit}
+                                onChange={(e) => updateMaterial(material.id, 'unit', e.target.value)}
+                                className={materialErrors[material.id]?.unit ? 'border-red-500' : ''}
+                              >
+                                <option value="unidad">Unidad</option>
+                                <option value="caja">Caja</option>
+                                <option value="kg">Kg</option>
+                                <option value="mts">Mts</option>
+                                <option value="m2">m²</option>
+                                <option value="m3">m³</option>
+                                <option value="lt">Litro</option>
+                              </Select>
+                              {materialErrors[material.id]?.unit && (
+                                <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].unit}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-slate-300 mb-2">
+                                Stock Mínimo
+                              </label>
+                              <Input
+                                type="number"
+                                value={material.stock_min || 0}
+                                onChange={(e) => updateMaterial(material.id, 'stock_min', parseInt(e.target.value) || 0)}
+                                min="0"
+                                className={materialErrors[material.id]?.stock_min ? 'border-red-500' : ''}
+                              />
+                              {materialErrors[material.id]?.stock_min && (
+                                <p className="mt-1 text-sm text-red-400">{materialErrors[material.id].stock_min}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Resumen de totales */}
+                {formData.total_amount > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-600">
+                    <div className="bg-slate-800/50 p-3 rounded border border-slate-600">
+                      <p className="text-xs text-slate-400 mb-1">Subtotal Materiales (Neto sin IVA)</p>
+                      <p className="text-lg font-semibold text-slate-100">
+                        ${formData.materials.reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Comprobante */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Comprobante (Opcional)
+              </label>
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-600 border-dashed rounded-md hover:border-slate-500 transition-colors">
+                <div className="space-y-1 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-slate-400" />
+                  <div className="flex text-sm text-slate-300">
+                    <label
+                      htmlFor="receipt-upload"
+                      className="relative cursor-pointer bg-slate-700 rounded-md font-medium text-blue-400 hover:text-blue-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 px-2 py-1"
+                    >
+                      <span>Subir archivo</span>
+                      <input
+                        id="receipt-upload"
+                        name="receipt-upload"
+                        type="file"
+                        className="sr-only"
+                        accept="image/*,.pdf"
+                        onChange={handleFileChange}
+                      />
+                    </label>
+                    <p className="pl-1">o arrastra y suelta</p>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    PNG, JPG, PDF hasta 10MB
+                  </p>
+                </div>
+              </div>
+
+              {receiptPreview && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-slate-300 mb-2">Vista previa:</p>
+                  <div className="border border-slate-600 rounded-lg p-2 bg-slate-700/30">
+                    <p className="text-sm text-slate-300">{receiptFile?.name || 'Archivo existente'}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Botones */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-slate-700">
+              <Button
+                type="button"
+                onClick={onClose}
+                className="bg-gray-600 hover:bg-gray-700 text-white"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {expense ? 'Actualizar Gasto' : 'Vista Previa'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </ExpenseModal>
+
+      {/* Modal de gestión de bodegas */}
+      <WarehouseFormModal
+        open={showWarehouseModal}
+        onClose={() => setShowWarehouseModal(false)}
+        onSuccess={() => fetchWarehouses(true)}
+      />
+    </>
   )
 }

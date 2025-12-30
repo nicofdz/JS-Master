@@ -62,6 +62,11 @@ export default function TareasPage() {
   const [loadingWorkers, setLoadingWorkers] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+
+  // Resolve numeric project ID for templates modal
+  const templatesProjectId = selectedProjectId && selectedProjectId !== 'all'
+    ? Number(selectedProjectId)
+    : undefined
   const [deletedTasks, setDeletedTasks] = useState<any[]>([])
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [deletedTasksCount, setDeletedTasksCount] = useState(0)
@@ -164,6 +169,7 @@ export default function TareasPage() {
         if (filters.activeTab) setActiveTab(filters.activeTab)
 
         // Date filters
+        // Reading file content first to find where to replace
         if (filters.dateFilterType) setDateFilterType(filters.dateFilterType)
         if (filters.dateStart) setDateStart(filters.dateStart)
         if (filters.dateEnd) setDateEnd(filters.dateEnd)
@@ -878,6 +884,7 @@ export default function TareasPage() {
       <TaskTemplatesModal
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}
+        projectId={templatesProjectId}
       />
 
       {/* Modal de Tareas Recientes REMOVED */}

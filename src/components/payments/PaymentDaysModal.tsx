@@ -31,6 +31,7 @@ interface PaymentDaysModalProps {
     startDate?: string
     endDate?: string
     projectId?: number | null
+    createdByName?: string | null
 }
 
 export function PaymentDaysModal({
@@ -47,7 +48,8 @@ export function PaymentDaysModal({
     dailyRate,
     startDate,
     endDate,
-    projectId
+    projectId,
+    createdByName
 }: PaymentDaysModalProps) {
     const [days, setDays] = useState<AttendanceDay[]>([])
     const [loading, setLoading] = useState(false)
@@ -315,6 +317,12 @@ export function PaymentDaysModal({
                                 <div>
                                     <div className="text-sm text-slate-400 mb-1">Rango de Fechas del Pago</div>
                                     <div className="text-base font-semibold text-slate-200">{paymentDateRange.formatted}</div>
+                                </div>
+                            )}
+                            {createdByName && (
+                                <div>
+                                    <div className="text-sm text-slate-400 mb-1">Realizado por</div>
+                                    <div className="text-lg font-semibold text-slate-100">{createdByName}</div>
                                 </div>
                             )}
                         </div>

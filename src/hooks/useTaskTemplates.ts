@@ -8,15 +8,17 @@ export interface TaskTemplate {
   name: string
   category: string
   estimated_hours: number
+  total_budget?: number | null
   priority?: string | null
   description?: string | null
   sort_order: number | null
   is_active: boolean
+  project_id?: number | null
   created_at: string
   updated_at: string
 }
 
-export function useTaskTemplates() {
+export function useTaskTemplates(projectId?: number | 'all') {
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,13 +28,20 @@ export function useTaskTemplates() {
       setLoading(true)
       setError(null)
 
-      // Consultar la tabla task_templates (plantillas de tareas)
-      // Las tareas reales se guardan en apartment_tasks
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('task_templates')
         .select('*')
         .eq('is_active', true)
-        .order('sort_order', { ascending: true })
+
+      if (projectId === 'all') {
+        // No filter by project_id -> returns all templates from all projects + global
+      } else if (projectId) {
+        query = query.eq('project_id', projectId)
+      } else {
+        query = query.is('project_id', null)
+      }
+
+      const { data, error: fetchError } = await query.order('sort_order', { ascending: true })
 
       if (fetchError) throw fetchError
 
@@ -47,28 +56,33 @@ export function useTaskTemplates() {
 
   useEffect(() => {
     fetchTemplates()
-  }, [])
+  }, [projectId])
 
   const createTemplate = async (data: {
     name: string
     category: string
     estimated_hours: number
+    total_budget?: number
     priority?: string | null
     description?: string | null
     sort_order?: number
   }) => {
     try {
-      // Obtener el siguiente sort_order si no se proporciona
+      if (!projectId || projectId === 'all') {
+        throw new Error('No se puede crear una plantilla sin un proyecto específico seleccionado (seleccione un proyecto en lugar de "Todos")')
+      }
+
       let nextSortOrder = data.sort_order
       if (!nextSortOrder) {
         const { data: maxData } = await supabase
           .from('task_templates')
           .select('sort_order')
+          .eq('project_id', projectId)
           .order('sort_order', { ascending: false })
           .limit(1)
-        
-        nextSortOrder = maxData && maxData.length > 0 
-          ? (maxData[0].sort_order || 0) + 1 
+
+        nextSortOrder = maxData && maxData.length > 0
+          ? (maxData[0].sort_order || 0) + 1
           : 1
       }
 
@@ -78,17 +92,19 @@ export function useTaskTemplates() {
           name: data.name,
           category: data.category,
           estimated_hours: data.estimated_hours,
+          total_budget: data.total_budget || 0,
           priority: data.priority || 'medium',
           description: data.description || null,
           sort_order: nextSortOrder,
-          is_active: true
+          is_active: true,
+          project_id: projectId
         })
         .select()
         .single()
 
       if (createError) throw createError
 
-      setTemplates(prev => [...prev, newTemplate].sort((a, b) => 
+      setTemplates(prev => [...prev, newTemplate].sort((a, b) =>
         (a.sort_order || 0) - (b.sort_order || 0)
       ))
 
@@ -103,6 +119,7 @@ export function useTaskTemplates() {
     name?: string
     category?: string
     estimated_hours?: number
+    total_budget?: number
     priority?: string | null
     description?: string | null
     sort_order?: number
@@ -120,7 +137,7 @@ export function useTaskTemplates() {
 
       if (updateError) throw updateError
 
-      setTemplates(prev => 
+      setTemplates(prev =>
         prev.map(t => t.id === id ? updatedTemplate : t)
           .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
       )
@@ -134,7 +151,6 @@ export function useTaskTemplates() {
 
   const deleteTemplate = async (id: number) => {
     try {
-      // Soft delete: marcar como inactivo
       const { error: deleteError } = await supabase
         .from('task_templates')
         .update({ is_active: false })
@@ -161,4 +177,3 @@ export function useTaskTemplates() {
     deleteTemplate
   }
 }
-

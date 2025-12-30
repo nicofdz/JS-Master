@@ -145,6 +145,15 @@ export function ProjectForm({ project, onSubmit, onCancel }: ProjectFormProps) {
           (projectData as any)[field] = null
         }
       })
+
+      // Limpiar campos de fecha: convertir cadenas vacías a null
+      const dateFields: (keyof ProjectFormData)[] = ['start_date', 'estimated_completion', 'contract_date']
+      
+      dateFields.forEach(field => {
+        if (field in projectData && (projectData as any)[field] === '') {
+          (projectData as any)[field] = null
+        }
+      })
       
       // Si hay archivos, los agregamos a los datos
       if (plan_pdf && plan_pdf.length > 0) {

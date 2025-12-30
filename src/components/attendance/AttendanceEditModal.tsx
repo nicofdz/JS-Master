@@ -15,6 +15,7 @@ interface AttendanceEditModalProps {
     workerName: string
     date: string
     onSave: () => void // Callback to refresh data
+    userRole?: string | null
 }
 
 export function AttendanceEditModal({
@@ -25,7 +26,8 @@ export function AttendanceEditModal({
     contractId,
     workerName,
     date,
-    onSave
+    onSave,
+    userRole
 }: AttendanceEditModalProps) {
     const { markAttendance } = useAttendance()
     const [isSaving, setIsSaving] = useState(false)
@@ -151,8 +153,8 @@ export function AttendanceEditModal({
                     <button
                         onClick={() => setIsPresent(true)}
                         className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 transition-all ${isPresent
-                                ? 'bg-emerald-900/30 border-emerald-500 text-emerald-400'
-                                : 'bg-slate-700/30 border-slate-600 text-slate-400 hover:border-slate-500'
+                            ? 'bg-emerald-900/30 border-emerald-500 text-emerald-400'
+                            : 'bg-slate-700/30 border-slate-600 text-slate-400 hover:border-slate-500'
                             }`}
                     >
                         <CheckCircle2 className="w-5 h-5" />
@@ -161,8 +163,8 @@ export function AttendanceEditModal({
                     <button
                         onClick={() => setIsPresent(false)}
                         className={`flex-1 p-3 rounded-lg border-2 flex items-center justify-center gap-2 transition-all ${!isPresent
-                                ? 'bg-red-900/30 border-red-500 text-red-400'
-                                : 'bg-slate-700/30 border-slate-600 text-slate-400 hover:border-slate-500'
+                            ? 'bg-red-900/30 border-red-500 text-red-400'
+                            : 'bg-slate-700/30 border-slate-600 text-slate-400 hover:border-slate-500'
                             }`}
                     >
                         <XCircle className="w-5 h-5" />
@@ -215,25 +217,27 @@ export function AttendanceEditModal({
                     </div>
                 </div>
 
-                {/* Paid Status Toggle */}
-                <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600">
-                    <div className={`p-2 rounded-full ${isPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-600/50 text-slate-400'}`}>
-                        <DollarSign className="w-5 h-5" />
+                {/* Paid Status Toggle (Admin only) */}
+                {userRole === 'admin' && (
+                    <div className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600">
+                        <div className={`p-2 rounded-full ${isPaid ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-600/50 text-slate-400'}`}>
+                            <DollarSign className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-200">Estado de Pago</p>
+                            <p className="text-xs text-slate-400">{isPaid ? 'Esta asistencia está pagada' : 'Pendiente de pago'}</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={isPaid}
+                                onChange={(e) => setIsPaid(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
                     </div>
-                    <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-200">Estado de Pago</p>
-                        <p className="text-xs text-slate-400">{isPaid ? 'Esta asistencia está pagada' : 'Pendiente de pago'}</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={isPaid}
-                            onChange={(e) => setIsPaid(e.target.checked)}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                    </label>
-                </div>
+                )}
 
                 {/* Footer */}
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
