@@ -74,10 +74,10 @@ export function useReports() {
       setLoading(true)
       setError(null)
 
-      // Definir rango de fechas (últimos 12 meses o año actual)
-      // Por defecto tomaremos el año actual completo
+      // Definir rango de fechas (año anterior y año actual = 24 meses)
       const currentYear = new Date().getFullYear()
-      const startDate = `${currentYear}-01-01`
+      const previousYear = currentYear - 1
+      const startDate = `${previousYear}-01-01`
       const endDate = `${currentYear}-12-31`
 
       // 1. Fetch Facturas (Ingresos)
@@ -104,7 +104,7 @@ export function useReports() {
       const { data: payments, error: paymentsError } = await supabase
         .from('worker_payment_history')
         .select('total_amount, payment_date')
-        .eq('is_deleted', false) // Asumiendo que existe este campo o similar para soft delete
+        .eq('is_deleted', false)
         .gte('payment_date', startDate)
         .lte('payment_date', endDate)
 
@@ -127,13 +127,42 @@ export function useReports() {
 
       const monthlyDataMap = new Map<string, MonthlyData>()
 
+      // Inicializar mapa para 24 meses (Año anterior + Año actual)
+      // Año anterior
       for (let i = 0; i < 12; i++) {
-        const monthKey = `${currentYear}-${String(i + 1).padStart(2, '0')}`
-        const monthName = new Date(currentYear, i).toLocaleString('es-CL', { month: 'short' })
-        const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1)
+        const monthKey = `${previousYear}-${String(i + 1).padStart(2, '0')}`
+        const date = new Date(previousYear, i)
+        // Formato Ene 25
+        const monthName = date.toLocaleString('es-CL', { month: 'short' })
+        const yearShort = String(previousYear).slice(-2)
+        const label = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${yearShort}`
 
         monthlyDataMap.set(monthKey, {
-          month: capitalizedMonth,
+          month: label,
+          totalEarnings: 0,
+          contractorEarnings: 0,
+          workerPayments: 0,
+          totalExpenses: 0,
+          materialCosts: 0,
+          laborCosts: 0,
+          operationalCosts: 0,
+          averageProgress: 0,
+          completedProjects: 0,
+          activeProjects: 0,
+          delayedProjects: 0
+        })
+      }
+
+      // Año actual
+      for (let i = 0; i < 12; i++) {
+        const monthKey = `${currentYear}-${String(i + 1).padStart(2, '0')}`
+        const date = new Date(currentYear, i)
+        const monthName = date.toLocaleString('es-CL', { month: 'short' })
+        const yearShort = String(currentYear).slice(-2)
+        const label = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${yearShort}`
+
+        monthlyDataMap.set(monthKey, {
+          month: label,
           totalEarnings: 0,
           contractorEarnings: 0,
           workerPayments: 0,
@@ -163,7 +192,7 @@ export function useReports() {
         const data = monthlyDataMap.get(key)
         if (data) {
           data.workerPayments += (pay.total_amount || 0)
-          data.laborCosts += (pay.total_amount || 0) // Labor Costs es lo mismo que Worker Payments
+          data.laborCosts += (pay.total_amount || 0)
         }
       })
 
@@ -188,26 +217,19 @@ export function useReports() {
       sortedKeys.forEach(key => {
         const data = monthlyDataMap.get(key)!
 
-        // 1. Total Gastos = Materiales + Mano de Obra (Payments) + Operacionales
-        // Nota: laborCosts ya incluye workerPayments
+        // 1. Total Gastos
         data.totalExpenses = data.materialCosts + data.laborCosts + data.operationalCosts
 
-        // 2. Ganancia Contratista = Ingresos (Facturas) - Pagos Trabajadores
+        // 2. Ganancia Contratista
         data.contractorEarnings = data.totalEarnings - data.workerPayments
 
         // 3. Progreso Estimado
-        // Contar tareas completadas en este mes
         const tasksCompletedInMonth = tasks?.filter(t => {
           if (t.status !== 'completed' || !t.completed_at) return false
           return getMonthKey(t.completed_at) === key
         }).length || 0
 
-        // Total tareas acumuladas hasta fin de este mes (creadas antes del fin de mes)
-        // Para simplificar "Average Progress", usaremos un proxy:
-        // (Tareas Completadas Acumuladas / Tareas Totales Acumuladas) * 100
-        // Esto es un 'Global Progress' histórico aproximado.
-
-        const monthEnd = new Date(parseInt(key.split('-')[0]), parseInt(key.split('-')[1]), 0) // Último día del mes
+        const monthEnd = new Date(parseInt(key.split('-')[0]), parseInt(key.split('-')[1]), 0)
 
         const cumulativeTasks = tasks?.filter(t => new Date(t.created_at) <= monthEnd)
         const cumulativeCompleted = cumulativeTasks?.filter(t => t.status === 'completed' && t.completed_at && new Date(t.completed_at) <= monthEnd)
@@ -218,11 +240,9 @@ export function useReports() {
         data.averageProgress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
         // 4. Proyectos
-        // Activos: Creados antes del fin de mes Y (no terminados O terminados después del inicio de mes)
-        // Por ahora usaremos el status actual como proxy simple o las fechas si existen
         data.activeProjects = projects?.filter(p => {
           const created = new Date(p.created_at)
-          return created <= monthEnd && p.status === 'active' // Simplificación
+          return created <= monthEnd && p.status === 'active'
         }).length || 0
       })
 
@@ -233,9 +253,8 @@ export function useReports() {
       const currentMonthKey = getMonthKey(new Date().toISOString())
       const currentMonthIndex = sortedKeys.indexOf(currentMonthKey)
 
-      // Si estamos en enero, el anterior es diciembre del año pasado (que no tenemos cargado en este set),
-      // así que compararemos con 0 o el mes anterior si existe en el array.
-      const currentData = monthlyDataMap.get(currentMonthKey) || finalMonthlyData[finalMonthlyData.length - 1]
+      const currentData = monthlyDataMap.get(currentMonthKey)
+      // El mes anterior ahora siempre debería existir a menos que sea Enero del año anterior (índice 0)
       const previousData = currentMonthIndex > 0 ? finalMonthlyData[currentMonthIndex - 1] : finalMonthlyData[0]
 
       if (currentData) {

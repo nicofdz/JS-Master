@@ -124,6 +124,8 @@ export default function ReportesPage() {
 
     const now = new Date()
     const currentMonth = now.getMonth() // 0-11
+    // Ajustar índice porque ahora tenemos 24 meses (0-11 año anterior, 12-23 año actual)
+    const currentMonthIndex = 12 + currentMonth
 
     let filteredData: any[] = []
 
@@ -131,15 +133,16 @@ export default function ReportesPage() {
       case 'current-month':
         return currentStats
       case 'last-3-months':
-        // Tomar los últimos 3 meses (incluyendo el actual si tiene datos, o los 3 anteriores)
-        // Como monthlyData es fijo Ene-Dic del año actual:
-        filteredData = data.slice(Math.max(0, currentMonth - 2), currentMonth + 1)
+        // Últimos 3 meses
+        filteredData = data.slice(Math.max(0, currentMonthIndex - 2), currentMonthIndex + 1)
         break
       case 'last-6-months':
-        filteredData = data.slice(Math.max(0, currentMonth - 5), currentMonth + 1)
+        // Últimos 6 meses
+        filteredData = data.slice(Math.max(0, currentMonthIndex - 5), currentMonthIndex + 1)
         break
       case 'last-year':
-        filteredData = data
+        // Últimos 12 meses (Rolling year)
+        filteredData = data.slice(Math.max(0, currentMonthIndex - 11), currentMonthIndex + 1)
         break
       default:
         return currentStats
@@ -175,16 +178,17 @@ export default function ReportesPage() {
 
     const now = new Date()
     const currentMonth = now.getMonth() // 0-11
+    const currentMonthIndex = 12 + currentMonth
 
     switch (period) {
       case 'current-month':
-        return fullData.slice(Math.max(0, currentMonth - 0), currentMonth + 1)
+        return fullData.slice(currentMonthIndex, currentMonthIndex + 1)
       case 'last-3-months':
-        return fullData.slice(Math.max(0, currentMonth - 2), currentMonth + 1)
+        return fullData.slice(Math.max(0, currentMonthIndex - 2), currentMonthIndex + 1)
       case 'last-6-months':
-        return fullData.slice(Math.max(0, currentMonth - 5), currentMonth + 1)
+        return fullData.slice(Math.max(0, currentMonthIndex - 5), currentMonthIndex + 1)
       case 'last-year':
-        return fullData
+        return fullData.slice(Math.max(0, currentMonthIndex - 11), currentMonthIndex + 1)
       default:
         return fullData
     }
