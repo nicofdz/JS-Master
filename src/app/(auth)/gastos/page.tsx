@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle, Trash2, Briefcase } from 'lucide-react'
+import { Plus, Search, Filter, Calendar, DollarSign, Package, Wrench, Shield, Fuel, FileText, X, Calculator, XCircle, Trash2, Briefcase, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -12,6 +12,7 @@ import { ReceiptModal } from '@/components/expenses/ReceiptModal'
 import { ExpensePreviewModal } from '@/components/expenses/ExpensePreviewModal'
 import { ExpenseChart } from '@/components/expenses/ExpenseChart'
 import { ExpenseFiltersSidebar } from '@/components/expenses/ExpenseFiltersSidebar'
+import { ExpenseDetailModal } from '@/components/expenses/ExpenseDetailModal'
 import { ConfirmationModal } from '@/components/common/ConfirmationModal'
 import { useExpenses, Expense } from '@/hooks/useExpenses'
 import { useProjects } from '@/hooks/useProjects'
@@ -102,6 +103,8 @@ export default function GastosPage() {
   const [ivaFilter, setIvaFilter] = useState(false)
   const [showChart, setShowChart] = useState(true)
   const [confirmDeleteExpenseState, setConfirmDeleteExpenseState] = useState<{ isOpen: boolean, expenseId: number | null }>({ isOpen: false, expenseId: null })
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedExpenseForDetail, setSelectedExpenseForDetail] = useState<Expense | null>(null)
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -504,6 +507,11 @@ export default function GastosPage() {
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense)
     setShowExpenseForm(true)
+  }
+
+  const handleViewDetail = (expense: Expense) => {
+    setSelectedExpenseForDetail(expense)
+    setShowDetailModal(true)
   }
 
   const handleCardClick = (type: string) => {
@@ -987,116 +995,100 @@ export default function GastosPage() {
             </Card>
           ) : (
             filteredExpenses.map((expense) => (
-              <Card key={expense.id} className="bg-slate-800 border-slate-700 hover:shadow-lg transition-shadow">
-                <CardContent className="p-3">
-                  <div className="flex flex-col sm:flex-row items-start justify-between">
-                    <div className="flex-1 w-full">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-white">{expense.name}</h3>
-                        <div className="flex gap-1.5">
-                          <Badge className={`${getTypeColor(expense.type)} text-[10px] px-1.5 py-0`}>
-                            <span className="flex items-center space-x-1">
+              <Card key={expense.id} className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-all hover:shadow-md group">
+                <CardContent className="p-4">
+                  <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                    {/* Left Column: Main Info */}
+                    <div className="flex-1 min-w-0 space-y-1 w-full">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-semibold text-white truncate pr-2">{expense.name}</h3>
+                        <div className="flex flex-wrap gap-1.5 shrink-0">
+                          <Badge className={`${getTypeColor(expense.type)} text-[10px] px-2 py-0 border-0`}>
+                            <span className="flex items-center gap-1">
                               {getTypeIcon(expense.type)}
                               <span>{getTypeLabel(expense.type)}</span>
                             </span>
                           </Badge>
                           <Badge
-                            className={`text-white capitalize text-[10px] px-1.5 py-0 ${expense.document_type === 'factura'
-                              ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-gray-500 text-white border-gray-500'
+                            variant="outline"
+                            className={`text-[10px] px-2 py-0 capitalize ${expense.document_type === 'factura'
+                              ? 'text-blue-400 border-blue-500/50 bg-blue-500/10'
+                              : 'text-slate-400 border-slate-600'
                               }`}
                           >
                             {expense.document_type}
                           </Badge>
-                          {/* Proyecto (Solo si existe) */}
                           {expense.project_id && (
-                            <Badge variant="outline" className="text-slate-300 border-slate-500 text-[10px] px-1.5 py-0 flex items-center gap-1">
+                            <Badge variant="outline" className="text-slate-400 border-slate-600 text-[10px] px-2 py-0 bg-slate-700/50 flex items-center gap-1 max-w-[150px]">
                               <Briefcase className="w-3 h-3" />
-                              <span className="max-w-[150px] truncate">
-                                {projects.find(p => p.id === expense.project_id)?.name || 'Proyecto desconocido'}
+                              <span className="truncate">
+                                {projects.find(p => p.id === expense.project_id)?.name}
                               </span>
                             </Badge>
                           )}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                        <div className="flex items-center">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400 mr-2" />
-                          <div>
-                            <p className="text-xs font-medium text-slate-400">Fecha</p>
-                            <p className="text-xs text-white">{formatDate(expense.date)}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center">
-                          <DollarSign className="w-3.5 h-3.5 text-slate-400 mr-2" />
-                          <div>
-                            <p className="text-xs font-medium text-slate-400">Total</p>
-                            <p className="text-xs text-white font-semibold">{formatPrice(expense.total_amount)}</p>
-                          </div>
-                        </div>
-
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {formatDate(expense.date)}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Briefcase className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[200px]" title={expense.supplier}>
+                            {expense.supplier}
+                          </span>
+                        </span>
                         {(expense.quantity || (expense.type === 'materiales' && expense.quantity === null)) && (
-                          <div className="flex items-center">
-                            <Package className="w-3.5 h-3.5 text-slate-400 mr-2" />
-                            <div>
-                              <p className="text-xs font-medium text-slate-400">Cantidad</p>
-                              <p className="text-xs text-white">
-                                {expense.type === 'materiales' && expense.quantity === null
-                                  ? 'Catálogo'
-                                  : `${expense.quantity} u.`}
-                              </p>
-                            </div>
-                          </div>
+                          <span className="flex items-center gap-1.5">
+                            <Package className="w-3.5 h-3.5" />
+                            {expense.type === 'materiales' && expense.quantity === null
+                              ? 'Catálogo'
+                              : `${expense.quantity} u.`}
+                          </span>
                         )}
-
-                        <div className="flex items-center">
-                          <FileText className="w-3.5 h-3.5 text-slate-400 mr-2" />
-                          <div>
-                            <p className="text-xs font-medium text-slate-400">Proveedor</p>
-                            <p className="text-xs text-white truncate max-w-[120px]" title={expense.supplier}>{expense.supplier}</p>
-                          </div>
-                        </div>
                       </div>
-
-                      {expense.description && (
-                        <div className="mb-4">
-                          <p className="text-sm font-medium text-slate-400 mb-1">Descripción</p>
-                          <p className="text-sm text-white">{expense.description}</p>
-                        </div>
-                      )}
                     </div>
 
-                    <div className="flex gap-2 mt-4 sm:mt-0 sm:ml-4 w-full sm:w-auto justify-end">
-                      {expense.receipt_url && (
+                    {/* Right Column: Amount & Actions */}
+                    <div className="flex items-center justify-between md:justify-end gap-6 w-full md:w-auto mt-2 md:mt-0 pl-0 md:pl-4 border-t md:border-t-0 border-slate-700 pt-3 md:pt-0">
+                      <div className="text-left md:text-right">
+                        <p className="text-sm text-slate-400">Total</p>
+                        <p className="text-lg font-bold text-white tracking-tight">{formatPrice(expense.total_amount)}</p>
+                      </div>
+
+                      <div className="flex items-center gap-1">
                         <Button
-                          onClick={() => handleViewReceipt(expense)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white p-2 flex-1 sm:flex-none justify-center"
-                          title="Ver Comprobante"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetail(expense)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700"
+                          title="Ver Detalles"
                         >
-                          <FileText className="w-4 h-4" />
-                          <span className="sm:hidden ml-2">Ver</span>
+                          <Eye className="w-4 h-4" />
                         </Button>
-                      )}
-                      <Button
-                        onClick={() => handleEdit(expense)}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white p-2 flex-1 sm:flex-none justify-center"
-                        title="Editar"
-                      >
-                        <Wrench className="w-4 h-4" />
-                        <span className="sm:hidden ml-2">Editar</span>
-                      </Button>
-                      {expense.status === 'active' && (
                         <Button
-                          onClick={() => handleCancelExpense(expense.id)}
-                          className="bg-red-600 hover:bg-red-700 text-white p-2 flex-1 sm:flex-none justify-center"
-                          title="Anular"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(expense)}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-yellow-400 hover:bg-yellow-400/10"
+                          title="Editar"
                         >
-                          <Trash2 className="w-4 h-4" />
-                          <span className="sm:hidden ml-2">Anular</span>
+                          <Wrench className="w-4 h-4" />
                         </Button>
-                      )}
+                        {expense.status === 'active' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCancelExpense(expense.id)}
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-red-400 hover:bg-red-400/10"
+                            title="Anular"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -1138,6 +1130,16 @@ export default function GastosPage() {
           onClose={() => {
             setShowReceiptModal(false)
             setSelectedExpense(null)
+          }}
+        />
+      )}
+
+      {showDetailModal && selectedExpenseForDetail && (
+        <ExpenseDetailModal
+          expense={selectedExpenseForDetail}
+          onClose={() => {
+            setShowDetailModal(false)
+            setSelectedExpenseForDetail(null)
           }}
         />
       )}

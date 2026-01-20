@@ -59,7 +59,7 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
   const fetchData = async () => {
     try {
       setLoading(true)
-      
+
       // Cargar trabajadores
       const { data: workersData, error: workersError } = await supabase
         .from('workers')
@@ -106,12 +106,12 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
         ciudad: selectedWorker.ciudad || 'No especificado',
         nacionalidad: selectedWorker.nacionalidad || 'Chilena',
         estado: selectedWorker.estado_civil || 'No especificado',
-        fecha_nacimiento: selectedWorker.fecha_nacimiento 
+        fecha_nacimiento: selectedWorker.fecha_nacimiento
           ? formatDateToChilean(selectedWorker.fecha_nacimiento)
           : 'No especificado',
         prevision: selectedWorker.prevision || 'No especificado',
         salud: selectedWorker.salud || 'No especificado',
-        
+
         // Datos del trabajo
         cargo: selectedWorker.cargo || 'Trabajador',
         nombre_obra: selectedProject.name,
@@ -122,7 +122,7 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
       // Llamar a la API para generar el contrato
       console.log('Enviando petición a /api/contracts/generate con método POST')
       console.log('Datos del contrato:', contractData)
-      
+
       const response = await fetch('/api/contracts/generate', {
         method: 'POST',
         headers: {
@@ -273,6 +273,8 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
           </CardContent>
         </Card>
 
+
+
         {/* Resumen del Contrato */}
         {selectedWorker && selectedProject && startDate && endDate && (
           <Card className="bg-slate-800 border-slate-700">
@@ -312,6 +314,6 @@ export function ContractGeneratorModal({ isOpen, onClose }: ContractGeneratorMod
           </Button>
         </div>
       </div>
-    </Modal>
+    </Modal >
   )
 }

@@ -54,7 +54,16 @@ export function ToolForm({ tool, onSave, onClose }: ToolFormProps) {
 
   useEffect(() => {
     if (tool) {
-      setFormData(tool)
+      setFormData({
+        name: tool.name,
+        brand: tool.brand,
+        status: tool.status,
+        value: tool.value,
+        location: tool.location,
+        details: tool.details,
+        image_url: tool.image_url,
+        project_id: tool.project_id
+      })
       if (tool.image_url) {
         setPreviewUrl(tool.image_url)
       }

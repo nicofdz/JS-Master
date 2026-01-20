@@ -157,6 +157,8 @@ export default function HerramientasPage() {
 
   const handleReturnToolForModal = async (loanId: number, returnDetails: string) => {
     await handleReturnTool(loanId, returnDetails)
+    setShowLoanModal(false)
+    setSelectedTool(null)
   }
 
 

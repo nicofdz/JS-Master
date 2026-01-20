@@ -333,17 +333,40 @@ export function useTools() {
     }
   }
 
-  // Cargar trabajadores
+  // Cargar trabajadores con su proyecto activo
   const fetchWorkers = async () => {
     try {
       const { data, error } = await supabase
         .from('workers')
-        .select('id, full_name')
+        .select(`
+          id, 
+          full_name,
+          contract_history (
+            project_id,
+            is_active,
+            status
+          )
+        `)
         .eq('is_active', true)
         .order('full_name')
 
       if (error) throw error
-      setWorkers(data || [])
+
+      // Procesar para obtener el proyecto activo (si tiene)
+      const workersWithProject = (data || []).map((worker: any) => {
+        // Buscar un contrato activo
+        const activeContract = worker.contract_history?.find((c: any) =>
+          c.is_active && c.status === 'activo'
+        )
+
+        return {
+          id: worker.id,
+          full_name: worker.full_name,
+          project_id: activeContract?.project_id || null
+        }
+      })
+
+      setWorkers(workersWithProject)
     } catch (err: any) {
       console.error('Error fetching workers:', err)
       setError(err.message)

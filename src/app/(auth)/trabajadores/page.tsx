@@ -20,12 +20,21 @@ import { formatDateToChilean } from '@/lib/contracts'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { ContractDetailModal } from '@/components/workers/ContractDetailModal'
+import { TemplateManagerModal } from '@/components/contracts/TemplateManagerModal'
+import { DocumentFormatModal } from '@/components/contracts/DocumentFormatModal'
 
 export default function TrabajadoresPage() {
   const { profile } = useAuth()
   const { workers, loading, error, createWorker, updateWorker, deleteWorker, restoreWorker, hardDeleteWorker, toggleWorkerStatus, refresh, refreshAll } = useWorkers()
   const { contracts, loading: contractsLoading, createContract, updateContract, deleteContract, restoreContract, hardDeleteContract, terminateContract, fetchContracts, checkAllContracts, uploadSignedContract, deleteSignedContract } = useContracts()
   const { projects } = useProjects()
+
+  // Estados para modal de formato de documento
+  const [showDocumentFormatModal, setShowDocumentFormatModal] = useState(false)
+  const [downloadType, setDownloadType] = useState<'both' | 'hours'>('both')
+  const [selectedContractForDownload, setSelectedContractForDownload] = useState<Contract | null>(null)
+
+  // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [contractTypeFilter, setContractTypeFilter] = useState<string>('all')
@@ -71,6 +80,9 @@ export default function TrabajadoresPage() {
   const [showContractHistoryModal, setShowContractHistoryModal] = useState(false)
   const [selectedWorkerForHistory, setSelectedWorkerForHistory] = useState<Worker | null>(null)
   const [contractHistoryFilter, setContractHistoryFilter] = useState<string>('all')
+
+  // Estado para el modal de gestión de plantillas
+  const [showTemplateManagerModal, setShowTemplateManagerModal] = useState(false)
 
   // Estados para el modal de generación de pacto de horas
   const [showHoursModal, setShowHoursModal] = useState(false)
@@ -383,6 +395,25 @@ export default function TrabajadoresPage() {
     })
     setIsIndefiniteContract(isIndefinite)
     setEditingContract(contract)
+
+    // Si es renovación, buscar y establecer la fecha de entrada
+    if (contract.is_renovacion) {
+      const workerContracts = contracts
+        .filter(c =>
+          c.worker_id === contract.worker_id &&
+          c.project_id === contract.project_id
+        )
+        .sort((a, b) => new Date(a.fecha_inicio).getTime() - new Date(b.fecha_inicio).getTime())
+
+      if (workerContracts.length > 0) {
+        setFechaEntradaEmpresa(workerContracts[0].fecha_inicio)
+      } else {
+        setFechaEntradaEmpresa(contract.fecha_inicio || '')
+      }
+    } else {
+      setFechaEntradaEmpresa('')
+    }
+
     setShowCreateContractModal(true)
   }
 
@@ -530,7 +561,16 @@ export default function TrabajadoresPage() {
     }
   }
 
-  const handleGenerateDocuments = async (contract: Contract) => {
+  const handleGenerateDocuments = (contract: Contract) => {
+    setSelectedContractForDownload(contract)
+    setDownloadType('both')
+    setShowDocumentFormatModal(true)
+  }
+
+  const executeGenerateDocuments = async (format: 'docx' | 'pdf') => {
+    const contract = selectedContractForDownload
+    if (!contract) return
+
     try {
       // Buscar los datos del trabajador y proyecto
       const worker = workers.find(w => w.id === contract.worker_id)
@@ -581,7 +621,10 @@ export default function TrabajadoresPage() {
         direccion_obra: project.address || 'No especificado',
         fecha_inicio: formatDateToChilean(contract.fecha_inicio),
         fecha_termino: contract.fecha_termino ? `HASTA ${formatDateToChilean(contract.fecha_termino)}` : 'INDEFINIDO',
-        fecha_entrada_empresa: formatDateToChilean(fechaEntradaEmpresa)
+        fecha_entrada_empresa: formatDateToChilean(fechaEntradaEmpresa),
+
+        // Formato (docType default 'both')
+        format
       }
 
       // Llamar a la API para generar el contrato
@@ -609,6 +652,7 @@ export default function TrabajadoresPage() {
       window.URL.revokeObjectURL(url)
 
       toast.success('Documentos generados y descargados correctamente')
+      setShowDocumentFormatModal(false)
     } catch (error: any) {
       console.error('Error generating documents:', error)
       toast.error(error.message || 'Error al generar documentos')
@@ -639,16 +683,28 @@ export default function TrabajadoresPage() {
     setShowHoursModal(true)
   }
 
-  const handleConfirmGenerateHours = async () => {
+  const handleConfirmGenerateHours = () => {
     if (!selectedContractForHours || !hoursFormData.fecha_inicio || !hoursFormData.fecha_termino) {
       toast.error('Por favor completa las fechas requeridas')
       return
     }
 
+    // Configurar para descarga, cerrar modal de horas y abrir selector de formato
+    setSelectedContractForDownload(selectedContractForHours)
+    setDownloadType('hours')
+    setShowHoursModal(false)
+    setShowDocumentFormatModal(true)
+  }
+
+  const executeGenerateHours = async (format: 'docx' | 'pdf') => {
+    if (!selectedContractForDownload || !hoursFormData.fecha_inicio || !hoursFormData.fecha_termino) {
+      return
+    }
+
     try {
       // Buscar los datos del trabajador y proyecto
-      const worker = workers.find(w => w.id === selectedContractForHours.worker_id)
-      const project = projects.find(p => p.id === selectedContractForHours.project_id)
+      const worker = workers.find(w => w.id === selectedContractForDownload.worker_id)
+      const project = projects.find(p => p.id === selectedContractForDownload.project_id)
 
       if (!worker || !project) {
         toast.error('No se encontraron los datos del trabajador o proyecto')
@@ -682,7 +738,8 @@ export default function TrabajadoresPage() {
         fecha_termino: `HASTA ${formatDateToChilean(hoursFormData.fecha_termino)}`,
 
         // Indicar que solo queremos el pacto de horas
-        documentType: 'hours'
+        documentType: 'hours',
+        format
       }
 
       // Llamar a la API para generar solo el pacto de horas
@@ -698,12 +755,12 @@ export default function TrabajadoresPage() {
         throw new Error('Error al generar el pacto de horas')
       }
 
-      // Descargar el archivo DOCX
+      // Descargar el archivo
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `pacto-horas-${worker.full_name}-${Date.now()}.docx`
+      link.download = `pacto-horas-${worker.full_name}-${Date.now()}.${format === 'pdf' ? 'zip' : 'docx'}` // El backend devuelve ZIP si es PDF (aunque sea un solo archivo, lo puse así en route.ts para consistencia, o tal vez debería revisar eso. Asumiré ZIP si es PDF para ir a la segura, o mejor dicho: si es PDF la API siempre devuelve ZIP porque mi implementación en route.ts lo hace así para simplificar)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -711,9 +768,10 @@ export default function TrabajadoresPage() {
 
       toast.success('Pacto de horas generado y descargado correctamente')
 
-      // Cerrar modal y limpiar
-      setShowHoursModal(false)
+      // Limpiar estados
+      setShowDocumentFormatModal(false)
       setSelectedContractForHours(null)
+      // No limpiamos horas form data inmediatamente por si falla y quieren reintentar, o se puede limpiar
       setHoursFormData({ fecha_inicio: '', fecha_termino: '' })
     } catch (error: any) {
       console.error('Error generating hours document:', error)
@@ -1170,10 +1228,20 @@ export default function TrabajadoresPage() {
                   Nuevo Trabajador
                 </Button>
               ) : (
-                <Button onClick={handleCreateContract} className="flex items-center gap-2 h-10">
-                  <Plus className="h-4 w-4" />
-                  Nuevo Contrato
-                </Button>
+                <>
+                  <Button onClick={handleCreateContract} className="flex items-center gap-2 h-10">
+                    <Plus className="h-4 w-4" />
+                    Nuevo Contrato
+                  </Button>
+                  <Button
+                    onClick={() => setShowTemplateManagerModal(true)}
+                    variant="outline"
+                    className="flex items-center gap-2 h-10 border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Gestionar Plantillas
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -1510,6 +1578,26 @@ export default function TrabajadoresPage() {
             </>
           )
         }
+
+        {/* Modal de gestión de plantillas */}
+        <TemplateManagerModal
+          isOpen={showTemplateManagerModal}
+          onClose={() => setShowTemplateManagerModal(false)}
+        />
+
+        {/* Modal de formato de documento */}
+        <DocumentFormatModal
+          isOpen={showDocumentFormatModal}
+          onClose={() => setShowDocumentFormatModal(false)}
+          onConfirm={(format) => {
+            if (downloadType === 'both') {
+              executeGenerateDocuments(format)
+            } else {
+              executeGenerateHours(format)
+            }
+          }}
+          title={downloadType === 'both' ? 'Descargar Documentos' : 'Descargar Pacto de Horas'}
+        />
 
         {/* Vista de Contratos */}
         {

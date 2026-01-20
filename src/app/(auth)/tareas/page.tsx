@@ -8,6 +8,7 @@ import { Plus, Search, Building2, User } from 'lucide-react'
 import { StatusFilterCards } from '@/components/common/StatusFilterCards'
 import { TaskHierarchyV2 } from '@/components/tasks-v2/TaskHierarchyV2'
 import { TaskFormModalV2 } from '@/components/tasks-v2/TaskFormModalV2'
+import { AddTasksToFloorsModal } from '@/components/projects/AddTasksToFloorsModal'
 import { DeletedTasksList } from '@/components/tasks-v2/DeletedTasksList'
 import { TaskTemplatesModal } from '@/components/tasks-v2/TaskTemplatesModal'
 import { Clock, Play, CheckCircle, Lock, AlertCircle, Layers, Trash2, CheckSquare, FileText, Filter, XCircle } from 'lucide-react'
@@ -72,7 +73,8 @@ export default function TareasPage() {
   const [deletedTasksCount, setDeletedTasksCount] = useState(0)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
   const [initialTaskData, setInitialTaskData] = useState<{ projectId: number; towerId: number; floorId: number; apartmentId: number | null } | null>(null)
-  const [massCreateData, setMassCreateData] = useState<{ projectId: number; towerId: number } | null>(null)
+  const [showMassCreateModal, setShowMassCreateModal] = useState(false)
+  const [massCreateData, setMassCreateData] = useState<{ projectId: number, towerId: number } | null>(null)
   // const [showRecentTasksModal, setShowRecentTasksModal] = useState(false) // Removed
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<any | null>(null)
 
@@ -136,7 +138,14 @@ export default function TareasPage() {
 
   const handleMassAddTask = (projectId: number, towerId: number) => {
     setMassCreateData({ projectId, towerId })
-    setShowCreateModal(true)
+    setShowMassCreateModal(true)
+  }
+
+  const handleMassCreateSuccess = async () => {
+    await refreshTasks()
+    await refreshStats()
+    setShowMassCreateModal(false)
+    setMassCreateData(null)
   }
 
   // Cargar filtros desde localStorage al iniciar Y leer URL params
@@ -169,7 +178,6 @@ export default function TareasPage() {
         if (filters.activeTab) setActiveTab(filters.activeTab)
 
         // Date filters
-        // Reading file content first to find where to replace
         if (filters.dateFilterType) setDateFilterType(filters.dateFilterType)
         if (filters.dateStart) setDateStart(filters.dateStart)
         if (filters.dateEnd) setDateEnd(filters.dateEnd)
@@ -860,15 +868,13 @@ export default function TareasPage() {
         onClose={() => {
           setShowCreateModal(false)
           setInitialTaskData(null)
-          setMassCreateData(null)
         }}
         mode="create"
-        initialProjectId={initialTaskData?.projectId || massCreateData?.projectId}
-        initialTowerId={initialTaskData?.towerId || massCreateData?.towerId}
+        initialProjectId={initialTaskData?.projectId}
+        initialTowerId={initialTaskData?.towerId}
         initialFloorId={initialTaskData?.floorId}
         initialApartmentId={initialTaskData?.apartmentId}
-        isMassCreate={!!massCreateData}
-        massCreateData={massCreateData || undefined}
+        isMassCreate={false}
         onSuccess={() => {
           if (refreshTasks) {
             refreshTasks()
@@ -879,6 +885,19 @@ export default function TareasPage() {
           }
         }}
       />
+
+      {massCreateData && (
+        <AddTasksToFloorsModal
+          isOpen={showMassCreateModal}
+          onClose={() => {
+            setShowMassCreateModal(false)
+            setMassCreateData(null)
+          }}
+          projectId={massCreateData.projectId}
+          towerId={massCreateData.towerId}
+          onSuccess={handleMassCreateSuccess}
+        />
+      )}
 
       {/* Modal de Gestión de Plantillas */}
       <TaskTemplatesModal

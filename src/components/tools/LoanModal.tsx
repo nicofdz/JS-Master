@@ -191,11 +191,33 @@ export function LoanModal({ tool, workers, users, projects, currentUserId, onClo
                       )}
                     >
                       <option value="">Seleccionar trabajador...</option>
-                      {workers.map((worker) => (
-                        <option key={worker.id} value={worker.id}>
-                          {worker.full_name}
-                        </option>
-                      ))}
+
+                      {/* Agrupar por Proyecto */}
+                      {projects.map(project => {
+                        const projectWorkers = workers.filter((w: any) => w.project_id === project.id)
+                        if (projectWorkers.length === 0) return null
+
+                        return (
+                          <optgroup key={project.id} label={`🏢 ${project.name}`}>
+                            {projectWorkers.map((worker) => (
+                              <option key={worker.id} value={worker.id}>
+                                {worker.full_name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )
+                      })}
+
+                      {/* Sin Proyecto Asignado */}
+                      <optgroup label="⚠️ Sin Proyecto / Otros">
+                        {workers
+                          .filter((w: any) => !w.project_id || !projects.find(p => p.id === w.project_id))
+                          .map((worker) => (
+                            <option key={worker.id} value={worker.id}>
+                              {worker.full_name}
+                            </option>
+                          ))}
+                      </optgroup>
                     </Select>
                     {errors.borrowerId && (
                       <p className="text-xs text-red-400 font-medium mt-1">{errors.borrowerId}</p>
