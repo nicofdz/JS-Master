@@ -11,6 +11,7 @@ import { AdjustDistributionModalV2 } from './AdjustDistributionModalV2'
 import { TaskFormModalV2 } from './TaskFormModalV2'
 import { useTasksV2 } from '@/hooks/useTasks_v2'
 import toast from 'react-hot-toast'
+import { AlertCircle } from 'lucide-react'
 
 interface TaskDetailModalV2Props {
   isOpen: boolean
@@ -42,7 +43,11 @@ export function TaskDetailModalV2({
   const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDistributionModal, setShowDistributionModal] = useState(false)
-  const { updateTask } = useTasksV2()
+  const { updateTask, deleteTask } = useTasksV2()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
+  const [showReasonInput, setShowReasonInput] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDeleteNotes = async () => {
     if (!task) return
@@ -54,6 +59,28 @@ export function TaskDetailModalV2({
       } catch (error) {
         console.error('Error deleting notes:', error)
       }
+    }
+  }
+
+  const handleDeleteTask = async () => {
+    if (!task) return
+
+    try {
+      setIsDeleting(true)
+      await deleteTask(task.id, deleteReason.trim() || 'Eliminada desde detalle')
+      toast.success('Tarea eliminada exitosamente')
+
+      // Cerrar modales
+      setShowDeleteConfirm(false)
+      onClose()
+
+      // Notificar actualización
+      onTaskUpdate?.()
+    } catch (error: any) {
+      console.error('Error deleting task:', error)
+      toast.error(`Error al eliminar tarea: ${error.message}`)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -329,41 +356,51 @@ export function TaskDetailModalV2({
             </div>
 
             {/* Botones de Acción */}
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+            <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200 justify-between">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onEdit ? onEdit() : setShowEditModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Editar
+                </button>
+                <button
+                  onClick={() => onAdjustDistribution ? onAdjustDistribution() : setShowDistributionModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Ajustar Distribución
+                </button>
+                <button
+                  onClick={() => setActiveTab('photos')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  <Image className="w-4 h-4" />
+                  Ver Fotos
+                </button>
+                <button
+                  onClick={() => setActiveTab('materials')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  <Package className="w-4 h-4" />
+                  Ver Materiales
+                </button>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  <History className="w-4 h-4" />
+                  Historial
+                </button>
+              </div>
+
               <button
-                onClick={() => onEdit ? onEdit() : setShowEditModal(true)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
               >
-                <Edit className="w-4 h-4" />
-                Editar
-              </button>
-              <button
-                onClick={() => onAdjustDistribution ? onAdjustDistribution() : setShowDistributionModal(true)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
-              >
-                <DollarSign className="w-4 h-4" />
-                Ajustar Distribución
-              </button>
-              <button
-                onClick={() => setActiveTab('photos')}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                <Image className="w-4 h-4" />
-                Ver Fotos
-              </button>
-              <button
-                onClick={() => setActiveTab('materials')}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                <Package className="w-4 h-4" />
-                Ver Materiales
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                <History className="w-4 h-4" />
-                Historial
+                <Trash2 className="w-4 h-4" />
+                Eliminar
               </button>
             </div>
           </div>
@@ -397,6 +434,79 @@ export function TaskDetailModalV2({
         task={task}
         onSuccess={onTaskUpdate}
       />
+
+      {/* Modal de Confirmación de Eliminación */}
+      {showDeleteConfirm && (
+        <ModalV2
+          isOpen={showDeleteConfirm}
+          onClose={() => {
+            setShowDeleteConfirm(false)
+            setDeleteReason('')
+            setShowReasonInput(false)
+          }}
+          title="Eliminar Tarea"
+          size="md"
+        >
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 text-red-500">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-700">
+                  ¿Estás seguro de que quieres eliminar esta tarea? Esta acción moverá la tarea a la papelera.
+                </p>
+                <div className="mt-4 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowReasonInput(!showReasonInput)}
+                    className="text-sm text-gray-500 hover:text-gray-700 underline"
+                  >
+                    {showReasonInput ? 'Ocultar' : 'Agregar'} razón de eliminación (opcional)
+                  </button>
+                  {showReasonInput && (
+                    <textarea
+                      value={deleteReason}
+                      onChange={(e) => setDeleteReason(e.target.value)}
+                      placeholder="Ingresa una razón para la eliminación..."
+                      className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      rows={3}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false)
+                  setDeleteReason('')
+                  setShowReasonInput(false)
+                }}
+                disabled={isDeleting}
+                className="px-6 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-md transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeleteTask}
+                disabled={isDeleting}
+                className="px-6 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  'Eliminar'
+                )}
+              </button>
+            </div>
+          </div>
+        </ModalV2>
+      )}
     </>
   )
 }

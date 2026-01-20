@@ -350,6 +350,17 @@ export default function TareasPage() {
     return projectWorkers
   }, [projectWorkers, users, selectedProjectId, loadingWorkers])
 
+  // Efecto para cerrar el modal de detalle si la tarea seleccionada ya no existe en la lista
+  // (por ejemplo, si fue eliminada)
+  useEffect(() => {
+    if (selectedTaskForDetail && !loading) {
+      const taskExists = tasks.some(t => t.id === selectedTaskForDetail.id)
+      if (!taskExists) {
+        setSelectedTaskForDetail(null)
+      }
+    }
+  }, [tasks, selectedTaskForDetail, loading])
+
   // Filtrar tareas
   const filteredTasks = tasks.filter(task => {
     const fullApartmentNumber = formatApartmentNumber(task.apartment_code, task.apartment_number || '')
