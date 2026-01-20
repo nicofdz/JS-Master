@@ -14,7 +14,7 @@ import { TaskTemplatesModal } from '@/components/tasks-v2/TaskTemplatesModal'
 import { Clock, Play, CheckCircle, Lock, AlertCircle, Layers, Trash2, CheckSquare, FileText, Filter, XCircle } from 'lucide-react'
 import { TaskFiltersSidebar } from '@/components/tasks-v2/TaskFiltersSidebar'
 // import { RecentTasksModal } from '@/components/tasks-v2/RecentTasksModal' // Removing Modal import
-import { RecentTasksList } from '@/components/tasks-v2/RecentTasksList'
+// import { RecentTasksList } from '@/components/tasks-v2/RecentTasksList' // Removed
 import { TaskDetailModalV2 } from '@/components/tasks-v2/TaskDetailModalV2'
 import { useTasksV2 } from '@/hooks'
 import { useProjectFilter } from '@/hooks/useProjectFilter'
@@ -487,6 +487,33 @@ export default function TareasPage() {
     return result
   }, [apartments, selectedProjectId, towerFilter, floorFilter, apartmentFilter, searchTerm, filteredTasks, workerFilter, statusFilter, dateFilterType])
 
+  // Calcular las últimas 10 tareas creadas
+  const recentTasks = useMemo(() => {
+    let filtered = [...tasks].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    if (recentTasksProjectFilter && recentTasksProjectFilter !== 'all') {
+      filtered = filtered.filter(t => t.project_id?.toString() === recentTasksProjectFilter)
+    }
+
+    return filtered.slice(0, 10)
+  }, [tasks, recentTasksProjectFilter])
+
+  // Calcular apartamentos asociados a las tareas recientes
+  const recentApartments = useMemo(() => {
+    // Necesitamos los apartamentos que contienen estas tareas para mantener la jerarquía
+    const recentTaskApartmentIds = new Set(recentTasks.map(t => t.apartment_id).filter(Boolean))
+
+    // Filtrar la lista completa de apartamentos
+    return apartments.filter(apt => {
+      // Incluir si el ID del depto está en las tareas recientes
+      if (recentTaskApartmentIds.has(apt.id)) return true
+
+      // O si tiene alguna tarea reciente que (por alguna razón) no mapeamos arriba pero está en su lista interna de filtrado?
+      // Mejor confiar en los IDs extraídos de las tareas
+      return false
+    })
+  }, [apartments, recentTasks])
+
   // Calculate delayed count client-side to match the dynamic filter logic
   const derivedDelayedCount = useMemo(() => {
     const today = new Date()
@@ -525,6 +552,8 @@ export default function TareasPage() {
       </div>
     )
   }
+
+
 
 
 
@@ -820,28 +849,17 @@ export default function TareasPage() {
           </div>
         </>
       ) : activeTab === 'recent' ? (
-        <RecentTasksList
-          tasks={tasks}
-          onTaskSelect={(taskId) => {
-            const task = tasks.find(t => t.id === taskId)
-            if (task) {
-              setSelectedTaskForDetail(task)
+        <TaskHierarchyV2
+          tasks={recentTasks}
+          apartments={recentApartments}
+          floors={floors}
+          onTaskUpdate={async () => {
+            if (refreshTasks) {
+              refreshTasks()
             }
           }}
-          onGoToLocation={(task) => {
-            // 1. Set filters based on task location
-            if (task.project_id) setSelectedProjectId(task.project_id.toString())
-            if (task.tower_id) setTowerFilter(task.tower_id.toString())
-            if (task.floor_id) setFloorFilter(task.floor_id.toString())
-            if (task.apartment_id) setApartmentFilter(task.apartment_id.toString())
-
-            // 2. Switch to 'active' tab
-            setActiveTab('active')
-
-            // 3. Clear searching to ensure specific location is visible
-            setSearchTerm('')
-          }}
-          selectedProjectId={recentTasksProjectFilter && recentTasksProjectFilter !== 'all' ? Number(recentTasksProjectFilter) : undefined}
+          onAddTask={handleAddTask} // Permitir agregar si se desea, o null si es solo vista lectura
+          areFiltersActive={true} // Forzar expansión para ver las tareas inmediatamente
         />
       ) : (
         <DeletedTasksList
