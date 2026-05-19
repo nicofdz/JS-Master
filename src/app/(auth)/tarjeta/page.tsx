@@ -97,6 +97,9 @@ export default function TarjetaPresentacionPage() {
     <div className="min-h-screen bg-slate-900 p-6">
       {/* CSS overrides for print */}
       <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          margin: 0;
+        }
         @media print {
           /* Hide everything except print layout */
           header, footer, nav, aside, button, .no-print, .notification-center {
