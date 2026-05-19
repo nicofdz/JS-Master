@@ -309,7 +309,7 @@ export default function TarjetaPresentacionPage() {
                     <span className={!darkMode ? 'text-slate-900' : 'text-white'}>JS MASTER</span>
                   </h2>
                   <p className={`text-xs tracking-[0.25em] font-semibold mt-1 uppercase bg-gradient-to-r ${getAccentClass()} bg-clip-text text-transparent`}>
-                    Construcción y Terminaciones
+                    Construcción, Terminaciones y Mantención
                   </p>
                 </div>
               </div>
@@ -393,7 +393,7 @@ export default function TarjetaPresentacionPage() {
               <span>JS MASTER</span>
             </h2>
             <p className={`text-[7px] tracking-[0.25em] font-semibold uppercase mt-0.5 bg-gradient-to-r ${getAccentClass()} bg-clip-text text-transparent`}>
-              Construcción y Terminaciones
+              Construcción, Terminaciones y Mantención
             </p>
           </div>
         </div>
