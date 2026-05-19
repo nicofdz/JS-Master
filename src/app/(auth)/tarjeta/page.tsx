@@ -39,7 +39,7 @@ export default function TarjetaPresentacionPage() {
   const router = useRouter()
 
   // Form State
-  const [nombre, setNombre] = useState('Juan Sandoval')
+  const [nombre, setNombre] = useState('Jorge Sandoval')
   const [cargo, setCargo] = useState('Fundador & Director General')
   const [telefono, setTelefono] = useState('+56 9 7150 7575')
   const [email, setEmail] = useState('jsandoval0696@gmail.com')
@@ -330,7 +330,7 @@ export default function TarjetaPresentacionPage() {
 
                 <div className="h-full grid grid-cols-12 p-8 items-center gap-4">
                   {/* Left Side: Brand info */}
-                  <div className="col-span-7 flex flex-col justify-between h-full py-2">
+                  <div className="col-span-8 flex flex-col justify-between h-full py-2">
                     <div>
                       <h3 className="text-2xl font-bold tracking-wide">{nombre}</h3>
                       <p className={`text-xs font-semibold uppercase tracking-wider bg-gradient-to-r ${getAccentClass()} bg-clip-text text-transparent mt-1`}>
@@ -354,8 +354,8 @@ export default function TarjetaPresentacionPage() {
                     </div>
                   </div>
 
-                  {/* Right Side: QR Code and Logo */}
-                  <div className="col-span-5 flex flex-col items-end justify-between h-full py-2">
+                  {/* Right Side: Logo */}
+                  <div className="col-span-4 flex flex-col items-end justify-start h-full py-2">
                     <div className="flex items-center gap-2">
                       <div className="relative w-8 h-8">
                         <Image
@@ -366,11 +366,6 @@ export default function TarjetaPresentacionPage() {
                         />
                       </div>
                       <span className="font-bold tracking-wider text-xs">JS MASTER</span>
-                    </div>
-
-                    {/* QR Code */}
-                    <div className={`p-2 rounded-xl border ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                      <MockQRCode />
                     </div>
                   </div>
                 </div>
@@ -431,7 +426,7 @@ export default function TarjetaPresentacionPage() {
               </div>
             </div>
 
-            <div className="col-span-4 flex flex-col items-end justify-between h-full py-1">
+            <div className="col-span-4 flex flex-col items-end justify-start h-full py-1">
               <div className="flex items-center gap-1.5">
                 <div className="relative w-6 h-6">
                   <Image
@@ -442,10 +437,6 @@ export default function TarjetaPresentacionPage() {
                   />
                 </div>
                 <span className="font-bold tracking-wider text-[8px]">JS MASTER</span>
-              </div>
-
-              <div className={`p-1.5 rounded-lg border ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                <MockQRCode />
               </div>
             </div>
           </div>
