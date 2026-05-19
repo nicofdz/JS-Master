@@ -94,7 +94,7 @@ export default function TarjetaPresentacionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 p-6 no-print">
+    <div className="min-h-screen bg-slate-900 p-6">
       {/* CSS overrides for print */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
@@ -102,11 +102,13 @@ export default function TarjetaPresentacionPage() {
           header, footer, nav, aside, button, .no-print, .notification-center {
             display: none !important;
           }
-          body, html, main {
+          /* Reset root layout paddings for print */
+          body, html, main, .min-h-screen, [class*="lg:pl-"] {
             background: white !important;
             color: black !important;
             margin: 0 !important;
             padding: 0 !important;
+            padding-left: 0 !important;
           }
           .print-container {
             display: flex !important;
@@ -130,6 +132,8 @@ export default function TarjetaPresentacionPage() {
             color: ${darkMode ? '#f8fafc' : '#0f172a'} !important;
             page-break-inside: avoid !important;
             overflow: hidden !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
           }
           .print-glow {
             display: none !important;
@@ -137,7 +141,7 @@ export default function TarjetaPresentacionPage() {
         }
       ` }} />
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6 no-print">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
@@ -377,7 +381,7 @@ export default function TarjetaPresentacionPage() {
       </div>
 
       {/* Hidden container designed ONLY for printing */}
-      <div className="hidden print-container">
+      <div className="hidden print:flex print-container">
         {/* Printable Front Side */}
         <div className="business-card-print p-0 relative">
           <div className={`absolute left-0 top-0 bottom-0 w-[4mm] bg-gradient-to-b ${getAccentClass()}`} />
