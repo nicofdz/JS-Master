@@ -45,7 +45,7 @@ export default function Privacidad() {
           </p>
           <ul className="list-none space-y-1">
             <li><strong>Email:</strong> jsandoval0696@gmail.com</li>
-            <li><strong>Teléfono:</strong> +56 9 7150 757</li>
+            <li><strong>Teléfono:</strong> +56 9 7150 7575</li>
           </ul>
         </div>
       </div>
