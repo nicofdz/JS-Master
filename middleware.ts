@@ -65,7 +65,7 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.includes(req.nextUrl.pathname)
 
   // Rutas protegidas que requieren autenticación
-  const protectedRoutes = ['/dashboard', '/trabajadores', '/pisos', '/reportes', '/solicitudes']
+  const protectedRoutes = ['/dashboard', '/trabajadores', '/pisos', '/reportes', '/solicitudes', '/usuarios', '/tarjeta']
   const isProtectedRoute = protectedRoutes.some(route =>
     req.nextUrl.pathname.startsWith(route)
   )

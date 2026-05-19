@@ -176,6 +176,7 @@ export default function AuthLayout({
       icon: Users,
       items: [
         { name: 'Usuarios', href: '/usuarios', icon: Users },
+        { name: 'Tarjeta Presentación', href: '/tarjeta', icon: CreditCard },
       ]
     })
 
