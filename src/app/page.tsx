@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Hammer, CheckCircle2, Building, ShieldCheck, Ruler, PaintBucket, Users, Trophy, Mail, Phone, Wrench } from 'lucide-react'
+import { ArrowRight, Hammer, CheckCircle2, Building, ShieldCheck, Ruler, PaintBucket, Users, Trophy, Mail, Phone, Wrench, Zap } from 'lucide-react'
 import { RevealOnScroll } from '@/components/ui/RevealOnScroll'
 import { CountUpAnimation } from '@/components/ui/CountUp'
 import { PromiseGrid } from '@/components/ui/PromiseGrid'
@@ -239,6 +239,12 @@ export default function Home() {
               description="Servicio integral de mantención preventiva y correctiva para establecimientos comerciales e institucionales, garantizando operatividad y durabilidad."
               delay={600}
             />
+            <ServiceCard
+              icon={<Zap />}
+              title="Electricidad"
+              description="Instalaciones eléctricas de baja tensión, canalizaciones, tableros eléctricos, iluminación LED y mantenimiento de redes comerciales y residenciales."
+              delay={750}
+            />
           </div>
         </div>
       </section>
@@ -353,6 +359,7 @@ export default function Home() {
                 <li>Instalación de Puertas</li>
                 <li>Guardapolvos y Molduras</li>
                 <li>Mantención de Establecimientos</li>
+                <li>Instalaciones Eléctricas</li>
               </ul>
             </div>
 
