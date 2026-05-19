@@ -72,10 +72,13 @@ export default function Home() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
           <RevealOnScroll>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-900/30 border border-blue-500/30 text-blue-400 mb-8 backdrop-blur-sm">
-              <Trophy className="w-4 h-4" />
-              <span className="text-sm font-medium">Excelencia en Construcción y Terminaciones</span>
-            </div>
+            <a
+              href="tel:+5697150757"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-900/30 border border-blue-500/30 text-blue-400 mb-8 backdrop-blur-sm hover:bg-blue-900/50 transition-colors cursor-pointer"
+            >
+              <Phone className="w-4 h-4" />
+              <span className="text-sm font-medium">Contáctanos: +56 9 7150 757</span>
+            </a>
           </RevealOnScroll>
 
           <RevealOnScroll delay={200}>
@@ -335,19 +338,19 @@ export default function Home() {
             <div>
               <h4 className="text-white font-bold mb-6">Servicios</h4>
               <ul className="space-y-3 text-slate-500 text-sm">
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Tabiquería</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Terminaciones</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Instalación de Puertas</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Guardapolvos y Molduras</li>
+                <li>Tabiquería</li>
+                <li>Terminaciones</li>
+                <li>Instalación de Puertas</li>
+                <li>Guardapolvos y Molduras</li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-white font-bold mb-6">Empresa</h4>
               <ul className="space-y-3 text-slate-500 text-sm">
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Sobre Nosotros</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Trayectoria</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Proyectos</li>
+                <li>Sobre Nosotros</li>
+                <li>Trayectoria</li>
+                <li>Proyectos</li>
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">
                   <a href="#contacto">Contacto</a>
                 </li>
@@ -382,8 +385,8 @@ export default function Home() {
               &copy; {new Date().getFullYear()} JS Master Construcción. Todos los derechos reservados.
             </div>
             <div className="flex gap-6">
-              <span className="text-slate-600 hover:text-slate-400 cursor-pointer text-sm">Privacidad</span>
-              <span className="text-slate-600 hover:text-slate-400 cursor-pointer text-sm">Términos</span>
+              <Link href="/privacidad" className="text-slate-600 hover:text-slate-400 text-sm">Privacidad</Link>
+              <Link href="/terminos" className="text-slate-600 hover:text-slate-400 text-sm">Términos</Link>
             </div>
           </div>
         </div>
