@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Hammer, CheckCircle2, Building, ShieldCheck, Ruler, PaintBucket, Users, Trophy, Mail, Phone } from 'lucide-react'
+import { ArrowRight, Hammer, CheckCircle2, Building, ShieldCheck, Ruler, PaintBucket, Users, Trophy, Mail, Phone, Wrench } from 'lucide-react'
 import { RevealOnScroll } from '@/components/ui/RevealOnScroll'
 import { CountUpAnimation } from '@/components/ui/CountUp'
 import { PromiseGrid } from '@/components/ui/PromiseGrid'
@@ -208,7 +208,7 @@ export default function Home() {
             </div>
           </RevealOnScroll>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <ServiceCard
               icon={<Hammer />}
               title="Tabiquería"
@@ -232,6 +232,12 @@ export default function Home() {
               title="Guardapolvos"
               description="Instalación de guardapolvos, junquillos y molduras decorativas. Cortes a inglete perfectos y fijaciones invisibles."
               delay={450}
+            />
+            <ServiceCard
+              icon={<Wrench />}
+              title="Mantención"
+              description="Servicio integral de mantención preventiva y correctiva para establecimientos comerciales e institucionales, garantizando operatividad y durabilidad."
+              delay={600}
             />
           </div>
         </div>
@@ -346,6 +352,7 @@ export default function Home() {
                 <li>Terminaciones</li>
                 <li>Instalación de Puertas</li>
                 <li>Guardapolvos y Molduras</li>
+                <li>Mantención de Establecimientos</li>
               </ul>
             </div>
 
