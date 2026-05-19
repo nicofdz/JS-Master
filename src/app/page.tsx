@@ -2,12 +2,10 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Hammer, CheckCircle2, Building, ShieldCheck, Ruler, PaintBucket, Users, Trophy } from 'lucide-react'
+import { ArrowRight, Hammer, CheckCircle2, Building, ShieldCheck, Ruler, PaintBucket, Users, Trophy, Mail, Phone } from 'lucide-react'
 import { RevealOnScroll } from '@/components/ui/RevealOnScroll'
 import { CountUpAnimation } from '@/components/ui/CountUp'
 import { PromiseGrid } from '@/components/ui/PromiseGrid'
-import { WorkWithUs } from '@/components/ui/WorkWithUs'
-import { ServiceRequestForm } from '@/components/ui/ServiceRequestForm'
 
 export default function Home() {
   return (
@@ -43,13 +41,13 @@ export default function Home() {
               <div className="w-px h-5 bg-slate-800 mx-2"></div>
 
               <Link
-                href="#contrata-servicios"
+                href="#contacto"
                 className="text-sm font-medium text-slate-300 hover:text-white transition-colors hover:scale-105 transform"
               >
                 Contratar Servicios
               </Link>
               <Link
-                href="#trabaja-con-nosotros"
+                href="#contacto"
                 className="text-sm font-medium text-slate-300 hover:text-white transition-colors hover:scale-105 transform"
               >
                 Trabaja con Nosotros
@@ -98,7 +96,7 @@ export default function Home() {
 
           <RevealOnScroll delay={600} className="mt-12 flex flex-col sm:flex-row justify-center gap-4">
             <Link
-              href="#contrata-servicios"
+              href="#contacto"
               className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-700 transition-all hover:scale-105 shadow-xl shadow-blue-500/20 group"
             >
               Contrata nuestros servicios
@@ -234,9 +232,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Hire Services Section */}
-      <ServiceRequestForm />
-
       {/* CTA Section */}
       <section className="py-32 relative overflow-hidden">
         <div className="absolute inset-0 bg-blue-900/20"></div>
@@ -249,7 +244,7 @@ export default function Home() {
               Utilizamos tecnología avanzada para gestionar nuestros proyectos, asegurando transparencia, trazabilidad y eficiencia en cada entrega.
             </p>
             <Link
-              href="#trabaja-con-nosotros"
+              href="#contacto"
               className="group relative inline-flex items-center px-12 py-5 bg-white text-blue-950 font-bold text-lg rounded-full hover:bg-blue-50 transition-all shadow-2xl hover:shadow-white/20 hover:-translate-y-1 overflow-hidden"
             >
               <span className="relative z-10">Trabaja con nosotros</span>
@@ -259,11 +254,65 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Work With Us Section */}
-      <WorkWithUs />
+      {/* Contact Section */}
+      <section id="contacto" className="py-24 bg-slate-900 border-y border-slate-800 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/10 via-slate-950 to-slate-950 pointer-events-none"></div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-16">
+            <RevealOnScroll>
+              <span className="text-blue-500 font-bold tracking-widest uppercase text-xs mb-2 block">Ponte en Contacto</span>
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">¿Quieres trabajar con nosotros o necesitas que hagamos un proyecto?</h2>
+              <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+                Estamos listos para colaborar contigo. Escríbenos o llámanos directamente y te responderemos a la brevedad.
+              </p>
+            </RevealOnScroll>
+          </div>
+
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            <RevealOnScroll delay={100} className="h-full">
+              <a
+                href="mailto:jsandoval0696@gmail.com"
+                className="group block p-8 rounded-3xl bg-slate-950/60 border border-slate-800 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 h-full"
+              >
+                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Enviar un Correo</h3>
+                <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                  Para consultas generales, propuestas de proyectos o postulaciones laborales, envíanos un email.
+                </p>
+                <span className="text-blue-400 font-semibold group-hover:text-blue-300 transition-colors inline-flex items-center gap-1">
+                  jsandoval0696@gmail.com
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </a>
+            </RevealOnScroll>
+
+            <RevealOnScroll delay={200} className="h-full">
+              <a
+                href="tel:+5697150757"
+                className="group block p-8 rounded-3xl bg-slate-950/60 border border-slate-800 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 h-full"
+              >
+                <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                  <Phone className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Llamar Directamente</h3>
+                <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+                  ¿Prefieres hablar con nosotros? Llámanos por teléfono para una atención más rápida.
+                </p>
+                <span className="text-blue-400 font-semibold group-hover:text-blue-300 transition-colors inline-flex items-center gap-1">
+                  +56 9 7150 757
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </a>
+            </RevealOnScroll>
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer id="contacto" className="bg-slate-950 py-16 border-t border-slate-900">
+      <footer className="bg-slate-950 py-16 border-t border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
             <div>
@@ -299,24 +348,30 @@ export default function Home() {
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">Sobre Nosotros</li>
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">Trayectoria</li>
                 <li className="hover:text-blue-400 transition-colors cursor-pointer">Proyectos</li>
-                <li className="hover:text-blue-400 transition-colors cursor-pointer">Contacto</li>
+                <li className="hover:text-blue-400 transition-colors cursor-pointer">
+                  <a href="#contacto">Contacto</a>
+                </li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-white font-bold mb-6">Contacto</h4>
               <ul className="space-y-4 text-sm">
-                <li className="flex items-center text-slate-500 group cursor-pointer hover:text-blue-400 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                  </div>
-                  contacto@jsmaster.cl
+                <li>
+                  <a href="mailto:jsandoval0696@gmail.com" className="flex items-center text-slate-500 group hover:text-blue-400 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </div>
+                    jsandoval0696@gmail.com
+                  </a>
                 </li>
-                <li className="flex items-center text-slate-500 group cursor-pointer hover:text-blue-400 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                  </div>
-                  +56 9 1234 5678
+                <li>
+                  <a href="tel:+5697150757" className="flex items-center text-slate-500 group hover:text-blue-400 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mr-3 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                    </div>
+                    +56 9 7150 757
+                  </a>
                 </li>
               </ul>
             </div>
