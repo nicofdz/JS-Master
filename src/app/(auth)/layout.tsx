@@ -2,7 +2,8 @@
 
 import { useAuth } from '@/hooks'
 import { ProjectFilterProvider } from '@/hooks/useProjectFilter'
-import { useDelayedTasks } from '@/hooks/useDelayedTasks'
+import { supabase } from '@/lib/supabase'
+
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -48,7 +49,33 @@ export default function AuthLayout({
   children: React.ReactNode
 }) {
   const { user, profile, loading, signOut } = useAuth()
-  const { delayedCount } = useDelayedTasks()
+  const [delayedCount, setDelayedCount] = useState(0)
+  
+  useEffect(() => {
+    const fetchDelayedCount = async () => {
+      try {
+        // En V2, las tareas retrasadas están en la tabla 'tasks' con is_delayed = true
+        // y status distinto a completed y cancelled
+        const { count, error } = await supabase
+          .from('tasks')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_delayed', true)
+          .neq('status', 'completed')
+          .neq('status', 'cancelled')
+          .eq('is_deleted', false)
+          
+        if (!error && count !== null) {
+          setDelayedCount(count)
+        }
+      } catch (err) {
+        console.error('Error fetching delayed count:', err)
+      }
+    }
+    
+    if (user) {
+      fetchDelayedCount()
+    }
+  }, [user])
   useTaskDelayChecker()
   const router = useRouter()
   const pathname = usePathname()

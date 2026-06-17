@@ -20,6 +20,7 @@ const nextConfig = {
   // Configuración experimental para manejar workers y archivos estáticos
   experimental: {
     esmExternals: 'loose',
+    serverComponentsExternalPackages: ['pdf2json'],
     outputFileTracingIncludes: {
       '/api/contracts/generate': ['./public/templates/**/*']
     }

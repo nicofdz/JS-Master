@@ -55,30 +55,41 @@ export function TaskPaymentModal({
     try {
       setLoading(true)
       const { data, error } = await supabase
-        .from('apartment_tasks')
+        .from('task_assignments')
         .select(`
-          id,
-          task_name,
           worker_payment,
-          status,
-          created_at,
-          apartments!inner(
-            apartment_number,
-            floors!inner(
-              floor_number,
-              projects!inner(name)
+          tasks!inner(
+            id,
+            task_name,
+            status,
+            created_at,
+            apartments!inner(
+              apartment_number,
+              floors!inner(
+                floor_number,
+                projects!inner(name)
+              )
             )
           )
         `)
-        .eq('assigned_to', workerId)
-        .eq('status', 'completed')
+        .eq('worker_id', workerId)
+        .eq('tasks.status', 'completed')
         .or('is_paid.is.null,is_paid.eq.false')
         .not('worker_payment', 'is', null)
         .gt('worker_payment', 0)
-        .order('created_at', { ascending: false })
 
       if (error) throw error
-      setTasks((data || []) as any)
+      
+      const formattedTasks = (data || []).map((row: any) => ({
+        id: row.tasks.id,
+        task_name: row.tasks.task_name,
+        worker_payment: row.worker_payment,
+        status: row.tasks.status,
+        created_at: row.tasks.created_at,
+        apartments: row.tasks.apartments
+      })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+      setTasks(formattedTasks)
     } catch (err: any) {
       console.error('Error fetching tasks:', err)
     } finally {

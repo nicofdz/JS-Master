@@ -4,7 +4,6 @@ export { useProjects } from './useProjects' // Usar versión real de Supabase
 export { useFloors } from './useFloors'
 export { useTowers } from './useTowers'
 export { useApartments } from './useApartments'
-export { useTasks } from './useTasks'
 export { useTasksV2 } from './useTasks_v2'
 export { useDashboard } from './useDashboard'
 export { useReports } from './useReports'

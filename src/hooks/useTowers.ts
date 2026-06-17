@@ -457,18 +457,6 @@ export function useTowers(projectId?: number) {
           await supabase.from('task_assignments').delete().in('task_id', taskIds)
         }
 
-        // 2. Obtener tareas de 'apartment_tasks' (si existe y es relevante para constraints)
-        const { data: aptTasks } = await supabase
-          .from('apartment_tasks')
-          .select('id')
-          .in('apartment_id', aptIds)
-
-        if (aptTasks && aptTasks.length > 0) {
-          const aptTaskIds = aptTasks.map(t => t.id)
-          await supabase.from('payment_tasks').delete().in('task_id', aptTaskIds)
-          await supabase.from('task_materials').delete().in('apartment_task_id', aptTaskIds)
-          await supabase.from('progress_photos').delete().in('apartment_task_id', aptTaskIds)
-        }
       }
 
       if (!hasHistory) {

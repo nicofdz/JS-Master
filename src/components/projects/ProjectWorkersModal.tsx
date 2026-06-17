@@ -161,18 +161,32 @@ export function ProjectWorkersModal({ isOpen, onClose, projectId, projectName }:
 
           // Obtener tareas de los departamentos del proyecto
           if (apartmentIds.length > 0) {
-            const { data: tasks, error: tasksError } = await supabase
-              .from('apartment_tasks')
-              .select('assigned_to, status')
-              .in('apartment_id', apartmentIds)
-              .in('assigned_to', workerIdsByTrato)
-              .neq('status', 'cancelled')
-              .not('assigned_to', 'is', null)
+            const { data: assignments, error: tasksError } = await supabase
+              .from('task_assignments')
+              .select(`
+                worker_id,
+                tasks!inner(
+                  status,
+                  apartment_id,
+                  is_deleted
+                )
+              `)
+              .in('worker_id', workerIdsByTrato)
 
             if (tasksError) {
               console.error('Error obteniendo tareas:', tasksError)
             } else {
-              projectTasks = tasks || []
+              // Filtrar por departamentos, no canceladas y no eliminadas
+              projectTasks = assignments?.reduce((acc: any[], a: any) => {
+                const t = Array.isArray(a.tasks) ? a.tasks[0] : a.tasks;
+                if (t && !t.is_deleted && t.status !== 'cancelled' && t.apartment_id && apartmentIds.includes(t.apartment_id)) {
+                  acc.push({
+                    assigned_to: a.worker_id,
+                    status: t.status
+                  });
+                }
+                return acc;
+              }, []) || []
             }
           }
         }

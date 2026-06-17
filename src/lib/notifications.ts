@@ -80,7 +80,7 @@ export async function notifyTaskDelayed(params: {
     message: `La tarea "${params.taskName}" está atrasada ${params.daysDelayed} día${params.daysDelayed > 1 ? 's' : ''}`,
     link: `/tareas?id=${params.taskId}`,
     metadata: { task_id: params.taskId, days_delayed: params.daysDelayed },
-    relatedTable: 'apartment_tasks',
+    relatedTable: 'tasks',
     relatedId: params.taskId
   })
 }
@@ -101,7 +101,7 @@ export async function notifyTaskAssigned(params: {
     message: `Se te ha asignado la tarea "${params.taskName}" en el apartamento ${params.apartmentNumber}`,
     link: `/tareas?id=${params.taskId}`,
     metadata: { task_id: params.taskId, apartment: params.apartmentNumber },
-    relatedTable: 'apartment_tasks',
+    relatedTable: 'tasks',
     relatedId: params.taskId
   })
 }

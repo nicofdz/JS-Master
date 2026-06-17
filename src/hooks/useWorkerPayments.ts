@@ -82,31 +82,46 @@ export function useWorkerPayments() {
   const getWorkerPaymentDetails = async (workerId: number) => {
     try {
       const { data, error } = await supabase
-        .from('apartment_tasks')
+        .from('task_assignments')
         .select(`
-          id,
-          task_name,
-          status,
           worker_payment,
-          start_date,
-          completed_at,
-          end_date,
-          created_at,
-          apartments!inner(
-            apartment_number,
-            floors!inner(
-              floor_number,
-              projects!inner(name)
+          tasks!inner(
+            id,
+            task_name,
+            status,
+            start_date,
+            completed_at,
+            end_date,
+            created_at,
+            apartments!inner(
+              apartment_number,
+              floors!inner(
+                floor_number,
+                projects!inner(name)
+              )
             )
           )
         `)
-        .eq('assigned_to', workerId)
+        .eq('worker_id', workerId)
         .not('worker_payment', 'is', null)
-        .order('completed_at', { ascending: false, nullsFirst: false })
 
       if (error) throw error
 
-      return data || []
+      return (data || []).map((row: any) => ({
+        id: row.tasks.id,
+        task_name: row.tasks.task_name,
+        status: row.tasks.status,
+        worker_payment: row.worker_payment,
+        start_date: row.tasks.start_date,
+        completed_at: row.tasks.completed_at,
+        end_date: row.tasks.end_date,
+        created_at: row.tasks.created_at,
+        apartments: row.tasks.apartments
+      })).sort((a, b) => {
+        if (!a.completed_at) return 1
+        if (!b.completed_at) return -1
+        return new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime()
+      })
     } catch (err: any) {
       console.error('Error fetching worker payment details:', err)
       throw err

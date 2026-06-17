@@ -1,0 +1,8 @@
+Eliminación de infraestructura legacy V1 y refactorización a V2
+
+- Eliminación de la ruta antigua de tareas (tareas-antiguo) y componentes obsoletos.
+- Eliminación de hooks legacy (useTasks, useDelayedTasks) y limpieza de referencias a la tabla apartment_tasks.
+- Refactorización de modales (ProjectWorkersModal, TaskPaymentModal) para consultar la tabla V2 task_assignments.
+- Actualización del cron job check-delayed-tasks y sistema de notificaciones a la nueva arquitectura.
+- Resolución de errores de compilación estática en Next.js y ajuste en next.config.mjs para empaquetado de dependencias (pdf2json).
+- Refactorización de consultas en useTowers y useWorkerPayments para operar exclusivamente bajo el sistema V2.

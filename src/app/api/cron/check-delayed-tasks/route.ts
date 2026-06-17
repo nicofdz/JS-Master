@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
         // 1. Get overdue tasks OR tasks already marked as delayed
         const { data: overdueTasks, error: tasksError } = await supabaseAdmin
-            .from('apartment_tasks')
+            .from('tasks')
             .select('id, task_name, end_date, is_delayed')
             .neq('status', 'completed')
             .neq('status', 'blocked')
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
                         title: 'Tarea Atrasada',
                         message: message,
                         type: 'task_delayed',
-                        related_table: 'apartment_tasks',
+                        related_table: 'tasks',
                         related_id: task.id,
                         link: '/tareas', // Or specific link logic
                         created_at: new Date().toISOString()
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
         // 5. Update flags (catch-up for those that were missed)
         if (tasksToUpdateFlag.length > 0) {
             const { error: updateError } = await supabaseAdmin
-                .from('apartment_tasks')
+                .from('tasks')
                 .update({ is_delayed: true })
                 .in('id', tasksToUpdateFlag)
 
