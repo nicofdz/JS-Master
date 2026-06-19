@@ -326,9 +326,12 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
     e.preventDefault()
 
     if (validateForm()) {
+      const typesWithQuantityList = ['materiales', 'epp', 'herramientas', 'combustible'];
+      const finalQuantity = typesWithQuantityList.includes(formData.type) ? (formData.quantity || null) : null;
+
       const expenseData = {
         ...formData,
-        quantity: formData.quantity || null,
+        quantity: finalQuantity,
         project_id: formData.project_id || null
       }
 
@@ -360,8 +363,8 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
       [field]: value
     }
 
-    // Calcular IVA automáticamente cuando cambia el total_amount (solo para gastos que NO son materiales)
-    if (field === 'total_amount' && value > 0 && newFormData.type !== 'materiales') {
+    // Calcular IVA automáticamente cuando cambia el total_amount (solo para gastos que NO son materiales O materiales sin añadir a catálogo)
+    if (field === 'total_amount' && value > 0 && (newFormData.type !== 'materiales' || !newFormData.addToMaterials)) {
       const { netAmount, ivaAmount } = calculateIVAFromTotal(value)
       newFormData.net_amount = netAmount
       newFormData.iva_amount = ivaAmount
@@ -398,6 +401,12 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
       } else if (value === false) {
         // Limpiar lista cuando se desmarca
         newFormData.materials = undefined
+        // Recalcular IVA basado en el total actual
+        if (newFormData.total_amount > 0) {
+          const { netAmount, ivaAmount } = calculateIVAFromTotal(newFormData.total_amount)
+          newFormData.net_amount = netAmount
+          newFormData.iva_amount = ivaAmount
+        }
       }
     }
 
@@ -705,8 +714,8 @@ export function ExpenseForm({ expense, onSave, onClose, onPreview }: ExpenseForm
               </div>
             </div>
 
-            {/* Monto Total (solo editable si NO es tipo materiales) */}
-            {formData.type !== 'materiales' && (
+            {/* Monto Total (solo editable si NO es tipo materiales O materiales sin añadir a catálogo) */}
+            {(formData.type !== 'materiales' || (formData.type === 'materiales' && !formData.addToMaterials)) && (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Total con IVA *
