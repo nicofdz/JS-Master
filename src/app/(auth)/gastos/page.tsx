@@ -268,7 +268,7 @@ export default function GastosPage() {
     setShowPreviewModal(true)
   }
 
-  const handleConfirmExpense = async (expenseData?: any, receiptFile?: File) => {
+  const handleConfirmExpense = async (expenseDataParams?: any, receiptFileParams?: File) => {
     try {
       // Filtrar campos que no pertenecen a la tabla expenses
       const { addToMaterials, materialCategory, materialUnit, materialStockMin, materialWarehouseId, materials, ...expenseData } = previewData
@@ -288,9 +288,9 @@ export default function GastosPage() {
 
       const createdExpense = await addExpense(newExpense)
 
-      // Subir comprobante si existe
-      if (receiptFile) {
-        await uploadReceipt(receiptFile, createdExpense.id)
+      // Subir comprobante si existe en el state de preview
+      if (previewReceiptFile) {
+        await uploadReceipt(previewReceiptFile, createdExpense.id)
       }
 
       // Procesar materiales si es tipo materiales

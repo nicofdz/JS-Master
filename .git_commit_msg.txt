@@ -1,8 +1,4 @@
-Eliminación de infraestructura legacy V1 y refactorización a V2
+Fix: Carga de comprobantes al crear nuevo gasto
 
-- Eliminación de la ruta antigua de tareas (tareas-antiguo) y componentes obsoletos.
-- Eliminación de hooks legacy (useTasks, useDelayedTasks) y limpieza de referencias a la tabla apartment_tasks.
-- Refactorización de modales (ProjectWorkersModal, TaskPaymentModal) para consultar la tabla V2 task_assignments.
-- Actualización del cron job check-delayed-tasks y sistema de notificaciones a la nueva arquitectura.
-- Resolución de errores de compilación estática en Next.js y ajuste en next.config.mjs para empaquetado de dependencias (pdf2json).
-- Refactorización de consultas en useTowers y useWorkerPayments para operar exclusivamente bajo el sistema V2.
+- Corrección en gastos/page.tsx para resolver un fallo donde los comprobantes (fotos/PDF) no se guardaban al registrar un gasto nuevo.
+- Ajuste en handleConfirmExpense para consumir el archivo directamente desde el estado previewReceiptFile en lugar de depender del parámetro inconsistente que recibía de la vista previa.
