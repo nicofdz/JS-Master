@@ -48,7 +48,7 @@ export function useExpenses(year?: number, month?: number, documentType?: 'bolet
       let query = supabase
         .from('expenses')
         .select('*')
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
 
       // Aplicar filtro de proyecto si está especificado
       if (projectId) {

@@ -71,7 +71,9 @@ export function ExpensePreviewModal({ expense, receiptFile, onConfirm, onCancel 
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CL')
+    if (!dateString) return ''
+    const [year, month, day] = dateString.split('T')[0].split('-')
+    return `${day}-${month}-${year}`
   }
 
   return (

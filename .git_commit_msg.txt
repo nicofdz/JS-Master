@@ -1,4 +1,5 @@
-Fix: Carga de comprobantes al crear nuevo gasto
+Fix: Corrección de zona horaria en fechas de gastos y ordenamiento
 
-- Corrección en gastos/page.tsx para resolver un fallo donde los comprobantes (fotos/PDF) no se guardaban al registrar un gasto nuevo.
-- Ajuste en handleConfirmExpense para consumir el archivo directamente desde el estado previewReceiptFile en lugar de depender del parámetro inconsistente que recibía de la vista previa.
+- Corrección de un fallo de zona horaria (UTC offset) que causaba que las fechas de los gastos se mostraran con un día de retraso.
+- Se actualizó la función formatDate en page.tsx, ExpenseDetailModal.tsx y ExpensePreviewModal.tsx para procesar la fecha de forma segura y exacta a la digitada (timezone-safe).
+- Modificación en useExpenses.ts para ordenar la lista de gastos visualmente por fecha de creación en el sistema (created_at) de forma descendente, en lugar de la fecha del documento del gasto.

@@ -150,7 +150,9 @@ export default function GastosPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CL')
+    if (!dateString) return ''
+    const [year, month, day] = dateString.split('T')[0].split('-')
+    return `${day}-${month}-${year}`
   }
 
   const filteredExpenses = useMemo(() => {

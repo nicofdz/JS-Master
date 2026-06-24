@@ -55,7 +55,9 @@ export function ExpenseDetailModal({ expense, onClose }: ExpenseDetailModalProps
     }
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('es-CL')
+        if (!dateString) return ''
+        const [year, month, day] = dateString.split('T')[0].split('-')
+        return `${day}-${month}-${year}`
     }
 
     return (
